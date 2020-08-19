@@ -1174,15 +1174,8 @@ switch(what)
                 stats(r,:)=[Rcv R2cv];
             end % ireg (nuisance regressors)
         end % iterate
-        
-        
-        
-        
-        
-        
-            
         varargout = {stats};
-    case 'TEST:all'
+    case 'TEST:all:Ridge_ms'          % Model selection for all the ROIs
     case 'graph_testGLM'
         hps = [];
         %{[
