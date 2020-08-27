@@ -13,7 +13,7 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING 
-subj_name = {'p01','p02','p03'};
+subj_name = {'p01','p02','p03','p04'};
 loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
 %========================================================================================================================
 % GLM INFO
@@ -166,7 +166,7 @@ switch(what)
             dircheck(fullfile(baseDir,imagingDir,subj_name{sn(s)}))
             for r=1:length(runs);
                 % move realigned data for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('ants_rrun_%2.2d.nii',runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('rrun_%2.2d.nii',runs(r)));
                 dest = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii',runs(r)));
                 copyfile(source,dest);
                 
@@ -178,7 +178,7 @@ switch(what)
             
             fprintf('realigned epi''s moved for %s \n',subj_name{sn(s)})
         end
-    case 'FUNC:coreg'                 % Adjust meanepi to anatomical image REQUIRES USER INPUT
+    case 'FUNC:coregTSE'                 % Adjust meanepi to anatomical image REQUIRES USER INPUT
         % (1) Manually seed the functional/anatomical registration
         % - Do "coregtool" on the matlab command window
         % - Select anatomical image and meanepi image to overlay
@@ -215,6 +215,25 @@ switch(what)
         % alignment by appending the prefix 'r' to the current file
         % So if you continually update rmeanepi, you'll end up with a file
         % called r...rrrmeanepi.
+    case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
+        % (1) Manually seed the functional/anatomical registration
+        % - Do "coregtool" on the matlab command window
+        % - Select anatomical image and meanepi image to overlay
+        % - Manually adjust meanepi image and save result as rmeanepi image
+        % example: bsp_imana('FUNC:coregEPI',1)
+        sn=varargin{1};% subjNum
+        
+        % (2) Automatically co-register functional and anatomical images for study 1
+        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii')};
+        J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn} '-n'],'rmean_epi.nii')};
+        J.other = {''};
+        J.eoptions.cost_fun = 'nmi';
+        J.eoptions.sep = [4 2];
+        J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+        J.eoptions.fwhm = [7 7];
+        matlabbatch{1}.spm.spatial.coreg.estimate=J;
+        spm_jobman('run',matlabbatch);
+        
     case 'FUNC:make_samealign'        % Align functional images to rmeanepi of study 1
         % Aligns all functional images from both sessions (each study done separately)
         % to rmeanepi of study 1
@@ -229,16 +248,15 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{sn(s)}));
             
             % Select image for reference
-            % Always rmeanepi from study 1
-            P{1} = fullfile(fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii'));
+            % For ants-registered data: TSE 
+            % P{1} = fullfile(fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii'));
+            % for tradition way: rmeanepi 
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmean_epi.nii'));
             
             % Select images to be realigned
             Q={};
             for r=1:numel(runs)
-                for i=1:numTRs-numDummys;
-                    Q{end+1}    = fullfile(baseDir,imagingDir,subj_name{sn(s)},...
-                        sprintf('run_%2.2d.nii,%d',runs(r),i));
-                end;
+              Q{end+1}    = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii',runs(r)));
             end;
             
             % Run spmj_makesamealign_nifti
@@ -322,6 +340,16 @@ switch(what)
             fprintf('%s have been resliced into suit space \n',region)
         end
         
+    case 'GLM:makeMask' 
+        sn=varargin{1}; % subjNum
+        tissues = [1:3 7 8]; 
+            
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmean_epi.nii'));
+        for i=1:length(tissues) 
+            P{i+1}=fullfile(baseDir,suitDir,'anatomicals',subj_name{sn},sprintf('c%danatomical.nii',tissues(i))); 
+        end
+        out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'brain_mask.nii'));
+        spm_imcalc_ui(char(P),out,'i1>800 & (i2+i3+i4+i5+i6)>0.7');
     case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
@@ -434,9 +462,9 @@ switch(what)
             J.bases.hrf.params = [4.5 11];                                  % set to [] if running wls
             J.volt = 1;
             J.global = 'None';
-            J.mask = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii')};
-            J.mthresh = 0.05;
-            J.cvi_mask = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii')};
+            J.mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'brain_mask.nii')};
+            J.mthresh = 0.01;
+            J.cvi_mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'brain_mask.nii')};
             J.cvi =  'fast';
             
             spm_rwls_run_fmri_spec(J);
@@ -551,7 +579,7 @@ switch(what)
         
         sn             = 3;             %% list of subjects
         glm            = 1;             %% The glm number
-        con_vs         = 'rest_task';%'average_4';   %% set it to 'rest' or 'average' (depending on the contrast you want)
+        con_vs         = 'rest_task';   %'average_4';   %% set it to 'rest' or 'average' (depending on the contrast you want)
         type           = 'task';        %% it can be set to either cond or task.
         
         vararginoptions(varargin, {'sn', 'glm', 'con_vs', 'type'})
@@ -622,7 +650,49 @@ switch(what)
                 end % conditions (n, conName: con and spmT)
             end % i (contrasts)
         end % sn 
+    case 'GLM:Fcontrast'               % Create Contrast images
+        %%% Calculating contrast images.
+        % 'SPM_light' is created in this step (xVi is removed as it slows
+        % down code for FAST GLM).
+        % Example1: bsp_imana('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
+        % Example2: bsp_imana('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'cond')
         
+        sn             = 3;             %% list of subjects
+        glm            = 1;             %% The glm number
+        type           = 'task';        %% it can be set to task, .... 
+        
+        vararginoptions(varargin, {'sn', 'glm', 'type'})
+                
+        %%% setting directory paths I need
+        glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
+        
+        for s = sn
+            fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
+            load(fullfile(glmDir, subj_name{s}, 'SPM.mat'))
+            
+            SPM  = rmfield(SPM,'xCon');
+            cd(fullfile(glmDir, subj_name{s}))
+            T = load('SPM_info.mat');
+            
+            % F contrast
+            name = sprintf('%s', type);
+            switch(type)
+                case 'task'
+                    numTasks = max(T.task); 
+                    con = zeros(numTasks,size(SPM.xX.X,2));
+                    for i=1:numTasks
+                        con(i,T.task==i)=1-1/numTasks;
+                        con(i,T.task>0 & T.task~=i)=-1/numTasks;
+                    end
+            end
+            
+            SPM.xCon(1) = spm_FcUtil('Set',name, 'F', 'c',con',SPM.xX.xKXs);
+            SPM = spm_contrasts(SPM,1:length(SPM.xCon));
+            save('SPM.mat', 'SPM','-v7.3');
+            SPM = rmfield(SPM,'xVi'); % 'xVi' take up a lot of space and slows down code!
+            save(fullfile(glmDir, subj_name{s}, 'SPM_light.mat'), 'SPM');
+
+        end % sn      
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
         
