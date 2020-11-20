@@ -810,6 +810,13 @@ switch(what)
                     R{1}.name = ['cerebellum'];
                     R{1}.value = 1;
                     R=region_calcregions(R);
+                case 'cortical_grey'
+                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'rc7anatomical.nii');
+                    R{1}.type = 'roi_image';
+                    R{1}.file= file;
+                    R{1}.name = ['cortical_grey'];
+                    R{1}.value = 1;
+                    R=region_calcregions(R);
                 case 'cerebellum_grey'
                     file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'rc_anatomical_seg1.nii');
                     R{1}.type = 'roi_image';
