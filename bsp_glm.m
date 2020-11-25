@@ -8,11 +8,11 @@ numDummys = 3;                                                              % pe
 numTRs    = 321;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
-% baseDir         ='/srv/diedrichsen/data/Pontine7T';
-baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
+baseDir         ='/srv/diedrichsen/data/Pontine7T';
+% baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
-anatomicalDir   ='/anatomicals';
+anatomicalDir   ='/anatomicals_gradcorrect';
 suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
@@ -25,6 +25,17 @@ run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13',
 runB        = [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70];  % Behavioural labelling of runs
 %========================================================================================================================
 switch(what)
+    case 'GLM:makeMask' % Changed to include CSF 
+        sn=varargin{1}; % subjNum
+        tissues = [1:3]; 
+            
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmean_epi.nii'));
+        for i=1:length(tissues) 
+            P{i+1}=fullfile(baseDir,anatomicalDir,subj_name{sn},sprintf('c%danatomical.nii',tissues(i))); 
+        end
+        out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'brain_mask.nii'));
+        spm_imcalc_ui(char(P),out,'i1>800 & (i2+i3+i4)>0.7');
+
     case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
@@ -38,9 +49,8 @@ switch(what)
         
         % load in task information
         C=dload(fullfile(baseDir,'bsp_taskConds_GLM.txt'));
-        Cc=getrow(C,C.StudyNum==1);
-        Tasks = unique(Cc.taskNames,'rows','stable');                       % get the task names
-        nTask      = unique(length(Tasks));                                 % how many tasks there are?
+        Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks 
+        nTask      = max(Cc.taskNum);                                 % how many tasks there are?
         
         for s=1:subjs,
             T=[];
@@ -69,17 +79,20 @@ switch(what)
                     % The order of tasks are different for each run, to
                     % have a common order for the tasks, I will be reading
                     % from the Cc file for all the runs and subjects
-                    ST = find(strcmp(P.taskName,Tasks{it}));
+                    ST = find(strcmp(lower(P.taskName),lower(Cc.taskNames{it})));
+                    if (isempty(ST) || length(ST)>1)
+                        keyboard; 
+                    end; 
                     for taskType = 1:2 % there are two taskTypes: instruction; not instructions
                         if taskType == 1 % instructions
                             % get the isntruction onset
                             instruct_onset = P.realStartTime(ST)- J.timing.RT*numDummys; %% get the instruction start time for the first task 
                             
                             % filling in the fields for SPM_info.mat
-                            S.task      = 0;              % task Number
-                            S.TN        = {'Instruct'};   % task name (TN)
+                            S.task      = it;              % task Number of the task after 
+                            S.taskName   = {'Instruct'};   % task name (TN)
                             S.inst      = 1;              % is it instruction (1) or not (0)?
-                            S.instOrder = ST;             % instOrder is defined by the task that comes after the instruction
+                            S.taskOrder = ST;             % instOrder Number of task 
                             S.time      = instruct_onset; % instruction onset time
                             % Determine taskName_after and taskName_before
                             % this instruction
@@ -106,9 +119,9 @@ switch(what)
                             
                             % filling in the fields for SPM_info.mat
                             S.task      = it;
-                            S.TN        = {Tasks{it}};
+                            S.taskName  = {Cc.taskNames{it}};
                             S.inst      = 0;
-                            S.instOrder = 0;
+                            S.taskOrder = ST;
                             S.time      = onset;
                             S.taskName_after  = {'none'}; % taskName before and after are only defined for instructions
                             S.taskName_before = {'none'};
@@ -116,7 +129,7 @@ switch(what)
                             T  = addstruct(T, S);
                             
                             % filling in the fields for SPM.mat
-                            J.sess(r).cond(itt).name     = Tasks{it};
+                            J.sess(r).cond(itt).name     = Cc.taskNames{it};
                             J.sess(r).cond(itt).onset    = onset;
                             J.sess(r).cond(itt).duration = 30;             % each task lasts for 30 sec
                             J.sess(r).cond(itt).tmod     = 0;
@@ -356,8 +369,8 @@ switch(what)
                     numTasks = max(T.task); 
                     con = zeros(numTasks,size(SPM.xX.X,2));
                     for i=1:numTasks
-                        con(i,T.task==i)=1-1/numTasks;
-                        con(i,T.task>0 & T.task~=i)=-1/numTasks;
+                        con(i,T.task==i & T.inst==0)=1-1/numTasks;
+                        con(i,T.task~=i & T.inst==0)=-1/numTasks;
                     end
             end
             

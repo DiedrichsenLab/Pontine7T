@@ -340,16 +340,6 @@ switch(what)
             fprintf('%s have been resliced into suit space \n',region)
         end
         
-    case 'GLM:makeMask' 
-        sn=varargin{1}; % subjNum
-        tissues = [1:3 7 8]; 
-            
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmean_epi.nii'));
-        for i=1:length(tissues) 
-            P{i+1}=fullfile(baseDir,suitDir,'anatomicals',subj_name{sn},sprintf('c%danatomical.nii',tissues(i))); 
-        end
-        out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'brain_mask.nii'));
-        spm_imcalc_ui(char(P),out,'i1>800 & (i2+i3+i4+i5+i6)>0.7');
     case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
