@@ -35,6 +35,9 @@ switch(what)
         end
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'brain_mask.nii'));
         spm_imcalc_ui(char(P),out,'i1>800 & (i2+i3+i4)>0.7');
+        
+        out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'gray_mask.nii'));
+        spm_imcalc_ui(char(P),out,'i1>800 & i2>0.4');
 
     case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
@@ -63,7 +66,7 @@ switch(what)
             J.dir = {glmSubjDir};
             J.timing.units = 'secs';
             J.timing.RT = 1.0;
-            J.timing.fmri_t = 16;
+            J.timing.fmri_t = 16;ls 
             J.timing.fmri_t0 = 1;
             
             for r=1:numel(runs) % loop through runs
@@ -152,7 +155,7 @@ switch(what)
             J.global = 'None';
             J.mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'brain_mask.nii')};
             J.mthresh = 0.01;
-            J.cvi_mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'brain_mask.nii')};
+            J.cvi_mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'gray_mask.nii')};
             J.cvi =  'fast';
             
             spm_rwls_run_fmri_spec(J);
@@ -561,7 +564,7 @@ switch(what)
             
             % load data
             load(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',region)));
-            SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{sn(s)}));
+            % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{sn(s)}));
 
             % Get the raw data files
             V=SPM.xY.VY;
@@ -579,11 +582,12 @@ switch(what)
     case 'TS:getall'                  % Get all raw TS defined
         sn=varargin{1};
         %bsp_imana('TS:getRawTs',sn,1,'cerebellum');
-        bsp_imana('TS:getRawTs',sn,1,'cerebellum_grey');
-        bsp_imana('TS:getRawTs',sn,1,'dentate');
-        bsp_imana('TS:getRawTs',sn,1,'csf');
-        %bsp_imana('TS:getRawTs',sn,1,'pontine');
-        %bsp_imana('TS:getRawTs',sn,1,'olive');      
+  
+        bsp_glm('TS:getRawTs',sn,1,'dentate');
+        bsp_glm('TS:getRawTs',sn,1,'csf');
+        bsp_glm('TS:getRawTs',sn,1,'pontine');
+        bsp_glm('TS:getRawTs',sn,1,'olive');      
+        bsp_glm('TS:getRawTs',sn,1,'cerebellum_grey');
         
     case 'test_GLM'                   % Get crossval R2 and R from GLM for different designs
         % example: bsp_imana('test_GLM','inK',{'Hpass','CSF'...},'inX',{'Mov',...},'hpf',128,'ridge',0.1);
