@@ -688,13 +688,18 @@ switch(what)
                                 Btrain = pinv(Xw(trainI,:))*Yw(trainI,:);
                                 Btest  = pinv(Xw(testI, :))*Yw(testI,:);
                             case 'ridge_fixed'
-                                                                Btrain = pinv(Xw(trainI,:))*Yw(trainI,:);
-                                Btest  = pinv(Xw(testI, :))*Yw(testI,:);
+                                alpha = 1; 
+                                Xtrain = Xr(trainI,:); 
+                                Xtest  = Xr(testI, :); 
+                                Btrain = (Xtrain' * Xtrain + eye(size(Xtrain,2))* alpha) \ (Xtrain' * Yr(trainI,:));
+                                Btest  = (Xtest'  * Xtest  + eye(size(Xtest,2)) * alpha) \ (Xtest'  * Yr(testI,:));
 
                             case 'ridge_pcm'
                                 
                             case 'tikhonov_pcm'
-                                
+                                [theta,INFO]=pcm_fitModelRegression(Xr(trainI,:),Yr(trainI,:),group,X0(trainI,:));
+                                keyboard; 
+
                         end
                         
                         % Performance valuation using only task-related regressors
@@ -807,7 +812,7 @@ function XX=get_feature(what,sn,SPM,INFO,separate,sscale,zscale)
                 [~,score] = pca(csf.Y);
                 % Include the first 2 PCs of CSF in design
                 for rn = 1:nRuns
-                    X{rn} = csf.Y(SPM.Sess(rn).row,:);
+                    X{rn} = score(SPM.Sess(rn).row,1:2);
                 end
                 
         end
