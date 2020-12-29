@@ -1,13 +1,16 @@
 function varargout=bsp_glm(what,varargin)
 % Second level analysis for the pontine7T project, starting from the level
-% of the GLM. 
+% of the GLM.
 
-% 
+%
 
 numDummys = 3;                                                              % per run
 numTRs    = 321;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
+global baseDir; 
+global subj_name; 
+
 baseDir         ='/srv/diedrichsen/data/Pontine7T';
 % baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
 imagingDir      ='/imaging_data';
@@ -16,7 +19,7 @@ anatomicalDir   ='/anatomicals_gradcorrect';
 suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
-% PRE-PROCESSING 
+% PRE-PROCESSING
 subj_name = {'p01','p02','p03','p04','p04-gradcorrect','p04-fmriprep'};
 %========================================================================================================================
 % GLM INFO
@@ -25,20 +28,20 @@ run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13',
 runB        = [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70];  % Behavioural labelling of runs
 %========================================================================================================================
 switch(what)
-    case 'GLM:makeMask' % Changed to include CSF 
+    case 'GLM:makeMask' % Changed to include CSF
         sn=varargin{1}; % subjNum
-        tissues = [1:3]; 
-            
+        tissues = [1:3];
+        
         P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmean_epi.nii'));
-        for i=1:length(tissues) 
-            P{i+1}=fullfile(baseDir,anatomicalDir,subj_name{sn},sprintf('c%danatomical.nii',tissues(i))); 
+        for i=1:length(tissues)
+            P{i+1}=fullfile(baseDir,anatomicalDir,subj_name{sn},sprintf('c%danatomical.nii',tissues(i)));
         end
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'brain_mask.nii'));
         spm_imcalc_ui(char(P),out,'i1>800 & (i2+i3+i4)>0.7');
         
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'gray_mask.nii'));
         spm_imcalc_ui(char(P),out,'i1>800 & i2>0.4');
-
+        
     case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
@@ -46,13 +49,13 @@ switch(what)
         sn=varargin{1};
         runs=varargin{2}; % [1:16]
         
-        announceTime=5;  % Instruction duration 
-        glm=1;  
+        announceTime=5;  % Instruction duration
+        glm=1;
         subjs=length(sn);
         
         % load in task information
         C=dload(fullfile(baseDir,'bsp_taskConds_GLM.txt'));
-        Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks 
+        Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks
         nTask      = max(Cc.taskNum);                                 % how many tasks there are?
         
         for s=1:subjs,
@@ -60,42 +63,42 @@ switch(what)
             A = dload(fullfile(baseDir,'data', subj_name{sn(s)},['sc1_',subj_name{sn(s)},'.dat'])); % get scanning timing and order
             A = getrow(A,A.runNum>=funcRunNum(1) & A.runNum<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
-            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder 
+            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
             
             % Fill up struct for glm
             J.dir = {glmSubjDir};
             J.timing.units = 'secs';
             J.timing.RT = 1.0;
-            J.timing.fmri_t = 16;ls 
+            J.timing.fmri_t = 16;ls
             J.timing.fmri_t0 = 1;
             
             for r=1:numel(runs) % loop through runs
                 P=getrow(A,A.runNum==runB(r));
                 for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i))]; 
+                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i))];
                 end;
                 J.sess(r).scans= N; % number of scans in run
                 
                 % loop through tasks
                 itt = 1;
-                for it = 1:nTask 
+                for it = 1:nTask
                     % The order of tasks are different for each run, to
                     % have a common order for the tasks, I will be reading
                     % from the Cc file for all the runs and subjects
                     ST = find(strcmp(lower(P.taskName),lower(Cc.taskNames{it})));
                     if (isempty(ST) || length(ST)>1)
-                        keyboard; 
-                    end; 
+                        keyboard;
+                    end;
                     for taskType = 1:2 % there are two taskTypes: instruction; not instructions
                         if taskType == 1 % instructions
                             % get the isntruction onset
-                            instruct_onset = P.realStartTime(ST)- J.timing.RT*numDummys; %% get the instruction start time for the first task 
+                            instruct_onset = P.realStartTime(ST)- J.timing.RT*numDummys; %% get the instruction start time for the first task
                             
                             % filling in the fields for SPM_info.mat
-                            S.task      = it;              % task Number of the task after 
+                            S.task      = it;              % task Number of the task after
                             S.taskName   = {'Instruct'};   % task name (TN)
                             S.inst      = 1;              % is it instruction (1) or not (0)?
-                            S.taskOrder = ST;             % instOrder Number of task 
+                            S.taskOrder = ST;             % instOrder Number of task
                             S.time      = instruct_onset; % instruction onset time
                             % Determine taskName_after and taskName_before
                             % this instruction
@@ -170,8 +173,8 @@ switch(what)
         sn=varargin{1};
         runs=varargin{2}; % [1:16]
         
-        announceTime=5;  % Instruction duration 
-        glm=2;  
+        announceTime=5;  % Instruction duration
+        glm=2;
         subjs=length(sn);
         
         % load in task information
@@ -185,7 +188,7 @@ switch(what)
             A = dload(fullfile(baseDir,'data', subj_name{sn(s)},['sc1_',subj_name{sn(s)},'.dat'])); % get scanning timing and order
             A = getrow(A,A.runNum>=funcRunNum(1) & A.runNum<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
-            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder 
+            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
             
             % Fill up struct for glm
             J.dir = {glmSubjDir};
@@ -197,7 +200,7 @@ switch(what)
             for r=1:numel(runs) % loop through runs
                 P=getrow(A,A.runNum==runB(r));
                 for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i))]; 
+                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i))];
                 end;
                 J.sess(r).scans= N; % number of scans in run
                 
@@ -216,7 +219,7 @@ switch(what)
                     S.TN        = {Tasks{it}};
                     S.inst      = 0;
                     S.instOrder = 0;
-                    S.time      = onset;                    
+                    S.time      = onset;
                     T  = addstruct(T, S);
                     
                     % filling in the fields for SPM.mat
@@ -226,7 +229,7 @@ switch(what)
                     J.sess(r).cond(it).tmod     = 0;
                     J.sess(r).cond(it).orth     = 0;
                     J.sess(r).cond(it).pmod     = struct('name', {}, 'param', {}, 'poly', {});
-                           
+                    
                 end % it (tasks)
                 J.sess(r).multi = {''};
                 J.sess(r).regress = struct('name', {}, 'val', {});
@@ -248,7 +251,7 @@ switch(what)
             save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T');
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
-    case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum 
+    case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum
         % example: bsp_imana('GLM:estimate_glm',1,1)
         sn=varargin{1};
         glm=varargin{2};
@@ -260,7 +263,7 @@ switch(what)
             load(fullfile(glmDir,'SPM.mat'));
             SPM.swd=glmDir;
             spm_rwls_spm(SPM);
-        end                  
+        end
     case 'GLM:contrast'               % Create Contrast images
         %%% Calculating contrast images.
         % 'SPM_light' is created in this step (xVi is removed as it slows
@@ -274,7 +277,7 @@ switch(what)
         type           = 'task';        %% it can be set to either cond or task.
         
         vararginoptions(varargin, {'sn', 'glm', 'con_vs', 'type'})
-                
+        
         %%% setting directory paths I need
         glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
         
@@ -313,8 +316,8 @@ switch(what)
                     case 'average_4' % contrast against the average of all the tasks (not including the instructions)
                         con        = zeros(1,size(SPM.xX.X, 2));
                         % TO TRY below - no instructions as contrasts
-                        con(1,logical(T.(type)      == ucondition(tt))) = 1./sum(logical(T.(type) == ucondition(tt)));                        
-                        con(1, logical(T.inst == 0)) = con(1, logical(T.inst == 0)) - 1./sum(T.inst == 0);                        
+                        con(1,logical(T.(type)      == ucondition(tt))) = 1./sum(logical(T.(type) == ucondition(tt)));
+                        con(1, logical(T.inst == 0)) = con(1, logical(T.inst == 0)) - 1./sum(T.inst == 0);
                     case 'rest'
                         con                     = zeros(1,size(SPM.xX.X,2));
                         con(:,logical(T.(type) == ucondition(tt))) = 1;
@@ -330,7 +333,7 @@ switch(what)
             save('SPM.mat', 'SPM','-v7.3');
             SPM = rmfield(SPM,'xVi'); % 'xVi' take up a lot of space and slows down code!
             save(fullfile(glmDir, subj_name{s}, 'SPM_light.mat'), 'SPM');
-
+            
             % rename contrast images and spmT images
             conName = {'con','spmT'};
             for i = 1:length(SPM.xCon)
@@ -340,7 +343,7 @@ switch(what)
                     movefile(oldName{i}, newName{i});
                 end % conditions (n, conName: con and spmT)
             end % i (contrasts)
-        end % sn 
+        end % sn
     case 'GLM:Fcontrast'               % Create Contrast images
         %%% Calculating contrast images.
         % 'SPM_light' is created in this step (xVi is removed as it slows
@@ -350,10 +353,10 @@ switch(what)
         
         sn             = 3;             %% list of subjects
         glm            = 1;             %% The glm number
-        type           = 'task';        %% it can be set to task, .... 
+        type           = 'task';        %% it can be set to task, ....
         
         vararginoptions(varargin, {'sn', 'glm', 'type'})
-                
+        
         %%% setting directory paths I need
         glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
         
@@ -369,7 +372,7 @@ switch(what)
             name = sprintf('%s', type);
             switch(type)
                 case 'task'
-                    numTasks = max(T.task); 
+                    numTasks = max(T.task);
                     con = zeros(numTasks,size(SPM.xX.X,2));
                     for i=1:numTasks
                         con(i,T.task==i & T.inst==0)=1-1/numTasks;
@@ -382,8 +385,8 @@ switch(what)
             save('SPM.mat', 'SPM','-v7.3');
             SPM = rmfield(SPM,'xVi'); % 'xVi' take up a lot of space and slows down code!
             save(fullfile(glmDir, subj_name{s}, 'SPM_light.mat'), 'SPM');
-
-        end % sn      
+            
+        end % sn
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
         
@@ -407,12 +410,12 @@ switch(what)
             cd (logDir);
             PULS = dir('*PULS.log');
             RSP  = dir('*RESP.log');
-            log  = dir('*Info.log');     
+            log  = dir('*Info.log');
             
             % 2. Define physio model structure
             physio = tapas_physio_new();
             
-            % 3. Define input files            
+            % 3. Define input files
             physio.save_dir = {logDir};                         % enter directory to save physIO output
             physio.log_files.cardiac = {PULS.name};             % .puls file
             physio.log_files.respiration = {RSP.name};          % .resp file
@@ -485,7 +488,7 @@ switch(what)
             tapas_physio_main_create_regressors(physio);
         end
     case 'ROI:define'                 % Defines ROIs for brain structures
-        % Before runing this, create masks for different structures 
+        % Before runing this, create masks for different structures
         sn=varargin{1}; % subjNum
         region=varargin{2}; % Name of ROI, see cases below
         
@@ -514,21 +517,21 @@ switch(what)
                     R{1}.name = ['dentate'];
                     R{1}.value = 1;
                     R=region_calcregions(R);
-                case 'pontine' 
+                case 'pontine'
                     file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'pontine_mask.nii');
                     R{1}.type = 'roi_image';
                     R{1}.file= file;
                     R{1}.name = ['pontine'];
                     R{1}.value = 1;
                     R=region_calcregions(R);
-                case 'olive' 
+                case 'olive'
                     file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'olive_mask.nii');
                     R{1}.type = 'roi_image';
                     R{1}.file= file;
                     R{1}.name = ['olive'];
                     R{1}.value = 1;
                     R=region_calcregions(R);
-                case 'csf' 
+                case 'csf'
                     file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'csf_mask.nii');
                     R{1}.type = 'roi_image';
                     R{1}.file= file;
@@ -539,7 +542,7 @@ switch(what)
             dircheck(fullfile(baseDir,regDir,'data',subj_name{sn(s)}));
             save(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',region)),'R');
             fprintf('ROIs have been defined for %s for %s \n',region,subj_name{sn(s)})
-        end        
+        end
     case 'ROI:defall'                 % Run all types in ROI
         sn=varargin{1}; % subjNum
         bsp_imana('ROI:define',sn,'cerebellum');
@@ -549,12 +552,12 @@ switch(what)
         bsp_imana('ROI:define',sn,'olive');
         bsp_imana('ROI:define',sn,'csf');
         
-    case 'TS:getRawTs'                % Get raw timeseries and save them 
+    case 'TS:getRawTs'                % Get raw timeseries and save them
         % bsp_imana('TS:getRawTs',1,1,'dentate');
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
         region=varargin{3}; % ROI
-
+        
         glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
         subjs=length(sn);
         
@@ -565,7 +568,7 @@ switch(what)
             % load data
             load(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',region)));
             % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{sn(s)}));
-
+            
             % Get the raw data files
             V=SPM.xY.VY;
             VresMS = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
@@ -573,280 +576,265 @@ switch(what)
             % Get time series data
             Y = region_getdata(V,R{1});  % Data is N x P
             resMS = region_getdata(VresMS,R{1});
-
+            
             dircheck(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn(s)}));
             filename=(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn(s)},sprintf('rawts_%s.mat',region)));
             save(filename,'Y','resMS','-v7.3');
             fprintf('Raw ts saved for %s (%s) for %s \n',subj_name{sn(s)},sprintf('glm%d',glm),region);
-        end            
+        end
     case 'TS:getall'                  % Get all raw TS defined
         sn=varargin{1};
         %bsp_imana('TS:getRawTs',sn,1,'cerebellum');
-  
+        
         bsp_glm('TS:getRawTs',sn,1,'dentate');
         bsp_glm('TS:getRawTs',sn,1,'csf');
         bsp_glm('TS:getRawTs',sn,1,'pontine');
-        bsp_glm('TS:getRawTs',sn,1,'olive');      
+        bsp_glm('TS:getRawTs',sn,1,'olive');
         bsp_glm('TS:getRawTs',sn,1,'cerebellum_grey');
         
     case 'test_GLM'                   % Get crossval R2 and R from GLM for different designs
-        % example: bsp_imana('test_GLM','inK',{'Hpass','CSF'...},'inX',{'Mov',...},'hpf',128,'ridge',0.1);
-        sn = 4;
+        % example: bsp_imana('test_GLM','inK',{'Hpass','CSF'...},'inX',{'Mov',...},'ridge',0.1);
+        % Input arguents :
+        %    sn: Subject number
+        %    inK: List of terms in the pre-filtering matrix (if any)
+        %    inX: List of terms in the design matrix
+        %
+        sn = 5;
         glm = 1;
         roi = {'dentate'};%{'cerebellum_grey','dentate','brainstem','pontine'};
-        hpf = inf; inK = []; inX = []; ridge = [];
-        glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
-        
+        inK = {};                   % Terms in filtering matrix - except for intercept
+        inX = {{'Tasks','Instruct'}}; % Terms in the design matrix
+        reg = {'OLS'};  % Regression methods
+        evalX = {1,2,[1 2]}; % Evaluation on what term in inX
+        D = []; % Result structure 
         % Get the posible options to test
-        vararginoptions(varargin,{'sn','hpf','inX','inK','ridge'});
+        vararginoptions(varargin,{'inX','inK','sn','reg','evalX'});
         
         % Load SPM file
+        glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
         glmDirSubj = fullfile(glmDir, subj_name{sn});
         load(fullfile(glmDirSubj,'SPM.mat'));
+        INFO = load(fullfile(glmDirSubj,'SPM_info.mat'));
         nRuns = length(SPM.nscan);
-        
-        % Create a-priori filter
-        for r = 1:nRuns
-            k.RT = SPM.xY.RT;
-            k.row = (SPM.Sess(r).row);
-            k.HParam = inf;
-            K(r) = spm_filter(k);
-        end
-        
-        % Add regressors of no interest to K.X0
-        
-        
-        if ~isempty(inK)
-            for t=1:length(inK)
-                switch inK{t}
-                    case 'Hpass'        % High pass filter
-                        k.HParam = hpf;
-                        for rn = 1:nRuns
-                            HPF = spm_filter(k);
-                            K(rn).X0 = [K(rn).X0 HPF.X0];
-                        end
-                    case 'Mov'          % Realignment parameters
-                        % load the motion files of every run
-                        for rn = 1:nRuns
-                            mov = load(fullfile(baseDir,imagingDir,subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
-                            mov = bsxfun(@rdivide,mov,sqrt(sum(mov.^2)));
-                            K(rn).X0 = [K(rn).X0 mov];
-                        end
-                    case 'MovPCA'       % 2 PCs of realigment paramenters
-                        % load the motion files of every run
-                        for rn = 1:nRuns
-                            mov = load(fullfile(baseDir,imagingDir,subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
-                            % Get the principal components
-                            [~,score] = pca(mov);
-                            score = bsxfun(@rdivide,score,sqrt(sum(score.^2))); % Make regressors orthonormal
-                            K(rn).X0 = [K(rn).X0 score(:,1:2)];
-                        end
-                    case 'Retroicor'    % Retroicor of cardio and resp 18 comp
-                        % Load the physio regressors from TAPAS
-                        for rn = 1:nRuns
-                            phys = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'multiple_regressors.txt'));
-                            phys = bsxfun(@rdivide,phys,sqrt(sum(phys.^2))); % Make regressors orthonormal
-                            K(rn).X0 = [K(rn).X0 phys];
-                        end
-                    case 'CSF'          % Mean signal of the CSF around brainstem
-                        % Get the CSF data
-                        csf = load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
-                        % mean CSF signal
-                        for rn = 1:nRuns
-                            mcsf = mean(csf.Y(SPM.Sess(rn).row,:),2);
-                            mcsf = bsxfun(@rdivide,mcsf,sqrt(sum(mcsf.^2)));
-                            K(rn).X0 = [K(rn).X0 mcsf];
-                        end
-                    case 'CSFPCA'       % 2 Pcs of CSF
-                        % Get the CSF data
-                        csf = load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
-                        % Compute the PCs
-                        for rn = 1:nRuns
-                            runcsf = csf.Y(SPM.Sess(rn).row,:);
-                            % Get the principal components
-                            [~,score] = pca(runcsf);
-                            score = bsxfun(@rdivide,score,sqrt(sum(score.^2))); % Make regressors orthonormal
-                            K(rn).X0 = [K(rn).X0 score(:,1:2)];
-                        end
-                end
-            end
-        end
-        
-        % Get weight/whitening matrix
-        W = SPM.xX.W;
-        % Get the design matrix (only task related and intercepts)
-        X = SPM.xX.X;
-        
-        % Add regressor of no interest to X
-        if ~isempty(inX)
-            for t=1:length(inX)
-                switch inX{t}
-                    case 'Hpass'        % High pass filter
-                        k.HParam = hpf;
-                        col = 1;
-                        for rn = 1:nRuns
-                            HPF = spm_filter(k);
-                            F(SPM.Sess(rn).row,col:col+size(HPF.X0,2)-1) = HPF.X0;
-                            col = col+size(HPF.X0,2);
-                        end
-                        X = [X F];
-                    case 'Mov'          % realignment parameters
-                        % load the motion files of every run
-                        M = zeros(size(X,1),nRuns*6);
-                        col = 1;
-                        for rn = 1:nRuns
-                            mov = load(fullfile(baseDir,imagingDir,subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
-                            mov = bsxfun(@rdivide,mov,sqrt(sum(mov.^2)));
-                            M(SPM.Sess(rn).row,col:col+5) = mov;
-                            col = col + 6;
-                        end
-                        X = [X M];
-                    case 'MovPCA'       % 2 PCs of realignment parameters
-                        % load the motion files of every run
-                        M = zeros(size(X,1),nRuns*2);
-                        for rn = 1:nRuns
-                            mov = load(fullfile(baseDir,imagingDir,subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
-                            [~,score] = pca(mov);
-                            score = bsxfun(@rdivide,score,sqrt(sum(score.^2)));
-                            M(SPM.Sess(rn).row,rn) = score(:,1);
-                            M(SPM.Sess(rn).row,rn+nRuns) = score(:,2);
-                        end
-                        X = [X M];
-                    case 'Retroicor'    % Retroicor of cardio and resp 18 comp
-                        % Load the physio regressors from TAPAS
-                        P = zeros(size(X,1),nRuns*18);
-                        col = 1;
-                        for rn = 1:nRuns
-                            phys = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'multiple_regressors.txt'));
-                            phys = bsxfun(@rdivide,phys,sqrt(sum(phys.^2)));
-                            P(SPM.Sess(rn).row,col:col+17) = phys;
-                            col = col + 18;
-                        end
-                        X = [X P];
-                    case 'CSF'          % Mean signal of the CSF around brainstem
-                        % Get the CSF mask
-                        csf = load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
-                        % Include mean CSF in design
-                        mcsf = mean(csf.Y,2);
-                        CSF = zeros(size(X,1),nRuns);
-                        for rn = 1:nRuns
-                            CSF(SPM.Sess(rn).row,rn) = mcsf(SPM.Sess(rn).row);
-                        end
-                        CSF = bsxfun(@rdivide,CSF,std(CSF))*0.1; % z-standardize the regressors
-                        X = [X CSF];
-                    case 'csfPCAover'   % 2 PCs of CSF computed over 4 runs
-                        % Get the CSF mask
-                        csf = load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
-                        [~,score] = pca(csf.Y);
-                        % Include the first 2 PCs of CSF in design
-                        CSF = zeros(size(X,1),nRuns*2);
-                        for rn = 1:nRuns
-                            CSF(SPM.Sess(rn).row,rn) = score(SPM.Sess(rn).row,1);
-                            CSF(SPM.Sess(rn).row,rn+nRuns) = score(SPM.Sess(rn).row,2);
-                        end
-                        CSF = bsxfun(@rdivide,CSF,std(CSF))*0.1; % z-standardize the regressors
-                        X = [X CSF];
-                    case 'CSFPCA'       % 2 PCs of CSF computed independently
-                        % Get the CSF mask
-                        csf = load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
-                        % Include the first 2 PCs of CSF in design
-                        CSF = zeros(size(X,1),nRuns*2);
-                        for rn = 1:nRuns
-                            runcsf = csf.Y(SPM.Sess(rn).row,:);
-                            [~,score] = pca(runcsf);
-                            score = bsxfun(@rdivide,score,sqrt(sum(score.^2)));
-                            CSF(SPM.Sess(rn).row,rn) = score(:,1);
-                            CSF(SPM.Sess(rn).row,rn+nRuns) = score(:,2);
-                        end
-                        CSF = bsxfun(@rdivide,CSF,std(CSF))*0.1; % z-standardize the regressors
-                        X = [X CSF];
-                end
-            end
-        end
-        
-        % Design space and projector matrix
-        xKXs        = spm_sp('Set',spm_filter(K,W*X));    % KWX
-        xKXs.X      = full(xKXs.X);
-        pKX         = spm_sp('x-',xKXs);                  % Projector
-        
-        stats = zeros(length(roi),3);
-        
         
         % Get the Data (Y)
         for r=1:length(roi) % Loop over ROIs
             
             % Load raw time series
-            load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},sprintf('rawts_%s.mat',roi{r})));     
+            load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},sprintf('rawts_%s.mat',roi{r})));
+            fprintf('SN: %d, ROI: %s\n',sn,roi{r});
             
-            % Whiten/Weight data and remove filter confounds
-            KWY = spm_filter(K,W*Y);
-            
-            % Weighted Least Squares estimation / Ridge regression 
-            if ~isempty(ridge)
-                % Tikhonov Matrix
-                T = eye(size(xKXs.X,2)) * ridge;
-                
-                % Number of T conditions on X
-                Ncondx = 0;
-                for i = 1:nRuns
-                    Ncondx = Ncondx + length(SPM.Sess(i).U);
+            for model = 1:length(inX)
+                % Add regressors of no interest to X0
+                X0 = [];
+                if (~isempty(inK))
+                    for t=1:length(inK{model})
+                        X0 = [X0 get_feature(inK{model}{t},sn,SPM,INFO,1,1,1)];
+                    end
                 end
-                % Set to zero the ridge for the intercept
-                T(Ncondx+1:Ncondx+nRuns,Ncondx+1:Ncondx+nRuns) = 0;
                 
-                % Projector matrix
-                pKXr = inv(xKXs.X' * xKXs.X + T) * xKXs.X';
-                B = pKXr * KWY;
-            else
-                B = pKX * KWY;                        % Original Parameter estimates
-            end
+                % Add intercept to X0
+                X0 = [X0 SPM.xX.X(:,SPM.xX.iB)];
+                
+                % Get the design matrix (only task related and intercepts)
+                X = [];
+                group = []; % regressor group
+                row = [];
+                i = 0 ;
+                
+                % Add regressor of no interest to X
+                for t=1:length(inX{model})
+                    x = get_feature(inX{model}{t},sn,SPM,INFO,0,1,1);
+                    k = size(x,2);
+                    indx = [i+1:i+k];
+                    group(indx)=t;
+                    X(:,indx) = x;
+                    i = i + k;
+                end
+                N = size(X,1);
+                
+                % Get weight/whitening matrix
+                W = SPM.xX.W;
+                
+                % Make run indicator
+                row=zeros(N,1);
+                for rn=1:nRuns
+                    row(SPM.Sess(rn).row,1)=rn;
+                end
+                
+                % Residual forming matrix
+                R         = eye(N)-X0*pinv(X0);
+                Xr        = R*X;    % KWX
+                               
+                % Whiten/Weight data and remove filter confounds
+                Yr = R*Y;
+                
+                for method=1:length(reg) % Loop over different methods
+                    
+                    % Crossvalidated approach
+                    for rn=1:nRuns
+                        
+                        trainI = find(row~=rn);
+                        testI  = find(row==rn);
+                        
+                        % Now estimate with the favorite regression approach
+                        switch(reg{method})
+                            case 'OLS'
+                                Btrain = pinv(Xr(trainI,:))*Yr(trainI,:);
+                                Btest  = pinv(Xr(testI, :))*Yr(testI,:);
+                            case 'GLS'
+                                Yw=W*Yr;
+                                Xw=W*Xr;
+                                Btrain = pinv(Xw(trainI,:))*Yw(trainI,:);
+                                Btest  = pinv(Xw(testI, :))*Yw(testI,:);
+                            case 'ridge_fixed'
+                                                                Btrain = pinv(Xw(trainI,:))*Yw(trainI,:);
+                                Btest  = pinv(Xw(testI, :))*Yw(testI,:);
+
+                            case 'ridge_pcm'
+                                
+                            case 'tikhonov_pcm'
+                                
+                        end
+                        
+                        % Performance valuation using only task-related regressors
+                        
+                        for ev=1:length(evalX)
+                            indx = ismember(group,evalX{ev});
+                            Ypred = Xr(testI,indx)*Btrain(indx,:);
+                            Ytest = Xr(testI,indx)*Btest(indx,:);
+                            
+                            % Record performance
+                            T.roi = roi(r);
+                            T.run  = rn;
+                            T.sn   = sn;
+                            T.method  = reg(method);
+                            T.methodN = method;
+                            T.evalX = ev;
+                            T.model = model;
+                            T.R    = mean(sum(Ypred.*Ytest)./sqrt(sum(Ypred.*Ypred).*sum(Ytest.*Ytest)));
+                            T.R2   = 1-mean(sum((Ypred-Ytest).^2)./sum(Ytest.^2));
+                            D = addstruct(D,T);
+                        end % evalX
+                    end % runs
+                end % regression methods
+            end % Model terms 
+            end % ROI
+            varargout = {D};
             
-            % Compute Residuals
-            Bres = spm_sp('r',xKXs,KWY);              
-            resMS = sum(Bres.^2)./SPM.xX.trRV*mean(diag(SPM.xX.Bcov)); % residuals MeanSquared
-            
-            % Univariate prewithen Betas
-            B = bsxfun(@rdivide,B,sqrt(resMS));
-            
-            % Calculate R2
-            part = kron((1:21),ones(1,18))';  % Check for each design!!!
-            cond = repmat((1:18)',21,1);      % Hardcoding here!!!
-            
-            [R2cv,Rcv] = bsp_patternConsistency_crossval(B,part,cond);
-            [R2] = rsa_patternConsistency(B,part,cond);
-            
-            fprintf('R2 = %.3f  R2cv = %.3f  Rcv = %.3f in %s\n',R2,R2cv,Rcv,roi{r});
-            stats(r,:)=[R2 R2cv Rcv];
+            case 'F-test'                     % F-test to compare between p01 and p02
+                % example: bsp_imana('F-test',1);
+                sn = varargin{1};
+                glm = 1;
+                glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+                
+                % Load SPM file
+                glmDirSubj = fullfile(glmDir, subj_name{sn});
+                load(fullfile(glmDirSubj,'SPM.mat'));
+                
+                % F contrast for all regressor
+                con = eye(length(SPM.Sess)*length(SPM.Sess(1).U));  % include each regressors
+                con = [con;zeros(length(SPM.Sess),length(con))];    % add zeros for the intercepts
+                SPM.xCon=spm_FcUtil('Set','SignalEffects', 'F', 'c',con,SPM.xX.xKXs);
+                spm_contrasts(SPM);
         end
-        varargout = {stats};
 end
 
-% Local functions
-function dircheck(dir)
-if ~exist(dir,'dir');
-    warning('%s doesn''t exist. Creating one now. You''re welcome! \n',dir);
-    mkdir(dir);
-end
-
-%%%  Pilot 3 log
-%01. Download data from correct7T and check the run numbers and sequences
-%02. Copy Mprage and tse in the anatomicals folder
-%03. Copy the functional runs in the imaging_data_raw
-%04. Remove dummies bsp_imana('FUNC:remDum',3);
-%05. Mov Correction bsp_imana('FUNC:realign',3,[1:21]);
-%06. Correct gradient deformation antsRegEpi.sh 3;
-%07. Rename and move func bsp_imana('FUNC:move_data',3,[1:21]);
-%08. Coregister tse and Mprage bsp_imana('FUNC:coreg',3,'auto');
-%09. Apply the new aligment bsp_imana('FUNC:make_samealign',3,[1:21]);
-%10. Make cerebellar mask usisng suit bsp_imana('SUIT:isolate',3);
-%11. Manually create the dentate mask from tse and place it in suitDir
-%12. Normalise cerebellum using dartel bsp_imana('SUIT:normalise_dentate',3)
-%13. Create SPM.mat for GLM1 bsp_imana('GLM:glm1',3,[1:21]);
-%14. Run the GLM bsp_imana('GLM:estimate_glm',3,1);
-%15. Download from DICOM server the *_PhysioLog and cpoy to Physio folder
-%16. Extract log files from dicom bsp_imana('PHYS:extract',3);
-%17. Create regressors using TAPAS bsp_imana('PHYS:createRegresor',3);
-%18. Manually create mask for pons, olive, CSF(thr .99,eroded) in SUIT/
-%19. Create ROI definitions bsp_imana('ROI:defall',3);
-%20. Extract raw Timeseries from ROIs bsp_imana('TS:getall',3);
-%21. Test GLM1 with different designs
+function XX=get_feature(what,sn,SPM,INFO,separate,sscale,zscale)
+    % Function that gets the regressors
+        global baseDir
+        global subj_name
+        glm = 1;
+        nRuns = length(SPM.nscan);
+        switch (what)
+            case 'Tasks'
+                for rn = 1:nRuns
+                    indx = SPM.Sess(rn).col;
+                    ii=INFO.inst(indx)==0;
+                    X{rn} = SPM.xX.X(SPM.Sess(rn).row,indx(ii));
+                end
+            case 'Instruct'
+                for rn = 1:nRuns
+                    indx = SPM.Sess(rn).col;
+                    ii=INFO.inst(indx)==1;
+                    X{rn} = SPM.xX.X(SPM.Sess(rn).row,indx(ii));
+                end
+            case 'Hpass'        % High pass filter
+                k.HParam = 128;
+                for rn = 1:nRuns
+                    HPF = spm_filter(k);
+                    X{rn} = HPF.X0;
+                end
+            case 'Mov'          % Realignment parameters
+                % load the motion files of every run
+                for rn = 1:nRuns
+                    X{rn} = load(fullfile(baseDir,'imaging_data',subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
+                end
+            case 'MovPCA'       % 2 PCs of realigment paramenters
+                % load the motion files of every run
+                for rn = 1:nRuns
+                    mov = load(fullfile(baseDir,'imaging_data',subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
+                    % Get the principal components
+                    [~,score] = pca(mov);
+                    X{rn} = score(:,1:2);
+                end
+            case 'Retroicor'    % Retroicor of cardio and resp 18 comp
+                % Load the physio regressors from TAPAS
+                for rn = 1:nRuns
+                    X{rn} = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'multiple_regressors.txt'));
+                end
+            case 'CSF'          % Mean signal of the CSF around brainstem
+                % Get the CSF data
+                csf = load(fullfile(baseDir,'RegionOfInterest',sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
+                % mean CSF signal
+                for rn = 1:nRuns
+                    mcsf = mean(csf.Y(SPM.Sess(rn).row,:),2);
+                    X{rn} = bsxfun(@rdivide,mcsf,sqrt(sum(mcsf.^2)));
+                end
+            case 'CSFPCAindiv'       % 2 Pcs of CSF
+                % Get the CSF data
+                csf = load(fullfile(baseDir,'RegionOfInterest',sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
+                % Compute the PCs
+                for rn = 1:nRuns
+                    runcsf = csf.Y(SPM.Sess(rn).row,:);
+                    % Get the principal components
+                    [~,score] = pca(runcsf);
+                    X{rn} = score(:,1:2);
+                end
+            case 'CSFPCAall'   % 2 PCs of CSF computed over 4 runs
+                % Get the CSF mask
+                csf = load(fullfile(baseDir,'RegionOfInterest',sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
+                [~,score] = pca(csf.Y);
+                % Include the first 2 PCs of CSF in design
+                for rn = 1:nRuns
+                    X{rn} = csf.Y(SPM.Sess(rn).row,:);
+                end
+                
+        end
+        if (zscale) % subtract mean from each regressor - seperate for each regressor
+            for rn = 1:nRuns
+                X{rn}=bsxfun(@minus,X{rn},mean(X{rn}));
+            end
+        end
+        if (sscale)
+            for rn = 1:nRuns
+                VAR(rn,:) = var(X{rn});
+            end
+            for rn = 1:nRuns
+                X{rn}=bsxfun(@rdivide,X{rn},sqrt(mean(VAR,1)));
+            end
+        end
+        N = size(SPM.xX.X,1);
+        K = size(X{1},2);
+        if (separate)
+            XX = zeros(N,K*nRuns);
+            for rn = 1:nRuns
+                
+            end
+        else
+            XX = zeros(N,K);
+            for rn = 1:nRuns
+                XX(SPM.Sess(rn).row,:) = X{rn};
+            end
+        end
+    end
