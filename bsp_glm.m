@@ -608,7 +608,7 @@ switch(what)
         evalX = {1,2,[1 2]}; % Evaluation on what term in inX
         D = []; % Result structure 
         % Get the posible options to test
-        vararginoptions(varargin,{'inX','inK','sn','reg','evalX'});
+        vararginoptions(varargin,{'roi','inX','inK','sn','reg','evalX'});
         
         % Load SPM file
         glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
@@ -619,10 +619,10 @@ switch(what)
         
         % Get the Data (Y)
         for r=1:length(roi) % Loop over ROIs
-            
+            fprintf('SN: %d, ROI: %s\n',sn,roi{r});
             % Load raw time series
             load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},sprintf('rawts_%s.mat',roi{r})));
-            fprintf('SN: %d, ROI: %s\n',sn,roi{r});
+            
             
             for model = 1:length(inX)
                 % Add regressors of no interest to X0
