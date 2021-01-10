@@ -622,7 +622,14 @@ switch(what)
             fprintf('SN: %d, ROI: %s\n',sn,roi{r});
             % Load raw time series
             load(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn},sprintf('rawts_%s.mat',roi{r})));
-            
+            % Voxel-wise prewhiten the data 
+            Y = bsxfun(@rdivide,Y,sqrt(resMS));
+            checksum = sum(abs(Y),1);
+            badindx = isnan(checksum) | checksum==0; 
+            if sum(badindx)>0
+                warning('Nans or 0 in ts file'); 
+                Y = Y(:,~badindx);
+            end
             
             for model = 1:length(inX)
                 % Add regressors of no interest to X0
@@ -670,45 +677,55 @@ switch(what)
                 Yr = R*Y;
                 
                 for method=1:length(reg) % Loop over different methods
-                    
+                    fprintf('%s:',reg{method});
                     % Crossvalidated approach
                     for rn=1:nRuns
                         
                         trainI = find(row~=rn);
                         testI  = find(row==rn);
                         
+                        tic; 
                         % Now estimate with the favorite regression approach
                         switch(reg{method})
                             case 'OLS'
                                 Btrain = pinv(Xr(trainI,:))*Yr(trainI,:);
                                 Btest  = pinv(Xr(testI, :))*Yr(testI,:);
+                                theta = [];
                             case 'GLS'
                                 Yw=W*Yr;
                                 Xw=W*Xr;
                                 Btrain = pinv(Xw(trainI,:))*Yw(trainI,:);
                                 Btest  = pinv(Xw(testI, :))*Yw(testI,:);
+                                theta = []; 
                             case 'ridge_fixed'
                                 alpha = 1; 
                                 Xtrain = Xr(trainI,:); 
                                 Xtest  = Xr(testI, :); 
                                 Btrain = (Xtrain' * Xtrain + eye(size(Xtrain,2))* alpha) \ (Xtrain' * Yr(trainI,:));
                                 Btest  = (Xtest'  * Xtest  + eye(size(Xtest,2)) * alpha) \ (Xtest'  * Yr(testI,:));
-
+                                theta = []; 
                             case 'ridge_pcm'
-                                
+                                group0 = ones(1,size(Xr,2));
+                                if (rn==1)
+                                    [theta,fitINFO]=pcm_fitModelRegression(Xr,Yr,group0,X0);
+                                end
+                                Btrain = pcm_estimateRegression(Xr(trainI,:),Yr(trainI,:),group0,X0(trainI,:),theta);
+                                Btest  = pcm_estimateRegression(Xr(testI,:), Yr(testI,:), group0,X0(testI,:), theta);
                             case 'tikhonov_pcm'
-                                [theta,INFO]=pcm_fitModelRegression(Xr(trainI,:),Yr(trainI,:),group,X0(trainI,:));
-                                keyboard; 
-
+                                if (rn==1)
+                                    [theta,fitINFO]=pcm_fitModelRegression(Xr,Yr,group,X0);
+                                end
+                                Btrain = pcm_estimateRegression(Xr(trainI,:),Yr(trainI,:),group,X0(trainI,:),theta);
+                                Btest  = pcm_estimateRegression(Xr(testI,:), Yr(testI,:), group,X0(testI,:), theta);
                         end
-                        
+                        fprintf('.');
                         % Performance valuation using only task-related regressors
-                        
+                        time = toc; 
                         for ev=1:length(evalX)
                             indx = ismember(group,evalX{ev});
                             Ypred = Xr(testI,indx)*Btrain(indx,:);
-                            Ytest = Xr(testI,indx)*Btest(indx,:);
-                            
+                            Ytestp = Xr(testI,indx)*Btest(indx,:);
+                            Ytest  = Yr(testI,:); 
                             % Record performance
                             T.roi = roi(r);
                             T.run  = rn;
@@ -717,11 +734,16 @@ switch(what)
                             T.methodN = method;
                             T.evalX = ev;
                             T.model = model;
-                            T.R    = mean(sum(Ypred.*Ytest)./sqrt(sum(Ypred.*Ypred).*sum(Ytest.*Ytest)));
-                            T.R2   = 1-mean(sum((Ypred-Ytest).^2)./sum(Ytest.^2));
+                            T.theta = nan(1,5); 
+                            T.theta(1:length(theta)) = theta;
+                            T.time = time; 
+                            T.R     = mean(sum(Ypred.*Ytest)./sqrt(sum(Ypred.*Ypred).*sum(Ytest.*Ytest)));
+                            T.Rp     = mean(sum(Ypred.*Ytestp)./sqrt(sum(Ypred.*Ypred).*sum(Ytestp.*Ytestp)));
+                            T.R2    = 1-mean(sum((Ypred-Ytest).^2)./sum(Ytest.^2));
                             D = addstruct(D,T);
                         end % evalX
                     end % runs
+                    fprintf('\n'); 
                 end % regression methods
             end % Model terms 
             end % ROI
@@ -742,7 +764,17 @@ switch(what)
                 con = [con;zeros(length(SPM.Sess),length(con))];    % add zeros for the intercepts
                 SPM.xCon=spm_FcUtil('Set','SignalEffects', 'F', 'c',con,SPM.xX.xKXs);
                 spm_contrasts(SPM);
-        end
+    case 'test_GLM_script'
+        model = {{'Tasks','Instruct'},...
+                 {'Tasks','Instruct','CSFPCAall'},...
+                 {'Tasks','Instruct','MovPCA'}}; 
+        roi = {'pontine','dentate','olive','csf','cerebellum_grey_subset','cortical_grey_subset'}; 
+        method = {'OLS','GLS','ridge_pcm','tikhonov_pcm'};
+        
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{1,2,[1 2]});
+        save(fullfile(baseDir,'results','test_GLM_5.mat'),'-struct','D'); 
+        varargout={D}; 
+end
 end
 
 function XX=get_feature(what,sn,SPM,INFO,separate,sscale,zscale)
@@ -777,12 +809,16 @@ function XX=get_feature(what,sn,SPM,INFO,separate,sscale,zscale)
                 end
             case 'MovPCA'       % 2 PCs of realigment paramenters
                 % load the motion files of every run
+                MOV  = []; 
                 for rn = 1:nRuns
                     mov = load(fullfile(baseDir,'imaging_data',subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
-                    % Get the principal components
-                    [~,score] = pca(mov);
-                    X{rn} = score(:,1:2);
+                    MOV = [MOV;mov];
                 end
+                % Get the principal components
+                [~,score] = pca(MOV);
+                for rn = 1:nRuns 
+                    X{rn} = score(SPM.Sess(rn).row,1:2);
+                end        
             case 'Retroicor'    % Retroicor of cardio and resp 18 comp
                 % Load the physio regressors from TAPAS
                 for rn = 1:nRuns
