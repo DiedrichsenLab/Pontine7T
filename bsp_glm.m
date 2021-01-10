@@ -552,12 +552,12 @@ switch(what)
         bsp_imana('ROI:define',sn,'olive');
         bsp_imana('ROI:define',sn,'csf');
         
-    case 'TS:getRawTs'                % Get raw timeseries and save them
+    case 'TS:getRawTs'                % Get raw timeseries and save them 
         % bsp_imana('TS:getRawTs',1,1,'dentate');
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
         region=varargin{3}; % ROI
-        
+
         glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
         subjs=length(sn);
         
@@ -567,8 +567,8 @@ switch(what)
             
             % load data
             load(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',region)));
-            % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{sn(s)}));
-            
+            SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{sn(s)}));
+
             % Get the raw data files
             V=SPM.xY.VY;
             VresMS = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
@@ -576,21 +576,20 @@ switch(what)
             % Get time series data
             Y = region_getdata(V,R{1});  % Data is N x P
             resMS = region_getdata(VresMS,R{1});
-            
+
             dircheck(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn(s)}));
             filename=(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn(s)},sprintf('rawts_%s.mat',region)));
             save(filename,'Y','resMS','-v7.3');
             fprintf('Raw ts saved for %s (%s) for %s \n',subj_name{sn(s)},sprintf('glm%d',glm),region);
-        end
+        end            
     case 'TS:getall'                  % Get all raw TS defined
         sn=varargin{1};
-        %bsp_imana('TS:getRawTs',sn,1,'cerebellum');
-        
+        %bsp_glm('TS:getRawTs',sn,1,'cerebellum');
+        bsp_glm('TS:getRawTs',sn,1,'cerebellum_grey');
         bsp_glm('TS:getRawTs',sn,1,'dentate');
         bsp_glm('TS:getRawTs',sn,1,'csf');
         bsp_glm('TS:getRawTs',sn,1,'pontine');
-        bsp_glm('TS:getRawTs',sn,1,'olive');
-        bsp_glm('TS:getRawTs',sn,1,'cerebellum_grey');
+        bsp_glm('TS:getRawTs',sn,1,'olive');      
         
     case 'test_GLM'                   % Get crossval R2 and R from GLM for different designs
         % example: bsp_imana('test_GLM','inK',{'Hpass','CSF'...},'inX',{'Mov',...},'ridge',0.1);
