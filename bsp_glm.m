@@ -427,7 +427,7 @@ switch(what)
             % 4. Define scan timing parameters
             physio.scan_timing.sqpar.Nslices = 60;              % number of slices in EPI volume
             physio.scan_timing.sqpar.TR = 1;                    % TR in secs
-            physio.scan_timing.sqpar.Ndummies = 3;              % Real dummy are not recorded
+            physio.scan_timing.sqpar.Ndummies = numDummys;      % Real dummy are not recorded
             physio.scan_timing.sqpar.Nscans = numTRs-numDummys; % number of time points/scans/volumes
             physio.scan_timing.sqpar.onset_slice = 30;          % slice of interest (choose middle slice if unsure?)
             physio.scan_timing.sync.method = 'scan_timing_log'; % using info file
@@ -442,6 +442,7 @@ switch(what)
             physio.model.orthogonalise = 'none';
             physio.model.output_multiple_regressors = 'multiple_regressors.txt';  %% regressor output filename
             physio.model.output_physio = 'physio.mat';  %% model output filename
+            physio.model.censor_unreliable_recording_intervals = false;  %% set to true to automatically censor missing recording intervals
             
             % 7. RETROICOR phase expansion (Glover et al., 2000)
             physio.model.retroicor.include = true;  %% use RETROICOR to calculate regressors
