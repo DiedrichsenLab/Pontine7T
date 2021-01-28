@@ -538,6 +538,21 @@ switch(what)
                     R{1}.name = ['csf-bs'];
                     R{1}.value = 1;
                     R=region_calcregions(R);
+                case 'csf_anterior'
+                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'rcsf_mask_anterior.nii');
+                    R{1}.type = 'roi_image';
+                    R{1}.file= file;
+                    R{1}.name = ['csf-ant'];
+                    R{1}.value = 1;
+                    R=region_calcregions(R);
+                case 'csf_posterior'
+                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'rcsf_mask_posterior.nii');
+                    R{1}.type = 'roi_image';
+                    R{1}.file= file;
+                    R{1}.name = ['csf-post'];
+                    R{1}.value = 1;
+                    R=region_calcregions(R);
+                
             end
             dircheck(fullfile(baseDir,regDir,'data',subj_name{sn(s)}));
             save(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',region)),'R');
@@ -877,4 +892,4 @@ function XX=get_feature(what,sn,SPM,INFO,separate,sscale,zscale)
                 XX(SPM.Sess(rn).row,:) = X{rn};
             end
         end
-    end
+end
