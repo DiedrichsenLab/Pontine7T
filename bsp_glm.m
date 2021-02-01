@@ -401,10 +401,13 @@ switch(what)
             extractCMRRPhysio(logfiles(lFile).name);
             cd ..
         end
-    case 'PHYS:createRegresor'        % Create Retroicor regressors using TAPAS (18 components)
-        sn=varargin{1};
+    case 'PHYS:createRegressor'        % Create Retroicor regressors using TAPAS (18 components)
+        sn=5; 
+        run = [1:20]; 
+        stop = true; 
+        vararginoptions(varargin,{'sn','run','stop'}); 
         
-        for nrun=1:length(run)
+        for nrun= run
             
             logDir = fullfile(baseDir,'physio',subj_name{sn},sprintf('run%2.2d',nrun));
             cd (logDir);
@@ -447,15 +450,15 @@ switch(what)
             % 7. RETROICOR phase expansion (Glover et al., 2000)
             physio.model.retroicor.include = true;  %% use RETROICOR to calculate regressors
             physio.model.retroicor.order.c = 3;
-            physio.model.retroicor.order.r = 4;
-            physio.model.retroicor.order.cr = 1;
+            physio.model.retroicor.order.r = 3;
+            physio.model.retroicor.order.cr = 0;
             
             % 8. RVT respiratory volume per time (Birn et al., 2008)
-            physio.model.rvt.include = false;
+            physio.model.rvt.include = true;
             physio.model.rvt.delays = 0;
             
-            % 9. HRV heart rate variability response (Chang et al., 2009)
-            physio.model.hrv.include = false;
+            % 9. HRV heart rate response (Chang et al., 2009)
+            physio.model.hrv.include = true;
             physio.model.hrv.delays = 0;
             
             % 10. ROI anatomical component-based noise extraction (aCompCor; Behzadi et al., 2007)
@@ -479,14 +482,23 @@ switch(what)
             physio.verbose.level = 1;  %% 0 = suppress graphical output; 1 = main plots; 2 = debugging plots; 3 = all plots
             physio.verbose.process_log = cell(0, 1);
             physio.verbose.fig_handles = zeros(0, 1);
-            physio.verbose.fig_output_file = 'PhysIO.fig';  %% output figure filename (output format can be any matlab supported graphics format)
+            physio.verbose.fig_output_file = [];  %% output figure filename (output format can be any matlab supported graphics format)
             physio.verbose.use_tabs = false;
             
             physio.ons_secs.c_scaling = 1;
             physio.ons_secs.r_scaling = 1;
             
             % 14. Run main script
-            tapas_physio_main_create_regressors(physio);
+            [physio_out,R,ons_sec]=tapas_physio_main_create_regressors(physio);
+            % Save as different text files.... 
+            dlmwrite('reg_retro_hr.txt',R(:,1:6));
+            dlmwrite('reg_retro_hr.txt',R(:,7:12));
+            dlmwrite('reg_hr.txt',[R(:,13) ons_sec.hr]); % Add the un-convolved version as well 
+            dlmwrite('reg_rvt.txt',[R(:,14) ons_sec.rvt]); % add the un-convolved version as well 
+            if (stop) 
+                keyboard; 
+                close all;
+            end;
         end
     case 'ROI:define'                 % Defines ROIs for brain structures
         % Before runing this, create masks for different structures
@@ -763,7 +775,7 @@ switch(what)
             end % ROI
             varargout = {D};
             
-            case 'F-test'                     % F-test to compare between p01 and p02
+    case 'F-test'                     % F-test to compare between p01 and p02
                 % example: bsp_imana('F-test',1);
                 sn = varargin{1};
                 glm = 1;
@@ -833,10 +845,29 @@ function XX=get_feature(what,sn,SPM,INFO,separate,sscale,zscale)
                 for rn = 1:nRuns 
                     X{rn} = score(SPM.Sess(rn).row,1:2);
                 end        
-            case 'Retroicor'    % Retroicor of cardio and resp 18 comp
+            case 'Retro_HR'    % Retroicor of cardio and resp 18 comp
                 % Load the physio regressors from TAPAS
                 for rn = 1:nRuns
-                    X{rn} = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'multiple_regressors.txt'));
+                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'retro_hr.txt'));
+                    X{rn} = A(:,1:4); % Two fundamentals
+                end
+            case 'Retro_RESP'    % Retroicor of cardio and resp 18 comp
+                % Load the physio regressors from TAPAS
+                for rn = 1:nRuns
+                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'retro_resp.txt'));
+                    X{rn} = A(:,1:4);
+                end
+             case 'HR'    % Retroicor of cardio and resp 18 comp
+                % Load the physio regressors from TAPAS
+                for rn = 1:nRuns
+                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'hr.txt'));
+                    X{rn} = A(:,1);
+                end
+            case 'RV'    % Retroicor of cardio and resp 18 comp
+                % Load the physio regressors from TAPAS
+                for rn = 1:nRuns
+                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'rvt.txt'));
+                    X{rn} = A(:,1); 
                 end
             case 'CSF'          % Mean signal of the CSF around brainstem
                 % Get the CSF data
