@@ -593,7 +593,6 @@ switch(what)
             Y = region_getdata(V,R{1});  % Data is N x P
             resMS = region_getdata(VresMS,R{1});
 
-            dircheck(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn(s)}));
             filename=(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn(s)},sprintf('rawts_%s.mat',region)));
             save(filename,'Y','resMS','-v7.3');
             fprintf('Raw ts saved for %s (%s) for %s \n',subj_name{sn(s)},sprintf('glm%d',glm),region);
@@ -783,7 +782,7 @@ switch(what)
         model = {{'Tasks','Instruct'},...
                  {'Tasks','Instruct','CSFPCAall'},...
                  {'Tasks','Instruct','MovPCA'}}; 
-        roi = {'pontine','dentate','olive','csf','cerebellum_grey_subset','cortical_grey_subset'}; 
+        roi = {'pontine','dentate','olive','csf','cerebellum_grey','cortical_grey_left'}; 
         method = {'OLS','GLS','ridge_pcm','tikhonov_pcm'};
         
         D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{1,2,[1 2]});
