@@ -492,7 +492,7 @@ switch(what)
             [physio_out,R,ons_sec]=tapas_physio_main_create_regressors(physio);
             % Save as different text files.... 
             dlmwrite('reg_retro_hr.txt',R(:,1:6));
-            dlmwrite('reg_retro_hr.txt',R(:,7:12));
+            dlmwrite('reg_retro_resp.txt',R(:,7:12));
             dlmwrite('reg_hr.txt',[R(:,13) ons_sec.hr]); % Add the un-convolved version as well 
             dlmwrite('reg_rvt.txt',[R(:,14) ons_sec.rvt]); % add the un-convolved version as well 
             if (stop) 
@@ -500,6 +500,14 @@ switch(what)
                 close all;
             end;
         end
+    case 'ROI:csf_image'                 % Defines ROIs for brain structures
+        sn=varargin{1}; 
+        P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
+            fullfile(baseDir,'anatomicals',subj_name{sn},'c3anatomical.nii')}; 
+        outname = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn},'csf_mask.nii'); 
+        spm_imcalc_ui(char(P),outname,'i1 & (i2>0.3)',{0,0,2,1}); 
+        
+        % Before runing t
     case 'ROI:define'                 % Defines ROIs for brain structures
         % Before runing this, create masks for different structures
         sn=varargin{1}; % subjNum
@@ -507,7 +515,7 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            
+            maskimg = fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn(s)},'mask.nii');
             switch region
                 case 'cerebellum'
                     file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii');
@@ -545,8 +553,9 @@ switch(what)
                     R{1}.value = 1;
                     R=region_calcregions(R);
                 case 'csf'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'csf_mask.nii');
+                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'csf_mask_brainstem.nii');
                     R{1}.type = 'roi_image';
+                    R{1}.mask = spm_vol(maskimg); 
                     R{1}.file= file;
                     R{1}.name = ['csf-bs'];
                     R{1}.value = 1;
@@ -569,6 +578,7 @@ switch(what)
             end
             dircheck(fullfile(baseDir,regDir,'data',subj_name{sn(s)}));
             save(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',region)),'R');
+            region_saveasimg(R{1},maskimg,'name',fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.nii',region))); 
             fprintf('ROIs have been defined for %s for %s \n',region,subj_name{sn(s)})
         end
     case 'ROI:defall'                 % Run all types in ROI
@@ -632,9 +642,10 @@ switch(what)
         inX = {{'Tasks','Instruct'}}; % Terms in the design matrix
         reg = {'OLS'};  % Regression methods
         evalX = {1,2,[1 2]}; % Evaluation on what term in inX
+        runs = [1:20]; 
         D = []; % Result structure 
         % Get the posible options to test
-        vararginoptions(varargin,{'roi','inX','inK','sn','reg','evalX'});
+        vararginoptions(varargin,{'roi','inX','inK','sn','reg','evalX','runs'});
         
         % Load SPM file
         glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
@@ -693,7 +704,8 @@ switch(what)
                 row=zeros(N,1);
                 for rn=1:nRuns
                     row(SPM.Sess(rn).row,1)=rn;
-                end
+                end; 
+                row(~ismember(row,runs))=0; 
                 
                 % Residual forming matrix
                 R         = eye(N)-X0*pinv(X0);
@@ -705,9 +717,9 @@ switch(what)
                 for method=1:length(reg) % Loop over different methods
                     fprintf('%s:',reg{method});
                     % Crossvalidated approach
-                    for rn=1:nRuns
+                    for rn=runs
                         
-                        trainI = find(row~=rn);
+                        trainI = find(row~=rn & row>0);
                         testI  = find(row==rn);
                         
                         tic; 
@@ -792,12 +804,14 @@ switch(what)
                 spm_contrasts(SPM);
     case 'test_GLM_script'
         model = {{'Tasks','Instruct'},...
-                 {'Tasks','Instruct','CSFPCAall'},...
-                 {'Tasks','Instruct','MovPCA'}}; 
+                 {'Tasks','Instruct','Retro_HR'},...
+                 {'Tasks','Instruct','Retro_RESP'},...
+                 {'Tasks','Instruct','HR'},...
+                 {'Tasks','Instruct','RV'}}; 
         roi = {'pontine','dentate','olive','csf','cerebellum_grey','cortical_grey_left'}; 
         method = {'OLS','GLS','ridge_pcm','tikhonov_pcm'};
         
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{1,2,[1 2]});
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{[1 2]},'runs',[1:10]);
         save(fullfile(baseDir,'results','test_GLM_5.mat'),'-struct','D'); 
         varargout={D}; 
 end
@@ -848,25 +862,25 @@ function XX=get_feature(what,sn,SPM,INFO,separate,sscale,zscale)
             case 'Retro_HR'    % Retroicor of cardio and resp 18 comp
                 % Load the physio regressors from TAPAS
                 for rn = 1:nRuns
-                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'retro_hr.txt'));
+                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'reg_retro_hr.txt'));
                     X{rn} = A(:,1:4); % Two fundamentals
                 end
             case 'Retro_RESP'    % Retroicor of cardio and resp 18 comp
                 % Load the physio regressors from TAPAS
                 for rn = 1:nRuns
-                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'retro_resp.txt'));
+                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'reg_retro_resp.txt'));
                     X{rn} = A(:,1:4);
                 end
              case 'HR'    % Retroicor of cardio and resp 18 comp
                 % Load the physio regressors from TAPAS
                 for rn = 1:nRuns
-                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'hr.txt'));
+                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'reg_hr.txt'));
                     X{rn} = A(:,1);
                 end
             case 'RV'    % Retroicor of cardio and resp 18 comp
                 % Load the physio regressors from TAPAS
                 for rn = 1:nRuns
-                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'rvt.txt'));
+                    A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'reg_rvt.txt'));
                     X{rn} = A(:,1); 
                 end
             case 'CSF'          % Mean signal of the CSF around brainstem
