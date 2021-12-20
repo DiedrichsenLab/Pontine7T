@@ -1,11 +1,10 @@
 function varargout=bsp_imana(what,varargin)
 
 numDummys = 3;                                                              % per run
-numTRs    = 321;                                                            % per run (includes dummies)
+numTRs    = 328;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
-baseDir         ='/srv/diedrichsen/data/Pontine7T';
-%baseDir         ='/Volumes/MotorControl/data/Pontine7T';
+baseDir         ='/srv/diedrichsen/data/Pontine7T/op-coreg-1';
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
@@ -13,13 +12,17 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING 
-subj_name = {'p01','p02','p03','p04'};
-loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
+subj_name = {'S99','S98','S97'};
+loc_AC={[79;127;127];[80;129;120];[77;125;129]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+%loc_AC={[105;169;169]}; % Numbers in the titlebar of mricron
+%loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
 %========================================================================================================================
 % GLM INFO
-funcRunNum  = [50,70];  % first and last behavioural run numbers
-run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21'};
-runB        = [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70];  % Behavioural labelling of runs
+funcRunNum  = [50,65];  % first and last behavioural run numbers
+%run         = {'01','02','03','04','05','06','07','08','09','10','11','12'};
+run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16'};
+%run         = {'09','10','11','12','13','14','15','16','01','02','03','04','05','06','07','08'};
+runB        = [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65];  % Behavioural labelling of runs
 %========================================================================================================================
 switch(what)
 
@@ -49,7 +52,7 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'rinv1_MP2RAGE.nii');
+            img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii');
             V               = spm_vol(img);
             dat             = spm_read_vols(V);
             oldOrig         = V.mat(1:3,4);
@@ -105,6 +108,44 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('Check segmentation results for %s\n', subj_name{sn(s)})
         end;
+        
+     case 'ANAT:coregTSE'                 % Adjust TSE to anatomical image REQUIRES USER INPUT
+        % (2) Manually seed the functional/anatomical registration
+        % - Do "coregtool" on the matlab command window
+        % - Select anatomical image and tse image to overlay
+        % - Manually adjust tse image and save result as rtse image
+        % example: bsp_imana('ANAT:coregTSE',1,'auto')
+        sn=varargin{1};% subjNum
+        step=varargin{2}; % first 'manual' then 'auto'
+        
+        cd(fullfile(baseDir,anatomicalDir,subj_name{sn}));
+        
+        switch step,
+            case 'manual'
+                coregtool;
+                keyboard();
+            case 'auto'
+                % do nothing
+        end
+        
+        % (1) Automatically co-register functional and anatomical images for study 1
+        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+        J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii')};
+        J.other = {''};
+        J.eoptions.cost_fun = 'nmi';
+        J.eoptions.sep = [4 2];
+        J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+        J.eoptions.fwhm = [7 7];
+        matlabbatch{1}.spm.spatial.coreg.estimate=J;
+        spm_jobman('run',matlabbatch);
+        
+        % NOTE:
+        % Overwrites tse, unless you update in step one, which saves it
+        % as rtse.
+        % Each time you click "update" in coregtool, it saves current
+        % alignment by appending the prefix 'r' to the current file
+        % So if you continually update rtse, you'll end up with a file
+        % called r...rrrtsei.
         
     case 'FUNC:remDum'                % Remove the extra dummy scans from all functional runs.
         % funtional runs have to be named as run_01-r.nii, run_02-r.nii ...
@@ -178,54 +219,18 @@ switch(what)
             
             fprintf('realigned epi''s moved for %s \n',subj_name{sn(s)})
         end
-    case 'FUNC:coregTSE'                 % Adjust meanepi to anatomical image REQUIRES USER INPUT
-        % (1) Manually seed the functional/anatomical registration
-        % - Do "coregtool" on the matlab command window
-        % - Select anatomical image and meanepi image to overlay
-        % - Manually adjust meanepi image and save result as rmeanepi image
-        % example: bsp_imana('FUNC:coreg',1)
-        sn=varargin{1};% subjNum
-        step=varargin{2}; % first 'manual' then 'auto'
-        
-        cd(fullfile(baseDir,anatomicalDir,subj_name{sn}));
-        
-        switch step,
-            case 'manual'
-                coregtool;
-                keyboard();
-            case 'auto'
-                % do nothing
-        end
-        
-        % (2) Automatically co-register functional and anatomical images for study 1
-        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
-        J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii')};
-        J.other = {''};
-        J.eoptions.cost_fun = 'nmi';
-        J.eoptions.sep = [4 2];
-        J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
-        J.eoptions.fwhm = [7 7];
-        matlabbatch{1}.spm.spatial.coreg.estimate=J;
-        spm_jobman('run',matlabbatch);
-        
-        % NOTE:
-        % Overwrites meanepi, unless you update in step one, which saves it
-        % as rmeanepi.
-        % Each time you click "update" in coregtool, it saves current
-        % alignment by appending the prefix 'r' to the current file
-        % So if you continually update rmeanepi, you'll end up with a file
-        % called r...rrrmeanepi.
+   
     case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
-        % (1) Manually seed the functional/anatomical registration
+        % (2) Manually seed the functional/anatomical registration
         % - Do "coregtool" on the matlab command window
         % - Select anatomical image and meanepi image to overlay
         % - Manually adjust meanepi image and save result as rmeanepi image
         % example: bsp_imana('FUNC:coregEPI',1)
         sn=varargin{1};% subjNum
         
-        % (2) Automatically co-register functional and anatomical images for study 1
+        % (1) Automatically co-register functional and anatomical images for study 1
         J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii')};
-        J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn} '-n'],'rmean_epi.nii')};
+        J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn} '-n'],'meanrun_01.nii')};
         J.other = {''};
         J.eoptions.cost_fun = 'nmi';
         J.eoptions.sep = [4 2];
@@ -251,7 +256,7 @@ switch(what)
             % For ants-registered data: TSE 
             % P{1} = fullfile(fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii'));
             % for tradition way: rmeanepi 
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmean_epi.nii'));
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmeanrun_01.nii'));
             
             % Select images to be realigned
             Q={};
@@ -848,6 +853,8 @@ switch(what)
         bsp_imana('ROI:define',sn,'pontine');
         bsp_imana('ROI:define',sn,'olive');
         bsp_imana('ROI:define',sn,'csf');
+        
+end
         
  
   

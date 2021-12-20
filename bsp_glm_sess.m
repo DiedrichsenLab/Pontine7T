@@ -20,13 +20,15 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING
-subj_name = {'S99','S98','S97'};
+subj_name = {'S99'};
 %========================================================================================================================
 % GLM INFO
-funcRunNum  = [1,16];  % first and last behavioural run numbers
+sess        = {'sess1','sess2'};
+funcRunNum  = [1,8];  % first and last behavioural run numbers
+%funcRunNum  = [9,16];
 run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21'};
-runB        = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];  % Behavioural labelling of runs
-sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session number
+runB        = [1,2,3,4,5,6,7,8];  % Behavioural labelling of runs
+%runB        = [9,10,11,12,13,14,15,16];
 
 %========================================================================================================================
 switch(what)
@@ -47,9 +49,10 @@ switch(what)
     case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
-        % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
+        % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],1,[1:XX])
         sn=varargin{1};
-        runs=varargin{2}; % [1:16]
+        sessNum=varargin{2};
+        runs=varargin{3}; % [1:8]
         
         announceTime=5;  % Instruction duration
         glm=1;
@@ -62,10 +65,10 @@ switch(what)
         
         for s=1:subjs,
             T=[];
-            A = dload(fullfile(baseDir,'data','fmri',subj_name{sn(s)},['fmri_',subj_name{sn(s)},'.tsv'])); % get scanning timing and order
+            A = dload(fullfile(baseDir,'data','fmri',subj_name{sn(s)},['fmri_',subj_name{sn(s)},'_op','.tsv'])); % get scanning timing and order
             A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
-            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
+            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm), sprintf('%s/',sess{sessNum}), subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
             
             % Fill up struct for glm
             J.dir = {glmSubjDir};
@@ -102,7 +105,6 @@ switch(what)
                             S.inst      = 1;              % is it instruction (1) or not (0)?
                             S.taskOrder = ST;             % instOrder Number of task
                             S.time      = instruct_onset; % instruction onset time
-                            S.sess      = sess(r);
                             % Determine taskName_after and taskName_before
                             % this instruction
                             S.taskName_after  = P.task_name(ST);
@@ -134,7 +136,6 @@ switch(what)
                             S.time      = onset;
                             S.taskName_after  = {'none'}; % taskName before and after are only defined for instructions
                             S.taskName_before = {'none'};
-                            S.sess      = sess(r);
                             
                             T  = addstruct(T, S);
                             
@@ -256,14 +257,15 @@ switch(what)
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
     case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum
-        % example: bsp_imana('GLM:estimate_glm',1,1)
+        % example: bsp_imana('GLM:estimate_glm',1,1,1)
         sn=varargin{1};
         glm=varargin{2};
+        sessNum=varargin{3};
         
         subjs=length(sn);
         
         for s=1:subjs,
-            glmDir =[baseDir,sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];
+            glmDir =[baseDir,sprintf('/GLM_firstlevel_%d/',glm),sprintf('%s/',sess{sessNum}),subj_name{sn(s)}];
             load(fullfile(glmDir,'SPM.mat'));
             SPM.swd=glmDir;
             spm_rwls_spm(SPM);
@@ -352,17 +354,18 @@ switch(what)
         %%% Calculating contrast images.
         % 'SPM_light' is created in this step (xVi is removed as it slows
         % down code for FAST GLM).
-        % Example1: bsp_glm('GLM:Fcontrast', 'sn', 3, 'glm', 1, 'type', 'task')
-        % Example2: bsp_glm('GLM:Fcontrast', 'sn', 3, 'glm', 1, 'type', 'cond')
+        % Example1: bsp_glm('GLM:Fcontrast', 'sn', 3, 'glm', 1, 'sesn', 1, 'type', 'task')
+        % Example2: bsp_glm('GLM:Fcontrast', 'sn', 3, 'glm', 1, 'sesn', 1, 'type', 'cond')
         
         sn             = 3;             %% list of subjects
         glm            = 1;             %% The glm number
+        sesn           = 1;             %% session label
         type           = 'task';        %% it can be set to task, ....
         
-        vararginoptions(varargin, {'sn', 'glm', 'type'})
+        vararginoptions(varargin, {'sn', 'glm', 'sesn', 'type'})
         
         %%% setting directory paths I need
-        glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
+        glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm),sprintf('%s/',sess{sesn}));
         
         for s = sn
             fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
@@ -394,15 +397,16 @@ switch(what)
     case 'GLM:contrast_F_summary'
         % Calculating contrast images for overall F-contrast between
         % tasks / conditions 
-        % EXAMPLE: bsp_glm('GLM:contrast_F_summary',[1:XX],1)
-        sn=varargin{1};           
-        glm = varargin{2};           %% The glm number
+        % EXAMPLE: bsp_glm('GLM:contrast_F_summary',[1:XX],1,1)
+        sn=varargin{1};
+        sessNum=varargin{2};           
+        glm = varargin{3};           %% The glm number
         
         D=[]; 
         subjs=length(sn);
         
         for s = 1:subjs
-            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm), subj_name{sn(s)}];
+            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm), sprintf('%s/',sess{sessNum}), subj_name{sn(s)}];
             regDir = [baseDir,'/suit/','anatomicals/',subj_name{sn(s)}];
             
             fprintf('******************** doing calc %s ********************\n', subj_name{sn(s)});
@@ -548,7 +552,7 @@ switch(what)
         end
     case 'ROI:csf_image'                 % Defines ROIs for brain structures
         sn=varargin{1}; 
-        P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
+        P = {fullfile(baseDir,'GLM_firstlevel_1','sess1',subj_name{sn},'mask.nii'),...
             fullfile(baseDir,'anatomicals',subj_name{sn},'c3anatomical.nii')}; 
         outname = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn},'csf_mask.nii'); 
         %spm_imcalc(char(P),outname,'i1 & (i2>0.3)',{0,0,2,1});
@@ -638,12 +642,13 @@ switch(what)
         bsp_imana('ROI:define',sn,'csf');
         
     case 'TS:getRawTs'                % Get raw timeseries and save them 
-        % bsp_imana('TS:getRawTs',1,1,'dentate');
+        % bsp_imana('TS:getRawTs',1,1,1,'dentate');
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
-        regions=varargin{3}; % ROI
+        sessNum=varargin{3}; %sessNum
+        regions=varargin{4}; % ROI
 
-        glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),sprintf('%s',sess{sessNum}));
         subjs=length(sn);
         
         for s=1:subjs,
@@ -662,9 +667,9 @@ switch(what)
             Y = region_getdata(V,R{1});  % Data is N x P
             resMS = region_getdata(VresMS,R{1});
 
-            filename=(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn(s)},sprintf('rawts_%s.mat',regions)));
+            filename=(fullfile(baseDir,regDir,sprintf('glm%d',glm),sprintf('%s',sess{sessNum}),subj_name{sn(s)},sprintf('rawts_%s.mat',regions)));
             save(filename,'Y','resMS','-v7.3');
-            fprintf('Raw ts saved for %s (%s) for %s \n',subj_name{sn(s)},sprintf('glm%d',glm),regions);
+            fprintf('Raw ts saved for %s (%s) for %s \n',subj_name{sn(s)},sprintf('glm%d',glm),sprintf('%s/',sess{sessNum}),regions);
         end            
     case 'TS:getall'                  % Get all raw TS defined
         sn=varargin{1};
@@ -682,14 +687,14 @@ switch(what)
         %    inK: List of terms in the pre-filtering matrix (if any)
         %    inX: List of terms in the design matrix
         %
-        sn = 1;
+        sn = 5;
         glm = 1;
         roi = {'dentate'};%{'cerebellum_grey','dentate','brainstem','pontine'};
         inK = {};                   % Terms in filtering matrix - except for intercept
         inX = {{'Tasks','Instruct'}}; % Terms in the design matrix
         reg = {'OLS'};  % Regression methods
         evalX = {1,2,[1 2]}; % Evaluation on what term in inX
-        runs = [1:16]; 
+        runs = [1:20]; 
         D = []; % Result structure 
         % Get the posible options to test
         vararginoptions(varargin,{'roi','inX','inK','sn','reg','evalX','runs'});
@@ -855,23 +860,12 @@ switch(what)
                  {'Tasks','Instruct','Retro_RESP'},...
                  {'Tasks','Instruct','HR'},...
                  {'Tasks','Instruct','RV'}}; 
-        roi = {'pontine','dentate','olive','csf','cerebellum_grey'}; 
+        roi = {'pontine','dentate','olive','csf','cerebellum_grey','cortical_grey_left'}; 
         method = {'OLS','GLS','ridge_pcm','tikhonov_pcm'};
         
         D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{[1 2]},'runs',[1:10]);
         save(fullfile(baseDir,'results','test_GLM_5.mat'),'-struct','D'); 
-        varargout={D};
-        
-    case 'test_GLM_script_2'
-        model = {{'Tasks','Instruct'},...
-                 {'Tasks','Instruct','HR'}}; 
-        roi = {'csf'}; 
-        method = {'OLS','GLS'};
-        
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{[1 2]},'runs',[1:16]);
-        save(fullfile(baseDir,'results','test_GLM_2.mat'),'-struct','D'); 
         varargout={D}; 
-        
 end
 end
 
