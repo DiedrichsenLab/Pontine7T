@@ -103,6 +103,7 @@ switch(what)
                             S.taskOrder = ST;             % instOrder Number of task
                             S.time      = instruct_onset; % instruction onset time
                             S.sess      = sess(r);
+                            S.run       = runB(r);
                             % Determine taskName_after and taskName_before
                             % this instruction
                             S.taskName_after  = P.task_name(ST);
@@ -135,6 +136,7 @@ switch(what)
                             S.taskName_after  = {'none'}; % taskName before and after are only defined for instructions
                             S.taskName_before = {'none'};
                             S.sess      = sess(r);
+                            S.run       = runB(r);
                             
                             T  = addstruct(T, S);
                             
