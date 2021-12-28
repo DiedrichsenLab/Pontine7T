@@ -6,7 +6,9 @@ numTRs    = 328;                                                            % pe
 %========================================================================================================================
 % PATH DEFINITIONS
 baseDir         ='/srv/diedrichsen/data/Pontine7T/op-coreg-1';
-baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T/op-coreg-1';
+if ~exist(baseDir,'dir')
+    baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T/op-coreg-1';
+end
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
@@ -396,6 +398,7 @@ switch(what)
             
             % 5. Define cardiac data parameters
             physio.preproc.cardiac.modality = 'PPU';        % cardiac data acquired with PPU
+            physio.preproc.cardiac.initial_cpulse_select.max_heart_rate_bpm = 110; % Allow higher heart rate to start
             physio.preproc.cardiac.initial_cpulse_select.auto_matched.min = 0.4;
             physio.preproc.cardiac.initial_cpulse_select.auto_matched.file = 'initial_cpulse_kRpeakfile.mat';
             physio.preproc.cardiac.posthoc_cpulse_select.off = struct([]);

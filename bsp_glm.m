@@ -12,7 +12,9 @@ global baseDir;
 global subj_name; 
 
 baseDir         ='/srv/diedrichsen/data/Pontine7T/op-coreg-1';
-baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T/op-coreg-1';
+if ~exist(baseDir,'dir')
+    baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T/op-coreg-1';
+end
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
@@ -30,6 +32,14 @@ sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session numb
 
 %========================================================================================================================
 switch(what)
+    case 'GLM:do'
+        bsp_glm('GLM:glm1',[2:3],[1:16]); 
+        bsp_glm('GLM:glm2',[2:3],[1:16]); 
+        bsp_glm('GLM:estimate',[2:3],1); 
+        bsp_glm('GLM:estimate',[2:3],2); 
+        bsp_glm('GLM:Fcontrast','sn', [2:3], 'glm', 1, 'type', 'task'); 
+        bsp_glm('GLM:Fcontrast','sn', [2:3], 'glm', 2, 'type', 'task'); 
+        
     case 'GLM:makeMask' % Changed to include CSF
         sn=varargin{1}; % subjNum
         tissues = [1:3];
@@ -265,9 +275,9 @@ switch(what)
             J.bases.hrf.params = [4.5 11];                                  % set to [] if running wls
             J.volt = 1;
             J.global = 'None';
-            J.mask = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii')};
-            J.mthresh = 0.05;
-            J.cvi_mask = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii')};
+            J.mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'brain_mask.nii')};
+            J.mthresh = 0.01;
+            J.cvi_mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'gray_mask.nii')};
             J.cvi =  'fast';
             
             spm_rwls_run_fmri_spec(J);
@@ -388,7 +398,9 @@ switch(what)
             fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
             load(fullfile(glmDir, subj_name{s}, 'SPM.mat'))
             
-            SPM  = rmfield(SPM,'xCon');
+            if isfield(SPM,'xCon')
+                SPM  = rmfield(SPM,'xCon');
+            end
             cd(fullfile(glmDir, subj_name{s}))
             T = load('SPM_info.mat');
             
