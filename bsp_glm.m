@@ -1,6 +1,6 @@
 function varargout=bsp_glm(what,varargin)
-% Second level analysis for the pontine7T project, starting from the level
-% of the GLM.
+% GLM analysis for the pontine7T project, starting from preprocessed data
+% (see bsp_imana). 
 
 %
 
@@ -12,7 +12,7 @@ global baseDir;
 global subj_name; 
 
 baseDir         ='/srv/diedrichsen/data/Pontine7T/op-coreg-1';
-% baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
+baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T/op-coreg-1';
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
@@ -184,15 +184,14 @@ switch(what)
         subjs=length(sn);
         
         % load in task information
-        C=dload(fullfile(baseDir,'bsp_taskConds_GLM.txt'));
-        Cc=getrow(C,C.StudyNum==1);
-        Tasks = unique(Cc.taskNames,'rows','stable');                       % get the task names
-        nTask      = unique(length(Tasks));                                 % how many tasks there are?
+        C=dload(fullfile(baseDir,'pontine_taskConds_GLM.tsv'));
+        Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks
+        nTask      = max(Cc.taskNum);                                 % how many tasks there are?
         
         for s=1:subjs,
             T=[];
-            A = dload(fullfile(baseDir,'data', subj_name{sn(s)},['sc1_',subj_name{sn(s)},'.dat'])); % get scanning timing and order
-            A = getrow(A,A.runNum>=funcRunNum(1) & A.runNum<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
+            A = dload(fullfile(baseDir,'data','fmri',subj_name{sn(s)},['fmri_',subj_name{sn(s)},'.tsv'])); % get scanning timing and order
+            A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
             glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
             
@@ -204,37 +203,56 @@ switch(what)
             J.timing.fmri_t0 = 1;
             
             for r=1:numel(runs) % loop through runs
-                P=getrow(A,A.runNum==runB(r));
+                P=getrow(A,A.run_num==runB(r));
                 for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
                     N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i))];
                 end;
                 J.sess(r).scans= N; % number of scans in run
-                
+                                
+                instruct_onset = P.real_start_time - J.timing.RT*numDummys; 
+                % Add overall Instruction regressor 
+                S.task      = 0;              % task Number of the task after
+                S.taskName   = {'Instruct'};   % task name (TN)
+                S.inst      = 1;              % is it instruction (1) or not (0)?
+                S.taskOrder = 0;             % instOrder Number of task
+                S.time      = instruct_onset(1); % instruction onset time
+                S.sess      = sess(r);
+                S.run       = runB(r);
+                T  = addstruct(T, S);
+                            
+                % filling in the fields for SPM.mat
+                J.sess(r).cond(1).name     = 'Instruct';
+                J.sess(r).cond(1).onset    = instruct_onset; % correct start time for numDummys and announcetime included (not for instruct)
+                J.sess(r).cond(1).duration = 5;              % instructions last for 5 sec
+                J.sess(r).cond(1).tmod     = 0;
+                J.sess(r).cond(1).orth     = 0;
+                J.sess(r).cond(1).pmod     = struct('name', {}, 'param', {}, 'poly', {});
+
                 % loop through tasks
                 for it = 1:nTask
                     % The order of tasks are different for each run, to
                     % have a common order for the tasks, I will be reading
                     % from the Cc file for all the runs and subjects
-                    ST = find(strcmp(P.taskName,Tasks{it}));
+                    ST = find(strcmp(lower(P.task_name),lower(Cc.taskNames{it})));
                     
                     % get the task onset (instruction onset + announceTime)
-                    onset = P.realStartTime(ST) - J.timing.RT*numDummys +announceTime;
+                    onset = P.real_start_time(ST) - J.timing.RT*numDummys +announceTime;
                     
                     % filling in the fields for SPM_info.mat
                     S.task      = it;
-                    S.TN        = {Tasks{it}};
+                    S.taskName  = {Cc.taskNames{it}};
                     S.inst      = 0;
                     S.instOrder = 0;
                     S.time      = onset;
                     T  = addstruct(T, S);
                     
                     % filling in the fields for SPM.mat
-                    J.sess(r).cond(it).name     = Tasks{it};
-                    J.sess(r).cond(it).onset    = onset;
-                    J.sess(r).cond(it).duration = 30;             % each task lasts for 30 sec
-                    J.sess(r).cond(it).tmod     = 0;
-                    J.sess(r).cond(it).orth     = 0;
-                    J.sess(r).cond(it).pmod     = struct('name', {}, 'param', {}, 'poly', {});
+                    J.sess(r).cond(it+1).name     = Cc.taskNames{it};
+                    J.sess(r).cond(it+1).onset    = onset;
+                    J.sess(r).cond(it+1).duration = 30;             % each task lasts for 30 sec
+                    J.sess(r).cond(it+1).tmod     = 0;
+                    J.sess(r).cond(it+1).orth     = 0;
+                    J.sess(r).cond(it+1).pmod     = struct('name', {}, 'param', {}, 'poly', {});
                     
                 end % it (tasks)
                 J.sess(r).multi = {''};
@@ -435,210 +453,6 @@ switch(what)
         drawline(finv(0.95,16,1000),'dir','horz')
         varargout={D};     
     
-    case 'PHYS:extract'               % Extract puls and resp files from dcm
-        sn=varargin{1};
-        
-        cd (fullfile(baseDir,'physio',subj_name{sn}));
-        logfiles = dir('*.dcm');
-        
-        for lFile = 1:length(logfiles)
-            fname = strsplit(logfiles(lFile).name,'.');
-            mkdir(fname{1});
-            movefile(logfiles(lFile).name,fname{1})
-            cd (fname{1})
-            extractCMRRPhysio(logfiles(lFile).name);
-            cd ..
-        end
-    case 'PHYS:createRegressor'        % Create Retroicor regressors using TAPAS (18 components)
-        sn=1; 
-        run = [1:16]; 
-        stop = true; 
-        vararginoptions(varargin,{'sn','run','stop'}); 
-        
-        for nrun= run
-            
-            logDir = fullfile(baseDir,'physio',subj_name{sn},sprintf('run%2.2d',nrun));
-            cd (logDir);
-            PULS = dir('*PULS.log');
-            RSP  = dir('*RESP.log');
-            log  = dir('*Info.log');
-            
-            % 2. Define physio model structure
-            physio = tapas_physio_new();
-            
-            % 3. Define input files
-            physio.save_dir = {logDir};                         % enter directory to save physIO output
-            physio.log_files.cardiac = {PULS.name};             % .puls file
-            physio.log_files.respiration = {RSP.name};          % .resp file
-            physio.log_files.scan_timing = {log.name};          % Log file
-            physio.log_files.vendor = 'Siemens_Tics';           % Vendor
-            physio.log_files.relative_start_acquisition = 0;    % only used for Philips
-            physio.log_files.align_scan = 'last';               % sync log and EPI files from the last scan
-            
-            % 4. Define scan timing parameters
-            physio.scan_timing.sqpar.Nslices = 60;              % number of slices in EPI volume
-            physio.scan_timing.sqpar.TR = 1;                    % TR in secs
-            physio.scan_timing.sqpar.Ndummies = numDummys;      % Real dummy are not recorded
-            physio.scan_timing.sqpar.Nscans = numTRs-numDummys; % number of time points/scans/volumes
-            physio.scan_timing.sqpar.onset_slice = 30;          % slice of interest (choose middle slice if unsure?)
-            physio.scan_timing.sync.method = 'scan_timing_log'; % using info file
-            
-            % 5. Define cardiac data parameters
-            physio.preproc.cardiac.modality = 'PPU';        % cardiac data acquired with PPU
-            physio.preproc.cardiac.initial_cpulse_select.auto_matched.min = 0.4;
-            physio.preproc.cardiac.initial_cpulse_select.auto_matched.file = 'initial_cpulse_kRpeakfile.mat';
-            physio.preproc.cardiac.posthoc_cpulse_select.off = struct([]);
-            
-            % 6. Define generic physio model parameters
-            physio.model.orthogonalise = 'none';
-            physio.model.output_multiple_regressors = 'multiple_regressors.txt';  %% regressor output filename
-            physio.model.output_physio = 'physio.mat';  %% model output filename
-            physio.model.censor_unreliable_recording_intervals = false;  %% set to true to automatically censor missing recording intervals
-            
-            % 7. RETROICOR phase expansion (Glover et al., 2000)
-            physio.model.retroicor.include = true;  %% use RETROICOR to calculate regressors
-            physio.model.retroicor.order.c = 3;
-            physio.model.retroicor.order.r = 3;
-            physio.model.retroicor.order.cr = 0;
-            
-            % 8. RVT respiratory volume per time (Birn et al., 2008)
-            physio.model.rvt.include = true;
-            physio.model.rvt.delays = 0;
-            
-            % 9. HRV heart rate response (Chang et al., 2009)
-            physio.model.hrv.include = true;
-            physio.model.hrv.delays = 0;
-            
-            % 10. ROI anatomical component-based noise extraction (aCompCor; Behzadi et al., 2007)
-            physio.model.noise_rois.include = false;
-            physio.model.noise_rois.thresholds = 0.9;
-            physio.model.noise_rois.n_voxel_crop = 0;
-            physio.model.noise_rois.n_components = 1;
-            
-            % 11. Motion modeling (Friston et al., 1996)
-            physio.model.movement.include = false;
-            physio.model.movement.file_realignment_parameters = {''};  %% No input required unless physio.model.movement.include is set to 'true'
-            physio.model.movement.order = 6;
-            physio.model.movement.outlier_translation_mm = 3;
-            physio.model.movement.outlier_rotation_deg = Inf;
-            
-            % 12. Include other regressors
-            physio.model.other.include = false;  %% include realignment parameters
-            physio.model.other.input_multiple_regressors = {''};  %% rp*.txt file if needed
-            
-            % 13. Output/model options
-            physio.verbose.level = 1;  %% 0 = suppress graphical output; 1 = main plots; 2 = debugging plots; 3 = all plots
-            physio.verbose.process_log = cell(0, 1);
-            physio.verbose.fig_handles = zeros(0, 1);
-            physio.verbose.fig_output_file = [];  %% output figure filename (output format can be any matlab supported graphics format)
-            physio.verbose.use_tabs = false;
-            
-            physio.ons_secs.c_scaling = 1;
-            physio.ons_secs.r_scaling = 1;
-            
-            % 14. Run main script
-            [physio_out,R,ons_sec]=tapas_physio_main_create_regressors(physio);
-            % Save as different text files.... 
-            dlmwrite('reg_retro_hr.txt',R(:,1:6));
-            dlmwrite('reg_retro_resp.txt',R(:,7:12));
-            dlmwrite('reg_hr.txt',[R(:,13) ons_sec.hr]); % Add the un-convolved version as well 
-            dlmwrite('reg_rvt.txt',[R(:,14) ons_sec.rvt]); % add the un-convolved version as well 
-            if (stop) 
-                keyboard; 
-                close all;
-            end;
-        end
-    case 'ROI:csf_image'                 % Defines ROIs for brain structures
-        sn=varargin{1}; 
-        P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
-            fullfile(baseDir,'anatomicals',subj_name{sn},'c3anatomical.nii')}; 
-        outname = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn},'csf_mask.nii'); 
-        %spm_imcalc(char(P),outname,'i1 & (i2>0.3)',{0,0,2,1});
-        spm_imcalc(char(P),outname,'i1 & (i2>0.3)',{0,0,1,4}); 
-        
-        % Before runing t
-    case 'ROI:define'                 % Defines ROIs for brain structures
-        % Before runing this, create masks for different structures
-        sn=varargin{1}; % subjNum
-        regions=varargin{2}; % Name of ROI, see cases below
-        
-        subjs=length(sn);
-        for s=1:subjs,
-            maskimg = fullfile(baseDir,'GLM_firstlevel_1','sess1',subj_name{sn(s)},'mask.nii');
-            switch regions
-                case 'cerebellum'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['cerebellum'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'cerebellum_grey'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_seg1.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['cerebellum_grey'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'dentate'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'dentate_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['dentate'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'pontine'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'pontine_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['pontine'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'olive'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'olive_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['olive'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'csf'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'csf_mask_brainstem.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.mask = spm_vol(maskimg); 
-                    R{1}.file= file;
-                    R{1}.name = ['csf-bs'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'csf_anterior'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'rcsf_mask_anterior.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['csf-ant'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'csf_posterior'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'rcsf_mask_posterior.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['csf-post'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                
-            end
-            dircheck(fullfile(baseDir,regDir,'data',subj_name{sn(s)}));
-            save(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',regions)),'R');
-            region_saveasimg(R{1},maskimg,'name',fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.nii',regions))); 
-            fprintf('ROIs have been defined for %s for %s \n',regions,subj_name{sn(s)})
-        end
-    case 'ROI:defall'                 % Run all types in ROI
-        sn=varargin{1}; % subjNum
-        bsp_imana('ROI:define',sn,'cerebellum');
-        bsp_imana('ROI:define',sn,'cerebellum_grey');
-        bsp_imana('ROI:define',sn,'dentate');
-        bsp_imana('ROI:define',sn,'pontine');
-        bsp_imana('ROI:define',sn,'olive');
-        bsp_imana('ROI:define',sn,'csf');
-        
     case 'TS:getRawTs'                % Get raw timeseries and save them 
         % bsp_imana('TS:getRawTs',1,1,'dentate');
         sn=varargin{1}; % subjNum
