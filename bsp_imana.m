@@ -275,8 +275,7 @@ switch(what)
         
         %spmj_checksamealign
     
-    case 'SUIT:isolate'               % Segment cerebellum into grey and white matter
-        
+    case 'SUIT:isolate'               % Segment cerebellum into grey and white matter        
         sn=varargin{1};
         %         spm fmri
         for s=sn,
@@ -287,6 +286,17 @@ switch(what)
             cd(fullfile(suitSubjDir));
             suit_isolate_seg({fullfile(suitSubjDir,'anatomical.nii')},'keeptempfiles',1);
         end
+        suit_normalize_dentate(job);
+    case 'SUIT:normalise_dartel'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
+        % Create the dentate mask in the imaging folder using the tse 
+        sn=varargin{1}; %subjNum
+        % example: 'sc1_sc2_imana('SUIT:normalise_dentate',1)
+        
+        cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
+        job.subjND.gray       = {'c_anatomical_seg1.nii'};
+        job.subjND.white      = {'c_anatomical_seg2.nii'};
+        job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
+        suit_normalize_dartel(job);
     case 'SUIT:normalise_dentate'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse 
         sn=varargin{1}; %subjNum
@@ -296,10 +306,44 @@ switch(what)
         job.subjND.gray       = {'c_anatomical_seg1.nii'};
         job.subjND.white      = {'c_anatomical_seg2.nii'};
         job.subjND.dentateROI = {'dentate_mask.nii'};
-        job.subjND.isolation  = {'c_anatomical_pcereb.nii'};
-        
-        
+        job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dentate(job);
+    case 'SUIT:reslice_ana'               % Reslice the contrast images from first-level GLM
+        % example: bsm_imana('SUIT:reslice',1,'anatomical')
+        % make sure that you reslice into 2mm^3 resolution
+        sn=varargin{1}; % subjNum
+        image=varargin{2}; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
+        
+        for s=sn
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            job.subj.affineTr = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
+            job.subj.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
+            job.subj.mask     = {fullfile(suitSubjDir ,'c_anatomical_pcereb_corr.nii')};
+            switch image
+                case 'anatomical'
+                    sourceDir = suitSubjDir; 
+                    source = fullfile(sourceDir,'anatomical.nii'); 
+                    job.subj.resample = {source};
+                    outDir = suitSubjDir; 
+                    job.vox           = [1 1 1];
+                case 'TSE'
+                    sourceDir = fullfile(baseDir,'anatomicals',subj_name{s}); 
+                    source = fullfile(sourceDir,'rtse.nii');
+                    job.subj.resample = {source};
+                    outDir = suitSubjDir; 
+                    job.vox           = [1 1 1];
+                case 'csf'
+                    sourceDir = fullfile(baseDir,'anatomicals',subj_name{s}); 
+                    source = fullfile(sourceDir,'c3anatomical.nii');
+                    job.subj.resample = {source};
+                    job.subj.mask     =  {}; 
+                    outDir = suitSubjDir; 
+                    job.vox           = [1 1 1];
+            end
+            suit_reslice_dartel(job);   
+            source=fullfile(sourceDir,'*wd*');
+            movefile(source,outDir);
+        end
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
         % make sure that you reslice into 2mm^3 resolution
@@ -362,7 +406,7 @@ switch(what)
             extractCMRRPhysio(logfiles(lFile).name);
             cd ..
         end
-    case 'PHYS:createRegressor'        % Create Retroicor regressors using TAPAS (18 components)
+    case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
         sn=1; 
         run = [1:16]; 
         stop = true; 
@@ -462,97 +506,57 @@ switch(what)
                 close all;
             end;
         end
-    case 'ROI:csf_image'                 % Defines ROIs for brain structures
+    case 'ROI:inv_reslice'              % Defines ROIs for brain structures
         sn=varargin{1}; 
-        P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
-            fullfile(baseDir,'anatomicals',subj_name{sn},'c3anatomical.nii')}; 
-        outname = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn},'csf_mask.nii'); 
-        %spm_imcalc(char(P),outname,'i1 & (i2>0.3)',{0,0,2,1});
-        spm_imcalc(char(P),outname,'i1 & (i2>0.3)',{0,0,1,4}); 
+        images = {'csf','pontine','olive','dentate','rednucleus'}; 
+        groupDir = fullfile(baseDir,'RegionOfInterest','group');
         
-        % Before runing t
+        for s=sn 
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            for im=1:length(images)
+                job.Affine = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
+                job.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
+                job.resample = {fullfile(groupDir,sprintf('%s_mask.nii',images{im}))}; 
+                job.ref     = {glm_mask};
+                suit_reslice_dartel_inv(job);
+                source=fullfile(suitSubjDir,sprintf('iw_%s_mask_u_a_c_anatomical_seg1.nii',images{im}));
+                dest  = fullfile(regSubjDir,sprintf('%s_mask.nii',images{im}));
+                movefile(source,dest);
+
+            end
+        end
+    case 'ROI:cerebellar_gray' 
+        sn=varargin{1};
+        for s = sn 
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
+                fullfile(suitSubjDir,'c_anatomical_seg1.nii'),...
+                fullfile(suitSubjDir,'c_anatomical_pcereb_corr.nii')}; 
+            outname = fullfile(regSubjDir,'cerebellum_gray_mask.nii'); 
+            spm_imcalc(char(P),outname,'i1 & (i2>0.1) & (i3>0.3)',{0,0,1,4}); 
+        end
     case 'ROI:define'                 % Defines ROIs for brain structures
         % Before runing this, create masks for different structures
-        sn=varargin{1}; % subjNum
-        regions=varargin{2}; % Name of ROI, see cases below
+        sn=2; 
+        regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
         
-        subjs=length(sn);
-        for s=1:subjs,
-            maskimg = fullfile(baseDir,'GLM_firstlevel_1','sess1',subj_name{sn(s)},'mask.nii');
-            switch regions
-                case 'cerebellum'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['cerebellum'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'cerebellum_grey'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_seg1.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['cerebellum_grey'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'dentate'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'dentate_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['dentate'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'pontine'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'pontine_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['pontine'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'olive'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'olive_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['olive'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'csf'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'csf_mask_brainstem.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.mask = spm_vol(maskimg); 
-                    R{1}.file= file;
-                    R{1}.name = ['csf-bs'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'csf_anterior'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'rcsf_mask_anterior.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['csf-ant'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'csf_posterior'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'rcsf_mask_posterior.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['csf-post'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                
+        vararginoptions(varargin,{'sn','regions'}); 
+        for s=sn
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            for r = 1:length(regions)
+                file = fullfile(regSubjDir,sprintf('%s_mask.nii',regions{r}));
+                R{r}.type = 'roi_image';
+                R{r}.file= file;
+                R{r}.name = regions{r};
+                R{r}.value = 1;
             end
-            dircheck(fullfile(baseDir,regDir,'data',subj_name{sn(s)}));
-            save(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',regions)),'R');
-            region_saveasimg(R{1},maskimg,'name',fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.nii',regions))); 
-            fprintf('ROIs have been defined for %s for %s \n',regions,subj_name{sn(s)})
+            R=region_calcregions(R);                
+            save(fullfile(regSubjDir,'regions.mat'),'R');
         end
-    case 'ROI:defall'                 % Run all types in ROI
-        sn=varargin{1}; % subjNum
-        bsp_imana('ROI:define',sn,'cerebellum');
-        bsp_imana('ROI:define',sn,'cerebellum_grey');
-        bsp_imana('ROI:define',sn,'dentate');
-        bsp_imana('ROI:define',sn,'pontine');
-        bsp_imana('ROI:define',sn,'olive');
-        bsp_imana('ROI:define',sn,'csf');
-        
+
            
 end
         

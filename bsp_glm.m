@@ -469,39 +469,30 @@ switch(what)
         % bsp_imana('TS:getRawTs',1,1,'dentate');
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
-        regions=varargin{3}; % ROI
 
         glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
-        subjs=length(sn);
         
-        for s=1:subjs,
-            glmDirSubj=fullfile(glmDir, subj_name{sn(s)});
+        for s=sn,
+            glmDirSubj=fullfile(glmDir, subj_name{s});
             load(fullfile(glmDirSubj,'SPM.mat'));
             
             % load data
-            load(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',regions)));
-            SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{sn(s)}));
+            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions.mat'));
+            % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
 
             % Get the raw data files
             V=SPM.xY.VY;
             VresMS = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
             
             % Get time series data
-            Y = region_getdata(V,R{1});  % Data is N x P
-            resMS = region_getdata(VresMS,R{1});
-
-            filename=(fullfile(baseDir,regDir,sprintf('glm%d',glm),subj_name{sn(s)},sprintf('rawts_%s.mat',regions)));
-            save(filename,'Y','resMS','-v7.3');
-            fprintf('Raw ts saved for %s (%s) for %s \n',subj_name{sn(s)},sprintf('glm%d',glm),regions);
-        end            
-    case 'TS:getall'                  % Get all raw TS defined
-        sn=varargin{1};
-        %bsp_glm('TS:getRawTs',sn,1,'cerebellum');
-        bsp_glm('TS:getRawTs',sn,1,'cerebellum_grey');
-        bsp_glm('TS:getRawTs',sn,1,'dentate');
-        bsp_glm('TS:getRawTs',sn,1,'csf');
-        bsp_glm('TS:getRawTs',sn,1,'pontine');
-        bsp_glm('TS:getRawTs',sn,1,'olive');      
+            for r = 1:length(R)
+                Y = region_getdata(V,R{r});  % Data is N x P
+                resMS = region_getdata(VresMS,R{r});
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
+                save(filename,'Y','resMS','-v7.3');
+                fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
+            end 
+        end
         
     case 'test_GLM'                   % Get crossval R2 and R from GLM for different designs
         % example: bsp_imana('test_GLM','inK',{'Hpass','CSF'...},'inX',{'Mov',...},'ridge',0.1);
