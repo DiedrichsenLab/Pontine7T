@@ -347,15 +347,16 @@ switch(what)
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
         % make sure that you reslice into 2mm^3 resolution
-        sn=varargin{1}; % subjNum
-        glm=varargin{2}; % glmNum
-        region=varargin{3}; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
-        mask=varargin{4}; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
+        sn=2; % subjNum
+        glm=1; % glmNum
+        type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
+        mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
         
+        vararginoptions(varargin,{'sn','glm','type','mask'});
         subjs=length(sn);
         
         for s=1:subjs,
-            switch region
+            switch type
                 case 'betas'
                     glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
                     outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
@@ -384,13 +385,13 @@ switch(what)
             job.subj.mask     = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},sprintf('%s.nii',mask))};
             job.vox           = [1 1 1];
             suit_reslice_dartel(job);
-            if ~strcmp(region,'cerebellarGrey'),
-                source=fullfile(glmSubjDir,'*wd*');
-                dircheck(fullfile(outDir));
-                destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
-                movefile(source,destination);
-            end
-            fprintf('%s have been resliced into suit space \n',region)
+            
+            source=fullfile(glmSubjDir,'*wd*');
+            dircheck(fullfile(outDir));
+            destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
+            movefile(source,destination);
+
+            fprintf('%s have been resliced into suit space \n',type)
         end
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
