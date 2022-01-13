@@ -352,7 +352,7 @@ switch(what)
         type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
         mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
         
-        vararginoptions(varargin,{'sn','glm','type','mask'});
+        v
         subjs=length(sn);
         
         for s=1:subjs,
@@ -384,6 +384,13 @@ switch(what)
             job.subj.resample = {source.name};
             job.subj.mask     = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},sprintf('%s.nii',mask))};
             job.vox           = [1 1 1];
+            % Replace Nans with zeros to avoid big holes in the the data 
+            for i=1:length(source)
+                V=spm_vol(source(i).name); 
+                X=spm_read_vols(V); 
+                X(isnan(X))=0; 
+                spm_write_vol(V,X); 
+            end; 
             suit_reslice_dartel(job);
             
             source=fullfile(glmSubjDir,'*wd*');
@@ -393,6 +400,28 @@ switch(what)
 
             fprintf('%s have been resliced into suit space \n',type)
         end
+    case 'SUIT:map_to_flat' 
+        sn = 2; 
+        glm = 1; 
+        vararginoptions(varargin,{'sn','glm','type','mask'});
+        source_dir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn});
+        source=dir(fullfile(source_dir,'wdcon*')); % images to be resliced
+        for i=1:length(source)
+            name{i} = fullfile(source_dir,source(i).name); 
+        end; 
+        MAP = suit_map2surf(name); 
+        % G = surf_makeFuncGifti
+        set(gcf,'PaperPosition',[2 2 15 7]);
+        wysiwyg; 
+        for i=1:10 
+            subplot(2,5,i); 
+            suit_plotflatmap(MAP(:,i),'cscale',[-1.5 1.5]); 
+            n = source(i).name(7:end-4); 
+            n(n=='_')=' '; 
+            title(n); 
+        end; 
+        
+        
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
         
