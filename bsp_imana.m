@@ -308,6 +308,7 @@ switch(what)
         job.subjND.dentateROI = {'dentate_mask.nii'};
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dentate(job);
+    
     case 'SUIT:reslice_ana'               % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,'anatomical')
         % make sure that you reslice into 2mm^3 resolution
@@ -344,6 +345,7 @@ switch(what)
             source=fullfile(sourceDir,'*wd*');
             movefile(source,outDir);
         end
+        
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
         % make sure that you reslice into 2mm^3 resolution

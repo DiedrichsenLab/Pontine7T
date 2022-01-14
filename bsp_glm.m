@@ -39,6 +39,7 @@ switch(what)
         bsp_glm('GLM:estimate',[2:3],2);
         bsp_glm('GLM:Fcontrast','sn', [2:3], 'glm', 1, 'type', 'task');
         bsp_glm('GLM:Fcontrast','sn', [2:3], 'glm', 2, 'type', 'task');
+    
     case 'GLM:makeMask' % Changed to include CSF
         sn=varargin{1}; % subjNum
         tissues = [1:3];
@@ -52,6 +53,7 @@ switch(what)
         
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'gray_mask.nii'));
         spm_imcalc(char(P),out,'i1>800 & i2>0.4');
+    
     case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
@@ -180,6 +182,7 @@ switch(what)
             save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T');
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
+        
     case 'GLM:glm2'                   % FAST glm w/out hpf one regressor per task including instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
@@ -283,6 +286,7 @@ switch(what)
             save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T');
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
+        
     case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum
         % example: bsp_imana('GLM:estimate_glm',1,1)
         sn=varargin{1};
@@ -352,6 +356,7 @@ switch(what)
                 end % conditions (n, conName: con and spmT)
             end % i (contrasts)
         end % sn
+    
     case 'GLM:Fcontrast'               % Create Contrast images
         %%% Calculating contrast images.
         % 'SPM_light' is created in this step (xVi is removed as it slows
@@ -397,6 +402,7 @@ switch(what)
             save(fullfile(glmDir, subj_name{s}, 'SPM_light.mat'), 'SPM');
             
         end % sn
+    
     case 'GLM:contrast_F_summary'
         % Calculating contrast images for overall F-contrast between
         % tasks / conditions
@@ -438,6 +444,7 @@ switch(what)
         title('95% F-value');
         drawline(finv(0.95,16,1000),'dir','horz')
         varargout={D};
+    
     case 'GLM:restats'
         sn=varargin{1};
         glm = varargin{2};           %% The glm number
@@ -481,6 +488,7 @@ switch(what)
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
             end
         end
+        
     case 'test_GLM'                   % Get crossval R2 and R from GLM for different designs
         % example: bsp_imana('test_GLM','inK',{'Hpass','CSF'...},'inX',{'Mov',...},'ridge',0.1);
         % Input arguents :
@@ -646,6 +654,7 @@ switch(what)
             end % ROI
         end % Subjects
         varargout = {D};
+    
     case 'F-test'                     % F-test to compare between p01 and p02
         % example: bsp_imana('F-test',1);
         sn = varargin{1};
@@ -661,6 +670,7 @@ switch(what)
         con = [con;zeros(length(SPM.Sess),length(con))];    % add zeros for the intercepts
         SPM.xCon=spm_FcUtil('Set','SignalEffects', 'F', 'c',con,SPM.xX.xKXs);
         spm_contrasts(SPM);        
+    
     case 'test_GLM_lowfreq'
         % Compare different methods to deal with auto-correlated noise
         % And sporardic artifacts
@@ -676,6 +686,7 @@ switch(what)
             'runs',[1:16],'sn',sn);
         save(fullfile(baseDir,'results','test_GLM_lowfreq.mat'),'-struct','D');
         varargout={D};
+    
     case 'plot_GLM_lowfreq'
         D=load('test_GLM_lowfreq.mat');
         sn = [2 3]; 
@@ -692,6 +703,7 @@ switch(what)
                     'linestyle',style,'linewidth',2); % {'HpassOLS','HpassGLS','OLS','GLS'} 
             title('Different Runs across ROIs');
         end; 
+    
     case 'test_GLM_Physio'
         sn = [2 3];
         model = {{'Tasks','InstructC','Retro_HR'},...
@@ -708,6 +720,7 @@ switch(what)
             'runs',[1:16],'sn',sn);
         save(fullfile(baseDir,'results','test_GLM_physio.mat'),'-struct','D');
         varargout={D};
+    
     case 'plot_GLM_Physio'
         D=load('test_GLM_physio.mat');
         
@@ -725,6 +738,7 @@ switch(what)
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
             title('R of Physio-regressor');
         end; 
+    
     case 'test_GLM_script'
         model = {{'Tasks','Instruct'},...
             {'Tasks','Instruct','Retro_HR'},...
@@ -737,6 +751,110 @@ switch(what)
         D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{[1 2]},'runs',[1:10]);
         save(fullfile(baseDir,'results','test_GLM_5.mat'),'-struct','D');
         varargout={D};
+        
+    case 'test_GLM_Physio_Filter'
+        sn = [2 3];
+        model = {{'Tasks','InstructC'},...
+            {'Tasks','InstructC'},...
+            {'Tasks','InstructC'},...
+            {'Tasks','InstructC'},...
+            {'Tasks','InstructC'}};
+        inK   = {{'Retro_HR'},{'Retro_RESP'},{'HR'},{'RV'},{}};
+        evalX = {[1]};
+        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
+            'runs',[1:16],'sn',sn);
+        save(fullfile(baseDir,'results','test_GLM_physio_filter.mat'),'-struct','D');
+        varargout={D};
+    
+    case 'plot_GLM_Physio_Filter'
+        D=load('test_GLM_physio_filter.mat');
+        
+        sn = [2 3]; 
+        num_subj = length(sn); 
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
+        % style={':',':','-','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,2,(s-1)*2+1); 
+            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV','none'},'facecolor',color); 
+            title('performance of task differences');
+            ylabel(sprintf('SN %d',sn(s)));
+            subplot(num_subj,2,(s-1)*2+2); 
+            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV'},'facecolor',color); 
+                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
+            title('R of Physio-filter');
+        end; 
+        
+    case 'test_GLM_CSF'
+        sn = [2 3];
+        model = {{'Tasks','InstructC','CSF'},...
+            {'Tasks','InstructC','CSFPCAindiv'},...
+            {'Tasks','InstructC','CSFPCAall'},...
+            {'Tasks','InstructC'}};
+        inK   = {{},{},{},{}};
+        evalX = {[1]};
+        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
+            'runs',[1:16],'sn',sn);
+        save(fullfile(baseDir,'results','test_GLM_csf.mat'),'-struct','D');
+        varargout={D};
+    
+    case 'plot_GLM_CSF'
+        D=load('test_GLM_csf.mat');
+        
+        sn = [2 3]; 
+        num_subj = length(sn); 
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
+        % style={':',':','-','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,2,(s-1)*2+1); 
+            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
+            title('performance of task differences');
+            ylabel(sprintf('SN %d',sn(s)));
+            subplot(num_subj,2,(s-1)*2+2); 
+            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
+                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
+            title('R of CSF');
+        end; 
+    
+    case 'test_GLM_CSF_Filter'
+        sn = [2 3];
+        model = {{'Tasks','InstructC'},...
+            {'Tasks','InstructC'},...
+            {'Tasks','InstructC'},...
+            {'Tasks','InstructC'}};
+        inK   = {{'CSF'},{'CSFPCAindiv'},{'CSFPCAall'},{}};
+        evalX = {[1]};
+        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
+            'runs',[1:16],'sn',sn);
+        save(fullfile(baseDir,'results','test_GLM_csf_filter.mat'),'-struct','D');
+        varargout={D};
+    
+    case 'plot_GLM_CSF_Filter'
+        D=load('test_GLM_csf_filter.mat');
+        
+        sn = [2 3]; 
+        num_subj = length(sn); 
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
+        % style={':',':','-','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,2,(s-1)*2+1); 
+            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
+            title('performance of task differences');
+            ylabel(sprintf('SN %d',sn(s)));
+            subplot(num_subj,2,(s-1)*2+2); 
+            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
+                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
+            title('R of CSF-filter');
+        end; 
+        
     case 'physio_reg' % Examines the covariance of physiological regressors with main regressors 
         sn = 2; 
         glm = 1; 
@@ -864,7 +982,7 @@ switch (what)
         end
     case 'CSF'          % Mean signal of the CSF around brainstem
         % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest',sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
+        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_csf.mat'));
         % mean CSF signal
         for rn = 1:nRuns
             mcsf = mean(csf.Y(SPM.Sess(rn).row,:),2);
@@ -872,7 +990,7 @@ switch (what)
         end
     case 'CSFPCAindiv'       % 2 Pcs of CSF
         % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest',sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
+        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_csf.mat'));
         % Compute the PCs
         for rn = 1:nRuns
             runcsf = csf.Y(SPM.Sess(rn).row,:);
@@ -882,7 +1000,7 @@ switch (what)
         end
     case 'CSFPCAall'   % 2 PCs of CSF computed over 4 runs
         % Get the CSF mask
-        csf = load(fullfile(baseDir,'RegionOfInterest',sprintf('glm%d',glm),subj_name{sn},'rawts_csf.mat'));
+        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_csf.mat'));
         [~,score] = pca(csf.Y);
         % Include the first 2 PCs of CSF in design
         for rn = 1:nRuns
