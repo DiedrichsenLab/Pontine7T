@@ -1,11 +1,14 @@
 function varargout=bsp_imana(what,varargin)
-
+% Script for minimal preprocessing of the Pontine7T data
+% 
 numDummys = 3;                                                              % per run
-numTRs    = 321;                                                            % per run (includes dummies)
+numTRs    = 328;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
 baseDir         ='/srv/diedrichsen/data/Pontine7T';
-%baseDir         ='/Volumes/MotorControl/data/Pontine7T';
+if ~exist(baseDir,'dir')
+    baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
+end
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
@@ -13,13 +16,17 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING 
-subj_name = {'p01','p02','p03','p04'};
-loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
+subj_name = {'S99','S98','S97','S96'};
+loc_AC={[79;127;127];[80;129;120];[77;125;129];[90;129;138]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+%loc_AC={[105;169;169]}; % Numbers in the titlebar of mricron
+%loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
 %========================================================================================================================
 % GLM INFO
-funcRunNum  = [50,70];  % first and last behavioural run numbers
-run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21'};
-runB        = [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70];  % Behavioural labelling of runs
+funcRunNum  = [50,65];  % first and last behavioural run numbers
+%run         = {'01','02','03','04','05','06','07','08','09','10','11','12'};
+run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16'};
+%run         = {'09','10','11','12','13','14','15','16','01','02','03','04','05','06','07','08'};
+runB        = [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65];  % Behavioural labelling of runs
 %========================================================================================================================
 switch(what)
 
@@ -42,14 +49,14 @@ switch(what)
             spm_write_vol(V,dat);
             display 'Manually retrieve the location of the anterior commissure (x,y,z) before continuing'
         end
-    case 'ANAT:centre_AC'             % Re-centre AC
+    case 'ANAT:center_AC'             % Re-centre AC
         % Before running provide coordinates in the preprocessing section
         % example: bsp_imana('ANAT:centre_AC',1)
         sn=varargin{1}; % subjNum
         
         subjs=length(sn);
         for s=1:subjs,
-            img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'rinv1_MP2RAGE.nii');
+            img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii');
             V               = spm_vol(img);
             dat             = spm_read_vols(V);
             oldOrig         = V.mat(1:3,4);
@@ -105,6 +112,44 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('Check segmentation results for %s\n', subj_name{sn(s)})
         end;
+        
+    case 'ANAT:coregTSE'                 % Adjust TSE to anatomical image REQUIRES USER INPUT
+        % (2) Manually seed the functional/anatomical registration
+        % - Do "coregtool" on the matlab command window
+        % - Select anatomical image and tse image to overlay
+        % - Manually adjust tse image and save result as rtse image
+        % example: bsp_imana('ANAT:coregTSE',1,'auto')
+        sn=varargin{1};% subjNum
+        step=varargin{2}; % first 'manual' then 'auto'
+        
+        cd(fullfile(baseDir,anatomicalDir,subj_name{sn}));
+        
+        switch step,
+            case 'manual'
+                coregtool;
+                keyboard();
+            case 'auto'
+                % do nothing
+        end
+        
+        % (1) Automatically co-register functional and anatomical images for study 1
+        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+        J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii')};
+        J.other = {''};
+        J.eoptions.cost_fun = 'nmi';
+        J.eoptions.sep = [4 2];
+        J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+        J.eoptions.fwhm = [7 7];
+        matlabbatch{1}.spm.spatial.coreg.estimate=J;
+        spm_jobman('run',matlabbatch);
+        
+        % NOTE:
+        % Overwrites tse, unless you update in step one, which saves it
+        % as rtse.
+        % Each time you click "update" in coregtool, it saves current
+        % alignment by appending the prefix 'r' to the current file
+        % So if you continually update rtse, you'll end up with a file
+        % called r...rrrtsei.
         
     case 'FUNC:remDum'                % Remove the extra dummy scans from all functional runs.
         % funtional runs have to be named as run_01-r.nii, run_02-r.nii ...
@@ -178,56 +223,20 @@ switch(what)
             
             fprintf('realigned epi''s moved for %s \n',subj_name{sn(s)})
         end
-    case 'FUNC:coregTSE'                 % Adjust meanepi to anatomical image REQUIRES USER INPUT
-        % (1) Manually seed the functional/anatomical registration
-        % - Do "coregtool" on the matlab command window
-        % - Select anatomical image and meanepi image to overlay
-        % - Manually adjust meanepi image and save result as rmeanepi image
-        % example: bsp_imana('FUNC:coreg',1)
-        sn=varargin{1};% subjNum
-        step=varargin{2}; % first 'manual' then 'auto'
-        
-        cd(fullfile(baseDir,anatomicalDir,subj_name{sn}));
-        
-        switch step,
-            case 'manual'
-                coregtool;
-                keyboard();
-            case 'auto'
-                % do nothing
-        end
-        
-        % (2) Automatically co-register functional and anatomical images for study 1
-        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
-        J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii')};
-        J.other = {''};
-        J.eoptions.cost_fun = 'nmi';
-        J.eoptions.sep = [4 2];
-        J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
-        J.eoptions.fwhm = [7 7];
-        matlabbatch{1}.spm.spatial.coreg.estimate=J;
-        spm_jobman('run',matlabbatch);
-        
-        % NOTE:
-        % Overwrites meanepi, unless you update in step one, which saves it
-        % as rmeanepi.
-        % Each time you click "update" in coregtool, it saves current
-        % alignment by appending the prefix 'r' to the current file
-        % So if you continually update rmeanepi, you'll end up with a file
-        % called r...rrrmeanepi.
+   
     case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
-        % (1) Manually seed the functional/anatomical registration
+        % (2) Manually seed the functional/anatomical registration
         % - Do "coregtool" on the matlab command window
         % - Select anatomical image and meanepi image to overlay
         % - Manually adjust meanepi image and save result as rmeanepi image
         % example: bsp_imana('FUNC:coregEPI',1)
         sn=varargin{1};% subjNum
         
-        % (2) Automatically co-register functional and anatomical images for study 1
-        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii')};
-        J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn} '-n'],'rmean_epi.nii')};
+        % (1) Automatically co-register functional and anatomical images for study 1
+        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'rtse.nii')};
+        J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn} '-n'],'rmeanrun_01.nii')};
         J.other = {''};
-        J.eoptions.cost_fun = 'nmi';
+        J.eoptions.cost_fun = 'ncc';
         J.eoptions.sep = [4 2];
         J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
         J.eoptions.fwhm = [7 7];
@@ -251,7 +260,7 @@ switch(what)
             % For ants-registered data: TSE 
             % P{1} = fullfile(fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii'));
             % for tradition way: rmeanepi 
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmean_epi.nii'));
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmeanrun_01.nii'));
             
             % Select images to be realigned
             Q={};
@@ -267,7 +276,7 @@ switch(what)
         %spmj_checksamealign
     
     case 'SUIT:isolate'               % Segment cerebellum into grey and white matter
-        
+        % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
         sn=varargin{1};
         %         spm fmri
         for s=sn,
@@ -278,6 +287,19 @@ switch(what)
             cd(fullfile(suitSubjDir));
             suit_isolate_seg({fullfile(suitSubjDir,'anatomical.nii')},'keeptempfiles',1);
         end
+        
+    case 'SUIT:normalise_dartel'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
+        % Create the dentate mask in the imaging folder using the tse
+        % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
+        sn=varargin{1}; %subjNum
+        % example: 'sc1_sc2_imana('SUIT:normalise_dentate',1)
+        
+        cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
+        job.subjND.gray       = {'c_anatomical_seg1.nii'};
+        job.subjND.white      = {'c_anatomical_seg2.nii'};
+        job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
+        suit_normalize_dartel(job);
+        
     case 'SUIT:normalise_dentate'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse 
         sn=varargin{1}; %subjNum
@@ -287,22 +309,59 @@ switch(what)
         job.subjND.gray       = {'c_anatomical_seg1.nii'};
         job.subjND.white      = {'c_anatomical_seg2.nii'};
         job.subjND.dentateROI = {'dentate_mask.nii'};
-        job.subjND.isolation  = {'c_anatomical_pcereb.nii'};
-        
-        
+        job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dentate(job);
+    
+    case 'SUIT:reslice_ana'               % Reslice the contrast images from first-level GLM
+        % example: bsm_imana('SUIT:reslice',1,'anatomical')
+        % make sure that you reslice into 2mm^3 resolution
+        sn=varargin{1}; % subjNum
+        image=varargin{2}; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
+        
+        for s=sn
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            job.subj.affineTr = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
+            job.subj.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
+            job.subj.mask     = {fullfile(suitSubjDir ,'c_anatomical_pcereb_corr.nii')};
+            switch image
+                case 'anatomical'
+                    sourceDir = suitSubjDir; 
+                    source = fullfile(sourceDir,'anatomical.nii'); 
+                    job.subj.resample = {source};
+                    outDir = suitSubjDir; 
+                    job.vox           = [1 1 1];
+                case 'TSE'
+                    sourceDir = fullfile(baseDir,'anatomicals',subj_name{s}); 
+                    source = fullfile(sourceDir,'rtse.nii');
+                    job.subj.resample = {source};
+                    outDir = suitSubjDir; 
+                    job.vox           = [1 1 1];
+                case 'csf'
+                    sourceDir = fullfile(baseDir,'anatomicals',subj_name{s}); 
+                    source = fullfile(sourceDir,'c3anatomical.nii');
+                    job.subj.resample = {source};
+                    job.subj.mask     =  {}; 
+                    outDir = suitSubjDir; 
+                    job.vox           = [1 1 1];
+            end
+            suit_reslice_dartel(job);   
+            source=fullfile(sourceDir,'*wd*');
+            movefile(source,outDir);
+        end
+        
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
         % make sure that you reslice into 2mm^3 resolution
-        sn=varargin{1}; % subjNum
-        glm=varargin{2}; % glmNum
-        region=varargin{3}; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
-        mask=varargin{4}; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
+        sn=2; % subjNum
+        glm=1; % glmNum
+        type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
+        mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
         
+        v
         subjs=length(sn);
         
         for s=1:subjs,
-            switch region
+            switch type
                 case 'betas'
                     glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
                     outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
@@ -330,359 +389,44 @@ switch(what)
             job.subj.resample = {source.name};
             job.subj.mask     = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},sprintf('%s.nii',mask))};
             job.vox           = [1 1 1];
+            % Replace Nans with zeros to avoid big holes in the the data 
+            for i=1:length(source)
+                V=spm_vol(source(i).name); 
+                X=spm_read_vols(V); 
+                X(isnan(X))=0; 
+                spm_write_vol(V,X); 
+            end; 
             suit_reslice_dartel(job);
-            if ~strcmp(region,'cerebellarGrey'),
-                source=fullfile(glmSubjDir,'*wd*');
-                dircheck(fullfile(outDir));
-                destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
-                movefile(source,destination);
-            end
-            fprintf('%s have been resliced into suit space \n',region)
-        end
-        
-    case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
-        % GLM with FAST and no high pass filtering
-        % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
-        % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
-        sn=varargin{1};
-        runs=varargin{2}; % [1:16]
-        
-        announceTime=5;  % Instruction duration 
-        glm=1;  
-        subjs=length(sn);
-        
-        % load in task information
-        C=dload(fullfile(baseDir,'bsp_taskConds_GLM.txt'));
-        Cc=getrow(C,C.StudyNum==1);
-        Tasks = unique(Cc.taskNames,'rows','stable');                       % get the task names
-        nTask      = unique(length(Tasks));                                 % how many tasks there are?
-        
-        for s=1:subjs,
-            T=[];
-            A = dload(fullfile(baseDir,'data', subj_name{sn(s)},['sc1_',subj_name{sn(s)},'.dat'])); % get scanning timing and order
-            A = getrow(A,A.runNum>=funcRunNum(1) & A.runNum<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
-            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder 
-            
-            % Fill up struct for glm
-            J.dir = {glmSubjDir};
-            J.timing.units = 'secs';
-            J.timing.RT = 1.0;
-            J.timing.fmri_t = 16;
-            J.timing.fmri_t0 = 1;
-            
-            for r=1:numel(runs) % loop through runs
-                P=getrow(A,A.runNum==runB(r));
-                for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i))]; 
-                end;
-                J.sess(r).scans= N; % number of scans in run
-                
-                % loop through tasks
-                itt = 1;
-                for it = 1:nTask 
-                    % The order of tasks are different for each run, to
-                    % have a common order for the tasks, I will be reading
-                    % from the Cc file for all the runs and subjects
-                    ST = find(strcmp(P.taskName,Tasks{it}));
-                    for taskType = 1:2 % there are two taskTypes: instruction; not instructions
-                        if taskType == 1 % instructions
-                            % get the isntruction onset
-                            instruct_onset = P.realStartTime(ST)- J.timing.RT*numDummys; %% get the instruction start time for the first task 
-                            
-                            % filling in the fields for SPM_info.mat
-                            S.task      = 0;              % task Number
-                            S.TN        = {'Instruct'};   % task name (TN)
-                            S.inst      = 1;              % is it instruction (1) or not (0)?
-                            S.instOrder = ST;             % instOrder is defined by the task that comes after the instruction
-                            S.time      = instruct_onset; % instruction onset time
-                            % Determine taskName_after and taskName_before
-                            % this instruction
-                            S.taskName_after  = P.taskName(ST);
-                            if ST > 1
-                                S.taskName_before = P.taskName(ST-1);
-                            elseif ST == 1
-                                S.taskName_before = {'NaN'};
-                            end
-                            T  = addstruct(T, S);
-                            
-                            % filling in the fields for SPM.mat
-                            J.sess(r).cond(itt).name     = 'Instruct';
-                            J.sess(r).cond(itt).onset    = instruct_onset; % correct start time for numDummys and announcetime included (not for instruct)
-                            J.sess(r).cond(itt).duration = 5;              % instructions last for 5 sec
-                            J.sess(r).cond(itt).tmod     = 0;
-                            J.sess(r).cond(itt).orth     = 0;
-                            J.sess(r).cond(itt).pmod     = struct('name', {}, 'param', {}, 'poly', {});
-                            
-                            itt = itt + 1;
-                        elseif taskType == 2 % not instructions
-                            % get the task onset (instruction onset + announceTime)
-                            onset = P.realStartTime(ST) - J.timing.RT*numDummys +announceTime;
-                            
-                            % filling in the fields for SPM_info.mat
-                            S.task      = it;
-                            S.TN        = {Tasks{it}};
-                            S.inst      = 0;
-                            S.instOrder = 0;
-                            S.time      = onset;
-                            S.taskName_after  = {'none'}; % taskName before and after are only defined for instructions
-                            S.taskName_before = {'none'};
-                            
-                            T  = addstruct(T, S);
-                            
-                            % filling in the fields for SPM.mat
-                            J.sess(r).cond(itt).name     = Tasks{it};
-                            J.sess(r).cond(itt).onset    = onset;
-                            J.sess(r).cond(itt).duration = 30;             % each task lasts for 30 sec
-                            J.sess(r).cond(itt).tmod     = 0;
-                            J.sess(r).cond(itt).orth     = 0;
-                            J.sess(r).cond(itt).pmod     = struct('name', {}, 'param', {}, 'poly', {});
-                            
-                            itt = itt + 1;
-                        end % if it's instructions or not?
-                    end % taskType (looping over instruction and non-instructions)
-                end % it (tasks)
-                J.sess(r).multi = {''};
-                J.sess(r).regress = struct('name', {}, 'val', {});
-                J.sess(r).multi_reg = {''};
-                J.sess(r).hpf = inf;                                        % set to 'inf' if using J.cvi = 'FAST'. SPM HPF not applied
-            end
-            J.fact = struct('name', {}, 'levels', {});
-            J.bases.hrf.derivs = [0 0];
-            J.bases.hrf.params = [4.5 11];                                  % set to [] if running wls
-            J.volt = 1;
-            J.global = 'None';
-            J.mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'brain_mask.nii')};
-            J.mthresh = 0.01;
-            J.cvi_mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'brain_mask.nii')};
-            J.cvi =  'fast';
-            
-            spm_rwls_run_fmri_spec(J);
-            
-            save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T');
-            fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
-        end
-    case 'GLM:glm2'                  % FAST glm w/out hpf one regressor per task including instruction
-        % GLM with FAST and no high pass filtering
-        % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
-        % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
-        sn=varargin{1};
-        runs=varargin{2}; % [1:16]
-        
-        announceTime=5;  % Instruction duration 
-        glm=2;  
-        subjs=length(sn);
-        
-        % load in task information
-        C=dload(fullfile(baseDir,'bsp_taskConds_GLM.txt'));
-        Cc=getrow(C,C.StudyNum==1);
-        Tasks = unique(Cc.taskNames,'rows','stable');                       % get the task names
-        nTask      = unique(length(Tasks));                                 % how many tasks there are?
-        
-        for s=1:subjs,
-            T=[];
-            A = dload(fullfile(baseDir,'data', subj_name{sn(s)},['sc1_',subj_name{sn(s)},'.dat'])); % get scanning timing and order
-            A = getrow(A,A.runNum>=funcRunNum(1) & A.runNum<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
-            
-            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder 
-            
-            % Fill up struct for glm
-            J.dir = {glmSubjDir};
-            J.timing.units = 'secs';
-            J.timing.RT = 1.0;
-            J.timing.fmri_t = 16;
-            J.timing.fmri_t0 = 1;
-            
-            for r=1:numel(runs) % loop through runs
-                P=getrow(A,A.runNum==runB(r));
-                for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i))]; 
-                end;
-                J.sess(r).scans= N; % number of scans in run
-                
-                % loop through tasks
-                for it = 1:nTask
-                    % The order of tasks are different for each run, to
-                    % have a common order for the tasks, I will be reading
-                    % from the Cc file for all the runs and subjects
-                    ST = find(strcmp(P.taskName,Tasks{it}));
-                    
-                    % get the task onset (instruction onset + announceTime)
-                    onset = P.realStartTime(ST) - J.timing.RT*numDummys +announceTime;
-                    
-                    % filling in the fields for SPM_info.mat
-                    S.task      = it;
-                    S.TN        = {Tasks{it}};
-                    S.inst      = 0;
-                    S.instOrder = 0;
-                    S.time      = onset;                    
-                    T  = addstruct(T, S);
-                    
-                    % filling in the fields for SPM.mat
-                    J.sess(r).cond(it).name     = Tasks{it};
-                    J.sess(r).cond(it).onset    = onset;
-                    J.sess(r).cond(it).duration = 30;             % each task lasts for 30 sec
-                    J.sess(r).cond(it).tmod     = 0;
-                    J.sess(r).cond(it).orth     = 0;
-                    J.sess(r).cond(it).pmod     = struct('name', {}, 'param', {}, 'poly', {});
-                           
-                end % it (tasks)
-                J.sess(r).multi = {''};
-                J.sess(r).regress = struct('name', {}, 'val', {});
-                J.sess(r).multi_reg = {''};
-                J.sess(r).hpf = inf;                                        % set to 'inf' if using J.cvi = 'FAST'. SPM HPF not applied
-            end
-            J.fact = struct('name', {}, 'levels', {});
-            J.bases.hrf.derivs = [0 0];
-            J.bases.hrf.params = [4.5 11];                                  % set to [] if running wls
-            J.volt = 1;
-            J.global = 'None';
-            J.mask = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii')};
-            J.mthresh = 0.05;
-            J.cvi_mask = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii')};
-            J.cvi =  'fast';
-            
-            spm_rwls_run_fmri_spec(J);
-            
-            save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T');
-            fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
-        end
-    case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum 
-        % example: bsp_imana('GLM:estimate_glm',1,1)
-        sn=varargin{1};
-        glm=varargin{2};
-        
-        subjs=length(sn);
-        
-        for s=1:subjs,
-            glmDir =[baseDir,sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];
-            load(fullfile(glmDir,'SPM.mat'));
-            SPM.swd=glmDir;
-            spm_rwls_spm(SPM);
-        end                  
-    case 'GLM:contrast'               % Create Contrast images
-        %%% Calculating contrast images.
-        % 'SPM_light' is created in this step (xVi is removed as it slows
-        % down code for FAST GLM).
-        % Example1: bsp_imana('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
-        % Example2: bsp_imana('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'cond')
-        
-        sn             = 3;             %% list of subjects
-        glm            = 1;             %% The glm number
-        con_vs         = 'rest_task';   %'average_4';   %% set it to 'rest' or 'average' (depending on the contrast you want)
-        type           = 'task';        %% it can be set to either cond or task.
-        
-        vararginoptions(varargin, {'sn', 'glm', 'con_vs', 'type'})
-                
-        %%% setting directory paths I need
-        glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
-        
-        for s = sn
-            fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
-            load(fullfile(glmDir, subj_name{s}, 'SPM.mat'))
-            
-            SPM  = rmfield(SPM,'xCon');
-            cd(fullfile(glmDir, subj_name{s}))
-            T = load('SPM_info.mat');
-            
-            % t contrast for tasks
-            ucondition = unique(T.(type));
-            idx = 1;
-            for tt = 1:length(ucondition) % 0 is "instruct" regressor
-                switch con_vs
-                    case 'rest_task' % contrast against rest
-                        con = zeros(1,size(SPM.xX.X,2));
-                        con(:,logical(T.(type) == ucondition(tt))) = 1;
-                        tmp = zeros(1, size(SPM.xX.X, 2));
-                        tmp(:, strcmp(T.TN, 'rest')) = 1;
-                        sum_rest = sum(tmp);
-                        tmp      = tmp./sum_rest;
-                        con      = con/abs(sum(con));
-                        con      = con - tmp;
-                    case 'average_1' % contrast against the average of the other tasks including the instructions
-                        % New: Eva, Oct 2nd
-                        con                     = zeros(1,size(SPM.xX.X, 2));
-                        con(1,logical(T.(type) == ucondition(tt))) = 1./sum(logical(T.(type) == ucondition(tt)));
-                        con(1,logical(T.(type) ~= ucondition(tt))) = -1./sum(logical(T.(type) ~= ucondition(tt)));
-                    case 'average_2' % contrast against the average of the other tasks not including the instructions
-                        con        = zeros(1,size(SPM.xX.X, 2));
-                        % TO TRY below - no instructions as contrasts
-                        con(1,logical(T.(type) == ucondition(tt))) = 1./sum(logical(T.(type) == ucondition(tt)));
-                        con(1,logical((T.(type) ~= ucondition(tt)) .* (T.inst == 0))) = -1./sum(logical((T.(type) ~= ucondition(tt)) .* (T.inst == 0)));
-                    case 'average_4' % contrast against the average of all the tasks (not including the instructions)
-                        con        = zeros(1,size(SPM.xX.X, 2));
-                        % TO TRY below - no instructions as contrasts
-                        con(1,logical(T.(type)      == ucondition(tt))) = 1./sum(logical(T.(type) == ucondition(tt)));                        
-                        con(1, logical(T.inst == 0)) = con(1, logical(T.inst == 0)) - 1./sum(T.inst == 0);                        
-                    case 'rest'
-                        con                     = zeros(1,size(SPM.xX.X,2));
-                        con(:,logical(T.(type) == ucondition(tt))) = 1;
-                        con                     = con/abs(sum(con));
-                end
-                
-                name = sprintf('%s-%s',char(unique(T.TN(T.(type) == ucondition(tt)))), con_vs);
-                
-                SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
-                idx=idx+1;
-            end % tt (conditions)
-            SPM = spm_contrasts(SPM,1:length(SPM.xCon));
-            save('SPM.mat', 'SPM','-v7.3');
-            SPM = rmfield(SPM,'xVi'); % 'xVi' take up a lot of space and slows down code!
-            save(fullfile(glmDir, subj_name{s}, 'SPM_light.mat'), 'SPM');
+            source=fullfile(glmSubjDir,'*wd*');
+            dircheck(fullfile(outDir));
+            destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
+            movefile(source,destination);
 
-            % rename contrast images and spmT images
-            conName = {'con','spmT'};
-            for i = 1:length(SPM.xCon)
-                for n = 1:numel(conName)
-                    oldName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%2.4d.nii',conName{n},i));
-                    newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s.nii',conName{n},SPM.xCon(i).name));
-                    movefile(oldName{i}, newName{i});
-                end % conditions (n, conName: con and spmT)
-            end % i (contrasts)
-        end % sn 
-    case 'GLM:Fcontrast'               % Create Contrast images
-        %%% Calculating contrast images.
-        % 'SPM_light' is created in this step (xVi is removed as it slows
-        % down code for FAST GLM).
-        % Example1: bsp_imana('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
-        % Example2: bsp_imana('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'cond')
+            fprintf('%s have been resliced into suit space \n',type)
+        end
+    case 'SUIT:map_to_flat' 
+        sn = 2; 
+        glm = 1; 
+        vararginoptions(varargin,{'sn','glm','type','mask'});
+        source_dir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn});
+        source=dir(fullfile(source_dir,'wdcon*')); % images to be resliced
+        for i=1:length(source)
+            name{i} = fullfile(source_dir,source(i).name); 
+        end; 
+        MAP = suit_map2surf(name); 
+        % G = surf_makeFuncGifti
+        set(gcf,'PaperPosition',[2 2 15 7]);
+        wysiwyg; 
+        for i=1:10 
+            subplot(2,5,i); 
+            suit_plotflatmap(MAP(:,i),'cscale',[-1.5 1.5]); 
+            n = source(i).name(7:end-4); 
+            n(n=='_')=' '; 
+            title(n); 
+        end; 
         
-        sn             = 3;             %% list of subjects
-        glm            = 1;             %% The glm number
-        type           = 'task';        %% it can be set to task, .... 
         
-        vararginoptions(varargin, {'sn', 'glm', 'type'})
-                
-        %%% setting directory paths I need
-        glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
-        
-        for s = sn
-            fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
-            load(fullfile(glmDir, subj_name{s}, 'SPM.mat'))
-            
-            SPM  = rmfield(SPM,'xCon');
-            cd(fullfile(glmDir, subj_name{s}))
-            T = load('SPM_info.mat');
-            
-            % F contrast
-            name = sprintf('%s', type);
-            switch(type)
-                case 'task'
-                    numTasks = max(T.task); 
-                    con = zeros(numTasks,size(SPM.xX.X,2));
-                    for i=1:numTasks
-                        con(i,T.task==i)=1-1/numTasks;
-                        con(i,T.task>0 & T.task~=i)=-1/numTasks;
-                    end
-            end
-            
-            SPM.xCon(1) = spm_FcUtil('Set',name, 'F', 'c',con',SPM.xX.xKXs);
-            SPM = spm_contrasts(SPM,1:length(SPM.xCon));
-            save('SPM.mat', 'SPM','-v7.3');
-            SPM = rmfield(SPM,'xVi'); % 'xVi' take up a lot of space and slows down code!
-            save(fullfile(glmDir, subj_name{s}, 'SPM_light.mat'), 'SPM');
-
-        end % sn      
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
         
@@ -697,21 +441,24 @@ switch(what)
             extractCMRRPhysio(logfiles(lFile).name);
             cd ..
         end
-    case 'PHYS:createRegresor'        % Create Retroicor regressors using TAPAS (18 components)
-        sn=varargin{1};
+    case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
+        sn=4; 
+        run = [1:16]; 
+        stop = true; 
+        vararginoptions(varargin,{'sn','run','stop'}); 
         
-        for nrun=1:length(run)
+        for nrun= run
             
             logDir = fullfile(baseDir,'physio',subj_name{sn},sprintf('run%2.2d',nrun));
             cd (logDir);
             PULS = dir('*PULS.log');
             RSP  = dir('*RESP.log');
-            log  = dir('*Info.log');     
+            log  = dir('*Info.log');
             
             % 2. Define physio model structure
             physio = tapas_physio_new();
             
-            % 3. Define input files            
+            % 3. Define input files
             physio.save_dir = {logDir};                         % enter directory to save physIO output
             physio.log_files.cardiac = {PULS.name};             % .puls file
             physio.log_files.respiration = {RSP.name};          % .resp file
@@ -723,13 +470,14 @@ switch(what)
             % 4. Define scan timing parameters
             physio.scan_timing.sqpar.Nslices = 60;              % number of slices in EPI volume
             physio.scan_timing.sqpar.TR = 1;                    % TR in secs
-            physio.scan_timing.sqpar.Ndummies = 0;              % Real dummy are not recorded
+            physio.scan_timing.sqpar.Ndummies = numDummys;      % Real dummy are not recorded
             physio.scan_timing.sqpar.Nscans = numTRs-numDummys; % number of time points/scans/volumes
             physio.scan_timing.sqpar.onset_slice = 30;          % slice of interest (choose middle slice if unsure?)
             physio.scan_timing.sync.method = 'scan_timing_log'; % using info file
             
             % 5. Define cardiac data parameters
             physio.preproc.cardiac.modality = 'PPU';        % cardiac data acquired with PPU
+            physio.preproc.cardiac.initial_cpulse_select.max_heart_rate_bpm = 110; % Allow higher heart rate to start
             physio.preproc.cardiac.initial_cpulse_select.auto_matched.min = 0.4;
             physio.preproc.cardiac.initial_cpulse_select.auto_matched.file = 'initial_cpulse_kRpeakfile.mat';
             physio.preproc.cardiac.posthoc_cpulse_select.off = struct([]);
@@ -738,19 +486,20 @@ switch(what)
             physio.model.orthogonalise = 'none';
             physio.model.output_multiple_regressors = 'multiple_regressors.txt';  %% regressor output filename
             physio.model.output_physio = 'physio.mat';  %% model output filename
+            physio.model.censor_unreliable_recording_intervals = false;  %% set to true to automatically censor missing recording intervals
             
             % 7. RETROICOR phase expansion (Glover et al., 2000)
             physio.model.retroicor.include = true;  %% use RETROICOR to calculate regressors
             physio.model.retroicor.order.c = 3;
-            physio.model.retroicor.order.r = 4;
-            physio.model.retroicor.order.cr = 1;
+            physio.model.retroicor.order.r = 3;
+            physio.model.retroicor.order.cr = 0;
             
             % 8. RVT respiratory volume per time (Birn et al., 2008)
-            physio.model.rvt.include = false;
+            physio.model.rvt.include = true;
             physio.model.rvt.delays = 0;
             
-            % 9. HRV heart rate variability response (Chang et al., 2009)
-            physio.model.hrv.include = false;
+            % 9. HRV heart rate response (Chang et al., 2009)
+            physio.model.hrv.include = true;
             physio.model.hrv.delays = 0;
             
             % 10. ROI anatomical component-based noise extraction (aCompCor; Behzadi et al., 2007)
@@ -774,80 +523,77 @@ switch(what)
             physio.verbose.level = 1;  %% 0 = suppress graphical output; 1 = main plots; 2 = debugging plots; 3 = all plots
             physio.verbose.process_log = cell(0, 1);
             physio.verbose.fig_handles = zeros(0, 1);
-            physio.verbose.fig_output_file = 'PhysIO.fig';  %% output figure filename (output format can be any matlab supported graphics format)
+            physio.verbose.fig_output_file = [];  %% output figure filename (output format can be any matlab supported graphics format)
             physio.verbose.use_tabs = false;
             
             physio.ons_secs.c_scaling = 1;
             physio.ons_secs.r_scaling = 1;
             
             % 14. Run main script
-            tapas_physio_main_create_regressors(physio);
+            [physio_out,R,ons_sec]=tapas_physio_main_create_regressors(physio);
+            % Save as different text files.... 
+            dlmwrite('reg_retro_hr.txt',R(:,1:6));
+            dlmwrite('reg_retro_resp.txt',R(:,7:12));
+            dlmwrite('reg_hr.txt',[R(:,13) ons_sec.hr]); % Add the un-convolved version as well 
+            dlmwrite('reg_rvt.txt',[R(:,14) ons_sec.rvt]); % add the un-convolved version as well 
+            if (stop) 
+                keyboard; 
+                close all;
+            end;
         end
+    case 'ROI:inv_reslice'              % Defines ROIs for brain structures
+        sn=varargin{1}; 
+        images = {'csf','pontine','olive','dentate','rednucleus'}; 
+        groupDir = fullfile(baseDir,'RegionOfInterest','group');
         
-    case 'ROI:define'                 % Defines ROIs for brain structures
-        % Before runing this, create masks for different structures 
-        sn=varargin{1}; % subjNum
-        region=varargin{2}; % Name of ROI, see cases below
-        
-        subjs=length(sn);
-        for s=1:subjs,
-            
-            switch region
-                case 'cerebellum'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_pcereb.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['cerebellum'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'cerebellum_grey'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c_anatomical_seg1.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['cerebellum_grey'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'dentate'
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'dentate_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['dentate'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'pontine' 
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'pontine_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['pontine'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'olive' 
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'olive_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['olive'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
-                case 'csf' 
-                    file = fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'csf_mask.nii');
-                    R{1}.type = 'roi_image';
-                    R{1}.file= file;
-                    R{1}.name = ['csf-bs'];
-                    R{1}.value = 1;
-                    R=region_calcregions(R);
+        for s=sn 
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            for im=1:length(images)
+                job.Affine = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
+                job.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
+                job.resample = {fullfile(groupDir,sprintf('%s_mask.nii',images{im}))}; 
+                job.ref     = {glm_mask};
+                suit_reslice_dartel_inv(job);
+                source=fullfile(suitSubjDir,sprintf('iw_%s_mask_u_a_c_anatomical_seg1.nii',images{im}));
+                dest  = fullfile(regSubjDir,sprintf('%s_mask.nii',images{im}));
+                movefile(source,dest);
+
             end
-            dircheck(fullfile(baseDir,regDir,'data',subj_name{sn(s)}));
-            save(fullfile(baseDir,regDir,'data',subj_name{sn(s)},sprintf('regions_%s.mat',region)),'R');
-            fprintf('ROIs have been defined for %s for %s \n',region,subj_name{sn(s)})
-        end        
-    case 'ROI:defall'                 % Run all types in ROI
-        sn=varargin{1}; % subjNum
-        bsp_imana('ROI:define',sn,'cerebellum');
-        bsp_imana('ROI:define',sn,'cerebellum_grey');
-        bsp_imana('ROI:define',sn,'dentate');
-        bsp_imana('ROI:define',sn,'pontine');
-        bsp_imana('ROI:define',sn,'olive');
-        bsp_imana('ROI:define',sn,'csf');
+        end
+    case 'ROI:cerebellar_gray' 
+        sn=varargin{1};
+        for s = sn 
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
+                fullfile(suitSubjDir,'c_anatomical_seg1.nii'),...
+                fullfile(suitSubjDir,'c_anatomical_pcereb_corr.nii')}; 
+            outname = fullfile(regSubjDir,'cerebellum_gray_mask.nii'); 
+            spm_imcalc(char(P),outname,'i1 & (i2>0.1) & (i3>0.3)',{0,0,1,4}); 
+        end
+    case 'ROI:define'                 % Defines ROIs for brain structures
+        % Before runing this, create masks for different structures
+        sn=2; 
+        regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
+        
+        vararginoptions(varargin,{'sn','regions'}); 
+        for s=sn
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            for r = 1:length(regions)
+                file = fullfile(regSubjDir,sprintf('%s_mask.nii',regions{r}));
+                R{r}.type = 'roi_image';
+                R{r}.file= file;
+                R{r}.name = regions{r};
+                R{r}.value = 1;
+            end
+            R=region_calcregions(R);                
+            save(fullfile(regSubjDir,'regions.mat'),'R');
+        end
+
+           
+end
         
  
   
