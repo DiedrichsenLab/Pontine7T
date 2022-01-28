@@ -5,9 +5,9 @@ numDummys = 3;                                                              % pe
 numTRs    = 328;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
-baseDir         ='/srv/diedrichsen/data/Pontine7T/op-coreg-1';
+baseDir         ='/srv/diedrichsen/data/Pontine7T';
 if ~exist(baseDir,'dir')
-    baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T/op-coreg-1';
+    baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
 end
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
@@ -16,8 +16,8 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING 
-subj_name = {'S99','S98','S97'};
-loc_AC={[79;127;127];[80;129;120];[77;125;129]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+subj_name = {'S99','S98','S97','S96'};
+loc_AC={[79;127;127];[80;129;120];[77;125;129];[90;129;138]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
 %loc_AC={[105;169;169]}; % Numbers in the titlebar of mricron
 %loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
 %========================================================================================================================
@@ -49,7 +49,7 @@ switch(what)
             spm_write_vol(V,dat);
             display 'Manually retrieve the location of the anterior commissure (x,y,z) before continuing'
         end
-    case 'ANAT:centre_AC'             % Re-centre AC
+    case 'ANAT:center_AC'             % Re-centre AC
         % Before running provide coordinates in the preprocessing section
         % example: bsp_imana('ANAT:centre_AC',1)
         sn=varargin{1}; % subjNum
@@ -275,7 +275,8 @@ switch(what)
         
         %spmj_checksamealign
     
-    case 'SUIT:isolate'               % Segment cerebellum into grey and white matter        
+    case 'SUIT:isolate'               % Segment cerebellum into grey and white matter
+        % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
         sn=varargin{1};
         %         spm fmri
         for s=sn,
@@ -286,9 +287,10 @@ switch(what)
             cd(fullfile(suitSubjDir));
             suit_isolate_seg({fullfile(suitSubjDir,'anatomical.nii')},'keeptempfiles',1);
         end
-        suit_normalize_dentate(job);
+        
     case 'SUIT:normalise_dartel'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
-        % Create the dentate mask in the imaging folder using the tse 
+        % Create the dentate mask in the imaging folder using the tse
+        % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
         sn=varargin{1}; %subjNum
         % example: 'sc1_sc2_imana('SUIT:normalise_dentate',1)
         
@@ -297,6 +299,7 @@ switch(what)
         job.subjND.white      = {'c_anatomical_seg2.nii'};
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dartel(job);
+        
     case 'SUIT:normalise_dentate'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse 
         sn=varargin{1}; %subjNum
@@ -439,7 +442,7 @@ switch(what)
             cd ..
         end
     case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
-        sn=1; 
+        sn=4; 
         run = [1:16]; 
         stop = true; 
         vararginoptions(varargin,{'sn','run','stop'}); 
