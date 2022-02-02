@@ -16,8 +16,8 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING 
-subj_name = {'S99','S98','S97','S96'};
-loc_AC={[79;127;127];[80;129;120];[77;125;129];[90;129;138]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+subj_name = {'S99','S98','S97','S96','S95'};
+loc_AC={[79;127;127];[80;129;120];[77;125;129];[90;129;138];[78;131;127]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [1,16];  % first and last behavioural run numbers
@@ -128,6 +128,7 @@ switch(what)
             command = sprintf('bash /srv/diedrichsen/shell/optiBET.sh -i %s', img)
             system(command)
             fprintf('optiBET completed for %s \n',subj_name{sn(s)})
+            fprintf('Check the output of optiBET using FSLeyes or some other visualization software.')
         end
         
     case 'FUNC:remDum'                % Remove the extra dummy scans from all functional runs.
@@ -218,11 +219,27 @@ switch(what)
             command = sprintf('epi_reg --wmseg %s --epi %s --t1 %s --t1brain %s --out %s', wmseg, meanepi, t1, t1_bet, out)
             system(command)
             fprintf('epi_reg completed for %s \n',subj_name{sn(s)})
-        end  
+            fprintf('Check the registration using FSLeyes or some other visualization software.')
+        end
+        
+   case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
+        % Run gunzip on the output file from epi_reg step
+        % example: bsp_imana('FUNC:gunzip',1)
+        sn=varargin{1}; % subjNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            in     = fullfile(baseDir,imagingDirRaw,subj_name{sn(s)},'meanrun_01_func2struct');
+            out    = fullfile(baseDir,imagingDir,subj_name{sn(s)},'rmeanrun_01.nii');
+            % gunzip -c file.gz > /THERE/file
+            command = sprintf('gunzip -c %s > %s', in, out)
+            system(command)
+            fprintf('gunzip completed for %s \n',subj_name{sn(s)})
+        end
         
     case 'FUNC:make_samealign'        % Align functional images to rmeanepi of study 1
         % Aligns all functional images from both sessions (each study done separately)
-        % to rmeanepi of study 1
+        % to rmeanepi of session 1
         % example: bsp_imana('FUNC:make_samealign',1,[1:32])
         sn=varargin{1}; % subjNum
         runs=varargin{2}; % runNum
