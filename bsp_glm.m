@@ -669,12 +669,25 @@ switch(what)
         con = eye(length(SPM.Sess)*length(SPM.Sess(1).U));  % include each regressors
         con = [con;zeros(length(SPM.Sess),length(con))];    % add zeros for the intercepts
         SPM.xCon=spm_FcUtil('Set','SignalEffects', 'F', 'c',con,SPM.xX.xKXs);
-        spm_contrasts(SPM);        
+        spm_contrasts(SPM);
+        
+   case 'test_GLM_script'
+        model = {{'Tasks','Instruct'},...
+            {'Tasks','Instruct','Retro_HR'},...
+            {'Tasks','Instruct','Retro_RESP'},...
+            {'Tasks','Instruct','HR'},...
+            {'Tasks','Instruct','RV'}};
+        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
+        method = {'OLS','GLS','ridge_pcm','tikhonov_pcm'};
+        
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{[1 2]},'runs',[1:10]);
+        save(fullfile(baseDir,'results','test_GLM_5.mat'),'-struct','D');
+        varargout={D};
     
     case 'test_GLM_lowfreq'
         % Compare different methods to deal with auto-correlated noise
         % And sporardic artifacts
-        sn = [2 3];
+        sn = [2:4];
         model = {{'Tasks','Instruct'},...
             {'Tasks','Instruct'}};
         inK   = {{'Hpass'},...
@@ -689,7 +702,7 @@ switch(what)
     
     case 'plot_GLM_lowfreq'
         D=load('test_GLM_lowfreq.mat');
-        sn = [2 3]; 
+        sn = [2:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1]}; 
         style={':',':','-','-'}; 
@@ -705,7 +718,7 @@ switch(what)
         end; 
     
     case 'test_GLM_Physio'
-        sn = [2 3];
+        sn = [2:4];
         model = {{'Tasks','InstructC','Retro_HR'},...
             {'Tasks','InstructC','Retro_RESP'},...
             {'Tasks','InstructC','HR'},...
@@ -724,7 +737,7 @@ switch(what)
     case 'plot_GLM_Physio'
         D=load('test_GLM_physio.mat');
         
-        sn = [2 3]; 
+        sn = [2:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -738,22 +751,9 @@ switch(what)
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
             title('R of Physio-regressor');
         end; 
-    
-    case 'test_GLM_script'
-        model = {{'Tasks','Instruct'},...
-            {'Tasks','Instruct','Retro_HR'},...
-            {'Tasks','Instruct','Retro_RESP'},...
-            {'Tasks','Instruct','HR'},...
-            {'Tasks','Instruct','RV'}};
-        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        method = {'OLS','GLS','ridge_pcm','tikhonov_pcm'};
-        
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'evalX',{[1 2]},'runs',[1:10]);
-        save(fullfile(baseDir,'results','test_GLM_5.mat'),'-struct','D');
-        varargout={D};
         
     case 'test_GLM_Physio_Filter'
-        sn = [2 3];
+        sn = [2:4];
         model = {{'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
@@ -772,7 +772,7 @@ switch(what)
     case 'plot_GLM_Physio_Filter'
         D=load('test_GLM_physio_filter.mat');
         
-        sn = [2 3]; 
+        sn = [2:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -788,7 +788,7 @@ switch(what)
         end; 
         
     case 'test_GLM_CSF'
-        sn = [2 3];
+        sn = [2:4];
         model = {{'Tasks','InstructC','CSF'},...
             {'Tasks','InstructC','CSFPCAindiv'},...
             {'Tasks','InstructC','CSFPCAall'},...
@@ -806,7 +806,7 @@ switch(what)
     case 'plot_GLM_CSF'
         D=load('test_GLM_csf.mat');
         
-        sn = [2 3]; 
+        sn = [2:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -822,7 +822,7 @@ switch(what)
         end; 
     
     case 'test_GLM_CSF_Filter'
-        sn = [2 3];
+        sn = [2:4];
         model = {{'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
@@ -840,7 +840,7 @@ switch(what)
     case 'plot_GLM_CSF_Filter'
         D=load('test_GLM_csf_filter.mat');
         
-        sn = [2 3]; 
+        sn = [2:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 

@@ -14,6 +14,7 @@ imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
 suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
+fmapDir         ='/fieldmaps';
 %========================================================================================================================
 % PRE-PROCESSING 
 subj_name = {'S99','S98','S97','S96','S95'};
@@ -177,8 +178,8 @@ switch(what)
             end;
             spmj_realign(data);
             fprintf('runs realigned for %s\n',subj_name{sn(s)});
-        end
-    case 'FUNC:correct deform'        % Correct Magnetic field deformations using antsRegEpi.sh
+        end 
+
     case 'FUNC:move_data'             % Move realigned data
         % Moves image data from imaging_data_raw into imaging_data.
         % example: bsp_imana('FUNC:move_data',1,[1:4])
@@ -229,7 +230,7 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            in     = fullfile(baseDir,imagingDirRaw,subj_name{sn(s)},'meanrun_01_func2struct');
+            in     = fullfile(baseDir,imagingDirRaw,subj_name{sn(s)},'meanrun_01_func2struct.nii.gz');
             out    = fullfile(baseDir,imagingDir,subj_name{sn(s)},'rmeanrun_01.nii');
             % gunzip -c file.gz > /THERE/file
             command = sprintf('gunzip -c %s > %s', in, out)
@@ -237,10 +238,10 @@ switch(what)
             fprintf('gunzip completed for %s \n',subj_name{sn(s)})
         end
         
-    case 'FUNC:make_samealign'        % Align functional images to rmeanepi of study 1
-        % Aligns all functional images from both sessions (each study done separately)
-        % to rmeanepi of session 1
-        % example: bsp_imana('FUNC:make_samealign',1,[1:32])
+    case 'FUNC:make_samealign'        % Align functional images to rmeanepi of run 1, session 1
+        % Aligns all functional images from both sessions
+        % to rmeanepi of run 1 of session 1
+        % example: bsp_imana('FUNC:make_samealign',1,[1:16])
         sn=varargin{1}; % subjNum
         runs=varargin{2}; % runNum
         
@@ -268,6 +269,186 @@ switch(what)
         end
         
         %spmj_checksamealign
+        
+    case 'FMAP:make_samealign'        % Align fieldmaps to rmeanepi of run 1, session 1
+        % Aligns all fieldmaps from both sessions
+        % to rmeanepi of run 1 of session 1
+        % example: bsp_imana('FMAP:make_samealign',1)
+        sn=varargin{1}; % subjNum
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            
+            cd(fullfile(baseDir,imagingDir,subj_name{sn(s)}));
+            
+            % Select image for reference
+            % For ants-registered data: TSE 
+            % P{1} = fullfile(fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii'));
+            % for tradition way: rmeanepi 
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmeanrun_01.nii'));
+            
+            % Select images to be realigned
+            Q{1}    = fullfile(baseDir,fmapDir,subj_name{sn(s)},'magnitude1_sess_1'));
+            Q{2}    = fullfile(baseDir,fmapDir,subj_name{sn(s)},'magnitude2_sess_1'));
+            Q{3}    = fullfile(baseDir,fmapDir,subj_name{sn(s)},'phasediff_sess_1'));
+            Q{4}    = fullfile(baseDir,fmapDir,subj_name{sn(s)},'magnitude1_sess_2'));
+            Q{5}    = fullfile(baseDir,fmapDir,subj_name{sn(s)},'magnitude2_sess_2'));
+            Q{6}    = fullfile(baseDir,fmapDir,subj_name{sn(s)},'phasediff_sess_2'));
+            
+            % Run spmj_makesamealign_nifti
+            spmj_makesamealign_nifti(char(P),char(Q));
+            fprintf('fieldmaps realigned for %s \n',subj_name{sn(s)})
+        end
+        
+    case 'FMAP:average_magnitudes'        % Average magnitude images for each session
+        % Averages the two magnitude images for each session
+        % example: bsp_imana('FMAP:average_magnitudes',1,1)
+        sn=varargin{1}; % subjNum
+        sessn=varargin{2}; %sessNum
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            
+            cd(fullfile(baseDir,fmapDir,subj_name{sn(s)}));
+            
+            J.input = {sprintf('magnitude1_sess_%d.nii,1',sessn)
+                       sprintf('magnitude2_sess_%d.nii,1',sessn)};
+            J.output = sprintf('magnitudeavg_sess_%d.nii',sessn);
+            J.outdir = {fullfile(baseDir,fmapDir,subj_name{sn(s)})};
+            J.expression = '(i1+i2)/2';
+            J.var = struct('name', {}, 'value', {});
+            J.options.dmtx = 0;
+            J.options.mask = 0;
+            J.options.interp = 1;
+            J.options.dtype = 4;
+            matlabbatch{1}.spm.util.imcalc=J;
+            spm_jobman('run',matlabbatch);
+            fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
+        end
+        
+    case 'FMAP:segmentation'          % Segmentation + Normalisation
+        % example: bsp_imana('FMAP:segmentation',1,1)
+        sn=varargin{1}; % subjNum
+        sessn=varargin{2}; %sessNum
+        
+        subjs=length(sn);
+        
+        SPMhome=fileparts(which('spm.m'));
+        J=[];
+        for s=1:subjs,
+            J.channel.vols = {fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii',sessn))};
+            J.channel.biasreg = 0.001;
+            J.channel.biasfwhm = 60;
+            J.channel.write = [0 0];
+            J.tissue(1).tpm = {fullfile(SPMhome,'tpm/TPM.nii,1')};
+            J.tissue(1).ngaus = 1;
+            J.tissue(1).native = [1 0];
+            J.tissue(1).warped = [0 0];
+            J.tissue(2).tpm = {fullfile(SPMhome,'tpm/TPM.nii,2')};
+            J.tissue(2).ngaus = 1;
+            J.tissue(2).native = [1 0];
+            J.tissue(2).warped = [0 0];
+            J.tissue(3).tpm = {fullfile(SPMhome,'tpm/TPM.nii,3')};
+            J.tissue(3).ngaus = 2;
+            J.tissue(3).native = [1 0];
+            J.tissue(3).warped = [0 0];
+            J.tissue(4).tpm = {fullfile(SPMhome,'tpm/TPM.nii,4')};
+            J.tissue(4).ngaus = 3;
+            J.tissue(4).native = [1 0];
+            J.tissue(4).warped = [0 0];
+            J.tissue(5).tpm = {fullfile(SPMhome,'tpm/TPM.nii,5')};
+            J.tissue(5).ngaus = 4;
+            J.tissue(5).native = [1 0];
+            J.tissue(5).warped = [0 0];
+            J.tissue(6).tpm = {fullfile(SPMhome,'tpm/TPM.nii,6')};
+            J.tissue(6).ngaus = 2;
+            J.tissue(6).native = [0 0];
+            J.tissue(6).warped = [0 0];
+            J.warp.mrf = 1;
+            J.warp.cleanup = 1;
+            J.warp.reg = [0 0.001 0.5 0.05 0.2];
+            J.warp.affreg = 'mni';
+            J.warp.fwhm = 0;
+            J.warp.samp = 3;
+            J.warp.write = [1 1];
+            matlabbatch{1}.spm.spatial.preproc=J;
+            spm_jobman('run',matlabbatch);
+            fprintf('Check segmentation results for %s\n', subj_name{sn(s)})
+        end;
+        
+    case 'FMAP:mask_brain_extract'                % Create brain extracted magnitude FMAP image
+        % example: bsp_imana('FMAP:mask_brain_extract',1,1)
+        sn=varargin{1}; % subjNum
+        sessn=varargin{2}; %sessNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            in_ero  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('c2magnitudeavg_sess_%d.nii',sessn));
+            out_ero = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('c2magnitudeavg_mask_sess_%d.nii',sessn));
+            command_ero = sprintf('fslmaths %s -ero -bin %s', in_ero, out_ero)
+            system(command_ero)
+            
+            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii',sessn));
+            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
+            command_mask = sprintf('fslmaths %s -mul %s %s', in_fmap, out_ero, out_fmap)
+            system(command_mask)
+            
+            fprintf('fieldmap brain extraction completed for %s \n',subj_name{sn(s)})
+            fprintf('Check the bet fieldmap in FSLeyes or some other visualization software.')
+        end
+        
+    case 'FMAP:prepare_fieldmap'                % Convert phasediff fieldmap to rads/s
+        % example: bsp_imana('FMAP:prepare_fieldmap',1,1)
+        sn=varargin{1}; % subjNum
+        sessn=varargin{2}; %sessNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            phase  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasdiff_sess_%d.nii',sessn));
+            magnitude_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
+            rad    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasdiff_rads_sess_%d.nii',sessn));
+            command = sprintf('fsl_prepare_fieldmap SIEMENS %s %s %s deltaTE', phase, magnitude_bet, rad)
+            system(command)
+            
+            fprintf('phasediff fieldmap converted to rad/s for %s \n',subj_name{sn(s)})
+        end
+        
+    case 'FMAP:fsl_fugue'                % Run FSL fugue to unwarp EPI images
+        % example: bsp_imana('FMAP:fsl_fugue',1,1,[1:8])
+        sn=varargin{1}; % subjNum
+        sessn=varargin{2}; %sessNum
+        runs = varargin{3}; %runNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            for r=1:length(runs);
+                epi = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii',runs(r)));
+                unwrapped_phase = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasdiff_rads_sess_%d.nii',sessn));
+                out = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d_unwarp.nii',runs(r)));
+                command = sprintf('fugue -i %s -p %s --dwelltime=## --asym=## -s 0.5 -u %s', epi, unwrapped_phase, out)
+                system(command)
+                
+            end;          
+            fprintf('phasediff fieldmap converted to rad/s for %s \n',subj_name{sn(s)})
+        end
+        
+    case 'FMAP:gunzip'                % Unzip unwarped EPI images
+        % example: bsp_imana('FMAP:fsl_fugue',1,[1:16])
+        sn=varargin{1}; % subjNum
+        runs = varargin{2}; %runNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            for r=1:length(runs);
+                in = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d_unwarp.nii.gz',runs(r)));
+                out    = baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d_unwarp.nii',runs(r)));
+                command = sprintf('gunzip -c %s > %s', in, out)
+                system(command)
+            end;          
+            fprintf('unwarped epi images unzipped for %s \n',subj_name{sn(s)})
+        end
     
     case 'SUIT:isolate'               % Segment cerebellum into grey and white matter
         % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
@@ -341,6 +522,59 @@ switch(what)
             suit_reslice_dartel(job);   
             source=fullfile(sourceDir,'*wd*');
             movefile(source,outDir);
+        end
+
+   case 'ROI:inv_reslice'              % Defines ROIs for brain structures
+        sn=varargin{1}; 
+        images = {'csf','pontine','olive','dentate','rednucleus'}; 
+        groupDir = fullfile(baseDir,'RegionOfInterest','group');
+        
+        for s=sn 
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            for im=1:length(images)
+                job.Affine = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
+                job.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
+                job.resample = {fullfile(groupDir,sprintf('%s_mask.nii',images{im}))}; 
+                job.ref     = {glm_mask};
+                suit_reslice_dartel_inv(job);
+                source=fullfile(suitSubjDir,sprintf('iw_%s_mask_u_a_c_anatomical_seg1.nii',images{im}));
+                dest  = fullfile(regSubjDir,sprintf('%s_mask.nii',images{im}));
+                movefile(source,dest);
+
+            end
+        end
+        
+    case 'ROI:cerebellar_gray' 
+        sn=varargin{1};
+        for s = sn 
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
+                fullfile(suitSubjDir,'c_anatomical_seg1.nii'),...
+                fullfile(suitSubjDir,'c_anatomical_pcereb_corr.nii')}; 
+            outname = fullfile(regSubjDir,'cerebellum_gray_mask.nii'); 
+            spm_imcalc(char(P),outname,'i1 & (i2>0.1) & (i3>0.3)',{0,0,1,4}); 
+        end
+        
+    case 'ROI:define'                 % Defines ROIs for brain structures
+        % Before runing this, create masks for different structures
+        sn=4; 
+        regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
+        
+        vararginoptions(varargin,{'sn','regions'}); 
+        for s=sn
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            for r = 1:length(regions)
+                file = fullfile(regSubjDir,sprintf('%s_mask.nii',regions{r}));
+                R{r}.type = 'roi_image';
+                R{r}.file= file;
+                R{r}.name = regions{r};
+                R{r}.value = 1;
+            end
+            R=region_calcregions(R);                
+            save(fullfile(regSubjDir,'regions.mat'),'R');
         end
         
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
@@ -535,56 +769,7 @@ switch(what)
                 close all;
             end;
         end
-    case 'ROI:inv_reslice'              % Defines ROIs for brain structures
-        sn=varargin{1}; 
-        images = {'csf','pontine','olive','dentate','rednucleus'}; 
-        groupDir = fullfile(baseDir,'RegionOfInterest','group');
-        
-        for s=sn 
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
-            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            for im=1:length(images)
-                job.Affine = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
-                job.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
-                job.resample = {fullfile(groupDir,sprintf('%s_mask.nii',images{im}))}; 
-                job.ref     = {glm_mask};
-                suit_reslice_dartel_inv(job);
-                source=fullfile(suitSubjDir,sprintf('iw_%s_mask_u_a_c_anatomical_seg1.nii',images{im}));
-                dest  = fullfile(regSubjDir,sprintf('%s_mask.nii',images{im}));
-                movefile(source,dest);
 
-            end
-        end
-    case 'ROI:cerebellar_gray' 
-        sn=varargin{1};
-        for s = sn 
-            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
-                fullfile(suitSubjDir,'c_anatomical_seg1.nii'),...
-                fullfile(suitSubjDir,'c_anatomical_pcereb_corr.nii')}; 
-            outname = fullfile(regSubjDir,'cerebellum_gray_mask.nii'); 
-            spm_imcalc(char(P),outname,'i1 & (i2>0.1) & (i3>0.3)',{0,0,1,4}); 
-        end
-    case 'ROI:define'                 % Defines ROIs for brain structures
-        % Before runing this, create masks for different structures
-        sn=2; 
-        regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
-        
-        vararginoptions(varargin,{'sn','regions'}); 
-        for s=sn
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            for r = 1:length(regions)
-                file = fullfile(regSubjDir,sprintf('%s_mask.nii',regions{r}));
-                R{r}.type = 'roi_image';
-                R{r}.file= file;
-                R{r}.name = regions{r};
-                R{r}.value = 1;
-            end
-            R=region_calcregions(R);                
-            save(fullfile(regSubjDir,'regions.mat'),'R');
-        end
         
      %%%%% Unused cases %%%%%%
      
@@ -644,8 +829,9 @@ switch(what)
         J.eoptions.fwhm = [7 7];
         matlabbatch{1}.spm.spatial.coreg.estimate=J;
         spm_jobman('run',matlabbatch);
-
-           
+        
+     case 'FUNC:correct deform'        % Correct Magnetic field deformations using antsRegEpi.sh
+       
 end
         
  
