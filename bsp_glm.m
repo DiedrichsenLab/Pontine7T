@@ -11,9 +11,9 @@ numTRs    = 328;                                                            % pe
 global baseDir;
 global subj_name;
 
-baseDir         ='/srv/diedrichsen/data/Pontine7T';
+baseDir         ='/srv/diedrichsen/data/Cerebellum/Pontine7T';
 if ~exist(baseDir,'dir')
-    baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
+    baseDir         ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T';
 end
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
@@ -22,7 +22,7 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING
-subj_name = {'S99','S98','S97','S96'};
+subj_name = {'S99','S98','S97','S96','S95'};
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [1,16];  % first and last behavioural run numbers
@@ -33,12 +33,12 @@ sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session numb
 %========================================================================================================================
 switch(what)
     case 'GLM:do'
-        bsp_glm('GLM:glm1',[4],[1:16]);
-        bsp_glm('GLM:glm2',[4],[1:16]);
-        bsp_glm('GLM:estimate',[4],1);
-        bsp_glm('GLM:estimate',[4],2);
-        bsp_glm('GLM:Fcontrast','sn', [4], 'glm', 1, 'type', 'task');
-        bsp_glm('GLM:Fcontrast','sn', [4], 'glm', 2, 'type', 'task');
+        bsp_glm('GLM:glm1',[5],[1:16]);
+        bsp_glm('GLM:glm2',[5],[1:16]);
+        bsp_glm('GLM:estimate',[5],1);
+        bsp_glm('GLM:estimate',[5],2);
+        bsp_glm('GLM:Fcontrast','sn', [5], 'glm', 1, 'type', 'task');
+        bsp_glm('GLM:Fcontrast','sn', [5], 'glm', 2, 'type', 'task');
     
     case 'GLM:makeMask' % Changed to include CSF
         sn=varargin{1}; % subjNum
