@@ -22,7 +22,7 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING
-subj_name = {'S99','S98','S97','S96','S95'};
+subj_name = {'S98','S97','S96','S95'};
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [1,16];  % first and last behavioural run numbers
@@ -33,12 +33,12 @@ sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session numb
 %========================================================================================================================
 switch(what)
     case 'GLM:do'
-        bsp_glm('GLM:glm1',[5],[1:16]);
-        bsp_glm('GLM:glm2',[5],[1:16]);
-        bsp_glm('GLM:estimate',[5],1);
-        bsp_glm('GLM:estimate',[5],2);
-        bsp_glm('GLM:Fcontrast','sn', [5], 'glm', 1, 'type', 'task');
-        bsp_glm('GLM:Fcontrast','sn', [5], 'glm', 2, 'type', 'task');
+        bsp_glm('GLM:glm1',[3:4],[1:16]);
+        bsp_glm('GLM:glm2',[3:4],[1:16]);
+        bsp_glm('GLM:estimate',[3:4],1);
+        bsp_glm('GLM:estimate',[3:4],2);
+        bsp_glm('GLM:Fcontrast','sn', [3:4], 'glm', 1, 'type', 'task');
+        bsp_glm('GLM:Fcontrast','sn', [3:4], 'glm', 2, 'type', 'task');
     
     case 'GLM:makeMask' % Changed to include CSF
         sn=varargin{1}; % subjNum
@@ -718,7 +718,7 @@ switch(what)
         end; 
     
     case 'test_GLM_Physio'
-        sn = [2:4];
+        sn = [2:5];
         model = {{'Tasks','InstructC','Retro_HR'},...
             {'Tasks','InstructC','Retro_RESP'},...
             {'Tasks','InstructC','HR'},...
@@ -737,7 +737,7 @@ switch(what)
     case 'plot_GLM_Physio'
         D=load('test_GLM_physio.mat');
         
-        sn = [2:4]; 
+        sn = [2:5]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -753,7 +753,7 @@ switch(what)
         end; 
         
     case 'test_GLM_Physio_Filter'
-        sn = [2:4];
+        sn = [2:5];
         model = {{'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
@@ -772,7 +772,7 @@ switch(what)
     case 'plot_GLM_Physio_Filter'
         D=load('test_GLM_physio_filter.mat');
         
-        sn = [2:4]; 
+        sn = [2:5]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -856,7 +856,7 @@ switch(what)
         end; 
         
     case 'physio_reg' % Examines the covariance of physiological regressors with main regressors 
-        sn = 2; 
+        sn = [4]; 
         glm = 1; 
         vararginoptions(varargin,{'sn'})
         reg = {'Tasks','InstructC','Retro_HR','Retro_RESP','HR','RV'};
