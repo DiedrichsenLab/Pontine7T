@@ -5,9 +5,9 @@ numDummys = 3;                                                              % pe
 numTRs    = 328;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
-baseDir         ='/srv/diedrichsen/data/Pontine7T';
+baseDir         ='/srv/diedrichsen/data/Cerebellum/Pontine7T';
 if ~exist(baseDir,'dir')
-    baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
+    baseDir         ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T';
 end
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
@@ -16,7 +16,8 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING 
-subj_name = {'S99','S98','S97','S96'};
+subj_name = {'S99','S98','S97','S96', 'S95'};
+good_subjs = [98, 97, 96, 95];
 loc_AC={[79;127;127];[80;129;120];[77;125;129];[90;129;138]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
 %loc_AC={[105;169;169]}; % Numbers in the titlebar of mricron
 %loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
@@ -575,12 +576,17 @@ switch(what)
         end
     case 'ROI:define'                 % Defines ROIs for brain structures
         % Before runing this, create masks for different structures
-        sn=2; 
+        % Example usage: bsp_imana('ROI:define')
+        sn=good_subjs; 
         regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
         
         vararginoptions(varargin,{'sn','regions'}); 
         for s=sn
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            
+            % this will be changed
+            subj_name = sprintf('S%02d', s);
+%             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name);
             for r = 1:length(regions)
                 file = fullfile(regSubjDir,sprintf('%s_mask.nii',regions{r}));
                 R{r}.type = 'roi_image';
@@ -591,7 +597,54 @@ switch(what)
             R=region_calcregions(R);                
             save(fullfile(regSubjDir,'regions.mat'),'R');
         end
-
+    case 'ROI:get_beta'
+        % Example usage: bsp_imana('ROI:get_beta', 'glm', 1, 'region_name', 'regions')
+        
+        sn = good_subjs;
+        glm =  1;
+        region_name = 'regions';
+        
+        vararginoptions(varargin, {'sn', 'glm', 'region_name'});
+        
+        % setting directories
+        glmDir      = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
+        imageDir    = fullfile(baseDir, imagingDir);
+        regDataDir  = fullfile(baseDir, regDir, 'data');
+        betaDir     = fullfile(baseDir, regDir, sprintf('glm%d', glm), 'beta_roi');
+        dircheck(betaDir);
+        
+        for s = sn
+            % get subject name (this will be changed)
+            subj_name = sprintf('S%d', s);
+            
+            % get the region file
+            load(fullfile(regDataDir, subj_name, sprintf('%s.mat', region_name)));
+            
+            % load SPM_info and SPM
+            T = load(fullfile(glmDir, subj_name, 'SPM_info.mat'));
+            load(fullfile(glmDir, subj_name, 'SPM.mat'));
+            
+            % change the directory in SPM to the currrent GLM directory
+            newGLMDir   = fullfile(glmDir,subj_name);
+            newRawDir   = fullfile(imageDir,subj_name);
+            
+            SPM         = spmj_move_rawdata(SPM,newRawDir);
+            SPM.swd     = fullfile(newGLMDir);
+            
+            for r = 1:length(R) 
+                fprintf('- Doing %s %s\n', subj_name, R{r}.name);
+                % extract betas
+                V    = SPM.xY.VY;
+                data = region_getdata(V,R{r}, 'interp', 0, 'ignore_nan', 1);
+                keyboard;
+            end % r (regions)
+            
+            
+                
+                
+            
+        end % s (subject)
+        
            
 end
         
