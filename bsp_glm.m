@@ -687,7 +687,7 @@ switch(what)
     case 'test_GLM_lowfreq'
         % Compare different methods to deal with auto-correlated noise
         % And sporardic artifacts
-        sn = [2:4];
+        sn = [1:4];
         model = {{'Tasks','Instruct'},...
             {'Tasks','Instruct'}};
         inK   = {{'Hpass'},...
@@ -702,7 +702,7 @@ switch(what)
     
     case 'plot_GLM_lowfreq'
         D=load('test_GLM_lowfreq.mat');
-        sn = [2:4]; 
+        sn = [1:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1]}; 
         style={':',':','-','-'}; 
@@ -718,7 +718,7 @@ switch(what)
         end; 
     
     case 'test_GLM_Physio'
-        sn = [2:5];
+        sn = [1:4];
         model = {{'Tasks','InstructC','Retro_HR'},...
             {'Tasks','InstructC','Retro_RESP'},...
             {'Tasks','InstructC','HR'},...
@@ -737,7 +737,7 @@ switch(what)
     case 'plot_GLM_Physio'
         D=load('test_GLM_physio.mat');
         
-        sn = [2:5]; 
+        sn = [1:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -753,7 +753,7 @@ switch(what)
         end; 
         
     case 'test_GLM_Physio_Filter'
-        sn = [2:5];
+        sn = [1:4];
         model = {{'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
@@ -772,7 +772,7 @@ switch(what)
     case 'plot_GLM_Physio_Filter'
         D=load('test_GLM_physio_filter.mat');
         
-        sn = [2:5]; 
+        sn = [1:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -788,7 +788,7 @@ switch(what)
         end; 
         
     case 'test_GLM_CSF'
-        sn = [2:4];
+        sn = [1:4];
         model = {{'Tasks','InstructC','CSF'},...
             {'Tasks','InstructC','CSFPCAindiv'},...
             {'Tasks','InstructC','CSFPCAall'},...
@@ -806,7 +806,7 @@ switch(what)
     case 'plot_GLM_CSF'
         D=load('test_GLM_csf.mat');
         
-        sn = [2:4]; 
+        sn = [1:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -822,7 +822,7 @@ switch(what)
         end; 
     
     case 'test_GLM_CSF_Filter'
-        sn = [2:4];
+        sn = [1:4];
         model = {{'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
             {'Tasks','InstructC'},...
@@ -840,7 +840,7 @@ switch(what)
     case 'plot_GLM_CSF_Filter'
         D=load('test_GLM_csf_filter.mat');
         
-        sn = [2:4]; 
+        sn = [1:4]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
         % style={':',':','-','-','-'}; 
@@ -854,6 +854,86 @@ switch(what)
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
             title('R of CSF-filter');
         end; 
+        
+    case 'test_GLM_Mov'
+        sn = [1:4];
+        model = {{'Tasks','InstructC','Mov'},...
+            {'Tasks','InstructC','MovPCA'},...
+            {'Tasks','InstructC'}};
+        inK   = {{},{},{},{}};
+        evalX = {[1]};
+        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
+            'runs',[1:16],'sn',sn);
+        save(fullfile(baseDir,'results','test_GLM_mov.mat'),'-struct','D');
+        varargout={D};
+    
+    case 'plot_GLM_Mov'
+        D=load('test_GLM_mov.mat');
+        
+        sn = [1:4]; 
+        num_subj = length(sn); 
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
+        % style={':',':','-','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,2,(s-1)*2+1); 
+            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
+            title('performance of task differences');
+            ylabel(sprintf('SN %d',sn(s)));
+            subplot(num_subj,2,(s-1)*2+2); 
+            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
+                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
+            title('R of Mov');
+        end; 
+    
+    case 'test_GLM_Mov_Filter'
+        sn = [1:4];
+        model = {{'Tasks','InstructC'},...
+            {'Tasks','InstructC'},...
+            {'Tasks','InstructC'}};
+        inK   = {{'Mov'},{'MovPCA'},{}};
+        evalX = {[1]};
+        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
+            'runs',[1:16],'sn',sn);
+        save(fullfile(baseDir,'results','test_GLM_mov_filter.mat'),'-struct','D');
+        varargout={D};
+    
+    case 'plot_GLM_Mov_Filter'
+        D=load('test_GLM_mov_filter.mat');
+        
+        sn = [1:4]; 
+        num_subj = length(sn); 
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
+        % style={':',':','-','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,2,(s-1)*2+1); 
+            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
+            title('performance of task differences');
+            ylabel(sprintf('SN %d',sn(s)));
+            subplot(num_subj,2,(s-1)*2+2); 
+            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
+                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
+            title('R of Mov-filter');
+        end; 
+        
+    case 'test_GLM_GLS_csf_only'
+        % Compare different methods to deal with auto-correlated noise
+        % And sporardic artifacts
+        sn = [1:4];
+        model = {{'Tasks','Instruct'}};
+        inK   = {};
+        roi = {'csf'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',{[1]},...
+            'runs',[1:16],'sn',sn);
+        save(fullfile(baseDir,'results','test_GLM_gls_csf.mat'),'-struct','D');
+        varargout={D};
         
     case 'physio_reg' % Examines the covariance of physiological regressors with main regressors 
         sn = [4]; 

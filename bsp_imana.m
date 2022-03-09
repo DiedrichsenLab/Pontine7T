@@ -17,8 +17,10 @@ regDir          ='/RegionOfInterest';
 fmapDir         ='/fieldmaps';
 %========================================================================================================================
 % PRE-PROCESSING 
-subj_name = {'S99','S98','S97','S96','S95'};
-loc_AC={[79;127;127];[80;129;120];[77;125;129];[90;129;138];[78;131;127]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+subj_pilot = {'S99'};
+loc_AC_pilot = {[79;127;127]};
+subj_name = {'S98','S97','S96','S95','S01'};
+loc_AC={[80;129;120];[77;125;129];[90;129;138];[78;131;127];[77;125;122]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [1,16];  % first and last behavioural run numbers
