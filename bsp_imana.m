@@ -5,9 +5,9 @@ numDummys = 3;                                                              % pe
 numTRs    = 328;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
-baseDir         ='/srv/diedrichsen/data/Pontine7T';
+baseDir         ='/srv/diedrichsen/data/Cerebellum/Pontine7T';
 if ~exist(baseDir,'dir')
-    baseDir         ='/Volumes/diedrichsen_data$/data/Pontine7T';
+    baseDir         ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T';
 end
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
