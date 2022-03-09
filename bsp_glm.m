@@ -488,14 +488,194 @@ switch(what)
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
             end
         end
-        
-    case 'test_GLM'                   % Get crossval R2 and R from GLM for different designs
-        % example: bsp_imana('test_GLM','inK',{'Hpass','CSF'...},'inX',{'Mov',...},'ridge',0.1);
-        % Input arguents :
+    case 'test_GLM' 
+        % Get crossval R2 and R from GLM for different designs
+        % As an evaluation, it uses only the differences between the
+        % task-related regressors across all voxel
+        % Input arguments :
         %    sn: Subject number
-        %    inK: List of terms in the pre-filtering matrix (if any)
+        %    roi: Cell array of ROI names 
+        %    inK: List of terms in the pre-filtering matrix (cell array)
         %    inX: List of terms in the design matrix
-        %
+        %    reg: Regression method: OLS, GLS, Ridge_pcm, Tikhonov_pcm..
+        % Output arguments: 
+        %   D: Data Frame holding the evaluation results with fields
+        %   D.sn: Subject number
+        %   D.roi: Cell array of ROI names 
+        %   D.run: Run that served as test set
+        %   D.R: Predictive correlation (across voxels and tasks)
+        %   D.R2: Predictive correlation (across voxel and tasks) 
+        sn = 2;
+        glm = 1;
+        roi = {'dentate'};%{'cerebellum_gray','dentate','brainstem','pontine'};
+        inK = {};                   % Terms in filtering matrix - except for intercept
+        inX = {{'Tasks','Instruct'}}; % Terms in the design matrix
+        reg = {'OLS'};  % Regression methods
+        runs = [1:16];
+        D = []; % Result structure
+        % Get the posible options to test
+        vararginoptions(varargin,{'sn','roi','inK','inX','reg','evalX','runs'});
+        
+        % Load SPM file
+        for s = sn
+            glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+            glmDirSubj = fullfile(glmDir, subj_name{s});
+            load(fullfile(glmDirSubj,'SPM.mat'));
+            INFO = load(fullfile(glmDirSubj,'SPM_info.mat'));
+            nRuns = length(SPM.nscan);
+            
+            % Get the Data (Y)
+            for r=1:length(roi) % Loop over ROIs
+                fprintf('SN: %d, ROI: %s\n',s,roi{r});
+                % Load raw time series
+                load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',roi{r})));
+                % Voxel-wise prewhiten the data
+                Y = bsxfun(@rdivide,Y,sqrt(resMS));
+                checksum = sum(abs(Y),1);
+                
+                badindx = isnan(checksum) | checksum==0;
+                if sum(badindx)>0
+                    warning('%d Nans or 0 in ts file',sum(badindx));
+                    Y = Y(:,~badindx);
+                end
+                
+                for model = 1:length(inX)
+                    if (inX{model}{1}~='Tasks')
+                        error('First group of regressors in design matrix needs to be Tasks'); 
+                    end
+                    
+                    % Add regressors of no interest to X0
+                    X0 = [];
+                    if (~isempty(inK) && ~isempty(inK{model}))
+                        for t=1:length(inK{model})
+                            X0 = [X0 get_feature(inK{model}{t},s,SPM,INFO,1,1,1)];
+                        end
+                    end
+                    
+                    % Add intercept to X0
+                    X0 = [X0 SPM.xX.X(:,SPM.xX.iB)];
+                    
+                    % Get the design matrix (only task related and intercepts)
+                    X = [];
+                    group = []; % regressor group
+                    row = [];
+                    i = 0 ;
+                    
+                    % Add regressor of no interest to X
+                    for t=1:length(inX{model})
+                        x = get_feature(inX{model}{t},s,SPM,INFO,0,1,1);
+                        k = size(x,2);
+                        indx = [i+1:i+k];
+                        group(indx)=t;
+                        X(:,indx) = x;
+                        i = i + k;
+                    end
+                    N = size(X,1);
+                    
+                    % Get weight/whitening matrix
+                    W = SPM.xX.W;
+                    
+                    % Make run indicator
+                    row=zeros(N,1);
+                    for rn=1:nRuns
+                        row(SPM.Sess(rn).row,1)=rn;
+                    end;
+                    row(~ismember(row,runs))=0;
+                    
+                    for method=1:length(reg) % Loop over different methods
+                                                
+                        % Filtering design matrix and data
+                        switch(reg{method})
+                            case {'OLS'}
+                                R         = eye(N)-X0*pinv(X0);
+                                Xr        = R*X;    % KWX
+                                Yr        = R*Y;
+                            case {'GLS','ridge_fixed','tikhonov_pcm'}
+                                R         = eye(N)-X0*pinv(X0);
+                                Yr        = R*W*Y;
+                                Xr        = R*W*X;
+                        end
+                        fprintf('%s:',reg{method});
+                        % Crossvalidated approach
+                        for rn=runs
+                            
+                            trainI = find(row~=rn & row>0);
+                            testI  = find(row==rn);
+                            
+                            tic;
+                            % Now estimate with the favorite regression approach
+                            switch(reg{method})
+                                case {'OLS','GLS','WLS','GLS_WLS'}
+                                    Btrain = pinv(Xr(trainI,:))*Yr(trainI,:);
+                                    Btest  = pinv(Xr(testI, :))*Yr(testI,:);
+                                    theta = [];
+                                case 'ridge_fixed'
+                                    alpha = 1;
+                                    Xtrain = Xr(trainI,:);
+                                    Xtest  = Xr(testI, :);
+                                    Btrain = (Xtrain' * Xtrain + eye(size(Xtrain,2))* alpha) \ (Xtrain' * Yr(trainI,:));
+                                    Btest  = (Xtest'  * Xtest  + eye(size(Xtest,2)) * alpha) \ (Xtest'  * Yr(testI,:));
+                                    theta = [];
+                                case 'ridge_pcm'
+                                    group0 = ones(1,size(Xr,2));
+                                    if (rn==1)
+                                        [theta,fitINFO]=pcm_fitModelRegression(Xr,Yr,group0,X0);
+                                    end
+                                    Btrain = pcm_estimateRegression(Xr(trainI,:),Yr(trainI,:),group0,X0(trainI,:),theta);
+                                    Btest  = pcm_estimateRegression(Xr(testI,:), Yr(testI,:), group0,X0(testI,:), theta);
+                                case 'tikhonov_pcm'
+                                    if (rn==1)
+                                        [theta,fitINFO]=pcm_fitModelRegression(Xr,Yr,group,X0);
+                                    end
+                                    Btrain = pcm_estimateRegression(Xr(trainI,:),Yr(trainI,:),group,X0(trainI,:),theta);
+                                    Btest  = pcm_estimateRegression(Xr(testI,:), Yr(testI,:), group,X0(testI,:), theta);
+                            end
+                            fprintf('.');
+                            % Performance valuation using only task-related regressors
+                            time = toc;
+                            evindx = find(group==1);
+                            if ~isempty(evindx)
+                                q = length(evindx); 
+                                C = eye(q)-ones(q)/q; 
+                                Ypred = C*Btrain(evindx,:);
+                                Ytest = C*Btest(evindx,:);
+                                % Record performance
+                                T.roi = roi(r);
+                                T.run  = rn;
+                                T.sn   = s;
+                                T.method  = reg(method);
+                                T.methodN = method;
+                                T.model = model;
+                                T.theta = nan(1,5);
+                                T.theta(1:length(theta)) = theta;
+                                T.time = time;
+                                T.R     = sum(sum(Ypred.*Ytest))./sqrt(sum(sum(Ypred.*Ypred)).*sum(sum(Ytest.*Ytest))); % R with differences between task-related regressors
+                                T.R2    = 1-sum(sum((Ypred-Ytest).^2))./sum(sum(Ytest.^2));  % R2-on the differences of task related regressors
+                                D = addstruct(D,T);
+                            end % evalX
+                        end % runs
+                        fprintf('\n');
+                    end % regression methods
+                end % Model terms
+            end % ROI
+        end % Subjects
+        varargout = {D};
+
+    case 'test_GLM_timeseries' 
+        % Get crossval R2 and R from GLM for different designs
+        % example: bsp_imana('test_GLM','inK',{'Hpass','CSF'...},'inX',{'Mov',...},'ridge',0.1);
+        % This version is more complex, as it uses the predicted time
+        % series: Use only if you really understand what's going on. 
+        % Input arguments :
+        %    sn: Subject number
+        %    roi: Cell array of ROI names 
+        %    inK: List of terms in the pre-filtering matrix (cell array)
+        %    inX: List of terms in the design matrix
+        %    reg: Regression method: OLS, GLS, Ridge_pcm, Tikhonov_pcm..
+        %    eval: Which regressors to use from the design matrix ot
+        %    evaluate
+        % Output arguments: 
+        %   
         sn = 2;
         glm = 1;
         roi = {'dentate'};%{'cerebellum_gray','dentate','brainstem','pontine'};
@@ -572,6 +752,8 @@ switch(what)
                     row(~ismember(row,runs))=0;
                     
                     for method=1:length(reg) % Loop over different methods
+                                                
+                        % Filtering design matrix and data
                         switch(reg{method})
                             case {'OLS'}
                                 R         = eye(N)-X0*pinv(X0);
