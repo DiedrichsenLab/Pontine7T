@@ -22,7 +22,7 @@ suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
 %========================================================================================================================
 % PRE-PROCESSING
-subj_name = {'S98','S97','S96','S95'};
+subj_name = {'S98','S97','S96','S95','S01'};
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [1,16];  % first and last behavioural run numbers
@@ -33,12 +33,12 @@ sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session numb
 %========================================================================================================================
 switch(what)
     case 'GLM:do'
-        bsp_glm('GLM:glm1',[3:4],[1:16]);
-        bsp_glm('GLM:glm2',[3:4],[1:16]);
-        bsp_glm('GLM:estimate',[3:4],1);
-        bsp_glm('GLM:estimate',[3:4],2);
-        bsp_glm('GLM:Fcontrast','sn', [3:4], 'glm', 1, 'type', 'task');
-        bsp_glm('GLM:Fcontrast','sn', [3:4], 'glm', 2, 'type', 'task');
+        bsp_glm('GLM:glm1',[5],[1:16]);
+        bsp_glm('GLM:glm2',[5],[1:16]);
+        bsp_glm('GLM:estimate',[5],1);
+        bsp_glm('GLM:estimate',[5],2);
+        bsp_glm('GLM:Fcontrast','sn', [5], 'glm', 1, 'type', 'task');
+        bsp_glm('GLM:Fcontrast','sn', [5], 'glm', 2, 'type', 'task');
     
     case 'GLM:makeMask' % Changed to include CSF
         sn=varargin{1}; % subjNum
@@ -869,7 +869,7 @@ switch(what)
     case 'test_GLM_lowfreq'
         % Compare different methods to deal with auto-correlated noise
         % And sporardic artifacts
-        sn = [1:4];
+        sn = [1:5];
         model = {{'Tasks','Instruct'},...
             {'Tasks','Instruct'}};
         inK   = {{'Hpass'},...
@@ -877,14 +877,14 @@ switch(what)
         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
         method = {'OLS','GLS'};
         
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',{[1]},...
-            'runs',[1:16],'sn',sn);
-        save(fullfile(baseDir,'results','test_GLM_lowfreq.mat'),'-struct','D');
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'evalX',{[1]},...
+            'runs',[1:16]);
+        save(fullfile(baseDir,'results','test_GLM_lowfreq_2.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_lowfreq'
-        D=load('test_GLM_lowfreq.mat');
-        sn = [1:4]; 
+        D=load('test_GLM_lowfreq_2.mat');
+        sn = [1:5]; 
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1]}; 
         style={':',':','-','-'}; 
@@ -929,7 +929,7 @@ switch(what)
             title('performance of task differences');
             ylabel(sprintf('SN %d',sn(s)));
             subplot(num_subj,2,(s-1)*2+2); 
-            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s) & D.evalX==2,'leg',{'Retro HR','Retro Resp','HR','RV'},'facecolor',color); 
+            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s) & D.evalX==2,'leg',{'Retro HR','Retro Resp','HR','RV','none'},'facecolor',color); 
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
             title('R of Physio-regressor');
         end; 
