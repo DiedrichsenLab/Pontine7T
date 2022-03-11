@@ -503,9 +503,14 @@ switch(what)
         %   D.sn: Subject number (real)
         %   D.roi: Cell array of ROI names
         %   D.model: Specific combination in inX and inK regressors
-        %   D.method: Regression / Estimation method
+        %   D.method: Regression method (reg)
         %   D.run: Run that served as test set
-        %   TASK RELATED REGRESSORS: 
+        %   USING THE ENTIRE MODEL (TASKS, INSTRUCTION, NUISANCE)
+        %   THIS IS AFTER ANYTHING IN INK IS REMOVED - I.E. THE DATA IS
+        %   FILTERED AND WEIGHTED (W)
+        %   D.R: Predictive R of the whole model (against observed ts)
+        %   D.R2: Predictive R2 of the whole model
+        %   USING TASK RELATED REGRESSORS ONLY: 
         %   D.R_Y: Predictived R on predicted vs. observed time series
         %   D.R_B: Predictive R on beta estimates (not centered)
         %   D.R_Bc: Predictive R on beta estimates (centered)
@@ -520,7 +525,7 @@ switch(what)
         runs = [1:16];
         D = []; % Result structure
         % Get the posible options to test
-        vararginoptions(varargin,{'sn','roi','inK','inX','reg','evalX','runs'});
+        vararginoptions(varargin,{'sn','roi','inK','inX','reg','runs'});
         
         % Load SPM file
         for s = sn
@@ -639,9 +644,6 @@ switch(what)
                             fprintf('.');
                             % Performance valuation using only task-related regressors
                             time = toc;
-                            evindx = find(group==1);
-                            q = length(evindx); 
-                            C = eye(q)-ones(q)/q; 
                             % Record performance
                             T.roi = roi(r);
                             T.run  = rn;
@@ -652,6 +654,14 @@ switch(what)
                             T.theta = nan(1,5);
                             T.theta(1:length(theta)) = theta;
                             T.time = time;
+                            % Evaluation of the overall model: against observed time series  
+                            T.R        = calc_cosang(Xr(testI,:)*Btrain,Yr(testI,:)); 
+                            T.R2       = calc_R2(Xr(testI,:)*Btrain,Yr(testI,:));
+                            % Evalation of the task-related regressors
+                            % alone 
+                            evindx = find(group==1);
+                            q = length(evindx); 
+                            C = eye(q)-ones(q)/q; 
                             Btr = Btrain(evindx,:); % Task-related beta weights from training set 
                             Bte = Btest(evindx,:);  % Task-related beta weights from test run 
                             Xte = Xr(testI,evindx); % Design martrix for the test run (task related regressors) 
@@ -784,7 +794,7 @@ switch(what)
         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
         method = {'GLS'};
         
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,...
             'runs',[1:16],'sn',sn);
         save(fullfile(baseDir,'results','test_GLM_physio_filter.mat'),'-struct','D');
         varargout={D};
@@ -814,11 +824,10 @@ switch(what)
             {'Tasks','InstructC','CSFPCAall'},...
             {'Tasks','InstructC'}};
         inK   = {{},{},{},{}};
-        evalX = {[1]};
         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
         method = {'GLS'};
         
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,...
             'runs',[1:16],'sn',sn);
         save(fullfile(baseDir,'results','test_GLM_csf.mat'),'-struct','D');
         varargout={D};
@@ -848,11 +857,10 @@ switch(what)
             {'Tasks','InstructC'},...
             {'Tasks','InstructC'}};
         inK   = {{'CSF'},{'CSFPCAindiv'},{'CSFPCAall'},{}};
-        evalX = {[1]};
         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
         method = {'GLS'};
         
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
+        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,...
             'runs',[1:16],'sn',sn);
         save(fullfile(baseDir,'results','test_GLM_csf_filter.mat'),'-struct','D');
         varargout={D};
