@@ -400,6 +400,28 @@ switch(what)
             end
         end
         
+    case 'ROI:inv_reslice_csf'              % Defines ROIs for brain structures
+        sn=varargin{1}; 
+        images = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'}; 
+        groupDir = fullfile(baseDir,'RegionOfInterest','group');
+        
+        for s=sn 
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            for im=1:length(images)
+                job.Affine = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
+                job.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
+                job.resample = {fullfile(groupDir,sprintf('csf_mask_%s.nii',images{im}))}; 
+                job.ref     = {glm_mask};
+                suit_reslice_dartel_inv(job);
+                source=fullfile(suitSubjDir,sprintf('iw_%s_mask_u_a_c_anatomical_seg1.nii',images{im}));
+                dest  = fullfile(regSubjDir,sprintf('%s_mask.nii',images{im}));
+                movefile(source,dest);
+
+            end
+        end
+        
     case 'ROI:cerebellar_gray' 
         sn=varargin{1};
         for s = sn 
