@@ -20,8 +20,6 @@ subj_pilot = {'S99'};
 loc_AC_pilot = {[79;127;127]};
 subj_name = {'S98','S97','S96','S95','S01'};
 loc_AC={[80;129;120];[77;125;129];[90;129;138];[78;131;127];[77;125;122]}; % 
-%loc_AC={[105;169;169]}; % Numbers in the titlebar of mricron
-%loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [50,65];  % first and last behavioural run numbers
