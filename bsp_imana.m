@@ -415,8 +415,8 @@ switch(what)
                 job.resample = {fullfile(groupDir,sprintf('csf_mask_%s.nii',images{im}))}; 
                 job.ref     = {glm_mask};
                 suit_reslice_dartel_inv(job);
-                source=fullfile(suitSubjDir,sprintf('iw_%s_mask_u_a_c_anatomical_seg1.nii',images{im}));
-                dest  = fullfile(regSubjDir,sprintf('%s_mask.nii',images{im}));
+                source=fullfile(suitSubjDir,sprintf('iw_csf_mask_%s_u_a_c_anatomical_seg1.nii',images{im}));
+                dest  = fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}));
                 movefile(source,dest);
 
             end
