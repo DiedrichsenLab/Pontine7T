@@ -508,12 +508,12 @@ switch(what)
         %   USING THE ENTIRE MODEL (TASKS, INSTRUCTION, NUISANCE)
         %   THIS IS AFTER ANYTHING IN INK IS REMOVED - I.E. THE DATA IS
         %   FILTERED AND WEIGHTED (W)
-        %   D.R: Predictive R of the whole model (against observed ts)
+        %   D.R: Predictive R of the whole model (against observed ts) **
         %   D.R2: Predictive R2 of the whole model
         %   USING TASK RELATED REGRESSORS ONLY: 
         %   D.R_Y: Predictived R on predicted vs. observed time series
         %   D.R_B: Predictive R on beta estimates (not centered)
-        %   D.R_Bc: Predictive R on beta estimates (centered)
+        %   D.R_Bc: Predictive R on beta estimates (centered) **
         %   D.R_Yp: Predictive R on predicted vs. fitted time series (nc)
         %   D.R_Ypc: Predictive R on predicted vs. fitted time series (centered)
         sn = 3;
@@ -668,8 +668,8 @@ switch(what)
                             T.R_Y      = calc_cosang(Xte*Btr,Yr(testI,:)); % R of between predicted and observed time series
                             T.R_B      = calc_cosang(Btr,Bte);             % R of between predicted and observed task betas (non-centered)                            
                             T.R_Bc     = calc_cosang(C*Btr,C*Bte);         % R of between predicted and observed task betas (centered)
-                            T.R_Yp     = calc_cosang(Xte*Btr,Xte*Bte);     % R of between predicted and observed task betas (non-centered)                            
-                            T.R_Ypc    = calc_cosang(Xte*C*Btr,Xte*C*Bte); % R of between predicted and observed task betas (centered)
+                            T.R_Yp     = calc_cosang(Xte*Btr,Xte*Bte);     % R of between predicted vs. fitted time series (non-centered)                            
+                            T.R_Ypc    = calc_cosang(Xte*C*Btr,Xte*C*Bte); % R of between predicted vs. fitted time series (centered)
                             D = addstruct(D,T);
                         end % runs
                         fprintf('\n');
@@ -890,20 +890,18 @@ switch(what)
         sn = [1:5];
         model = {{'Tasks','Instruct'},...
             {'Tasks','Instruct'}};
-
         inK   = {{'Hpass'},...
             {}};
         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
         method = {'OLS','GLS'};
         
-        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'evalX',{[1]},...
-            'runs',[1:16]);
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
         save(fullfile(baseDir,'results','test_GLM_lowfreq.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_lowfreq'
         what = 'R_Bc'; % what to plot - here correlation on 
-        sn = [2 3 4 5]; 
+        sn = [1:5]; 
         vararginoptions(varargin,{'what','sn'});
 
         D=load('test_GLM_lowfreq.mat');
@@ -922,47 +920,41 @@ switch(what)
         end; 
 
     case 'test_GLM_Physio'
-        sn = [1:4];
+        sn = [1:5];
         model = {{'Tasks','InstructC','Retro_HR'},...
             {'Tasks','InstructC','Retro_RESP'},...
             {'Tasks','InstructC','HR'},...
             {'Tasks','InstructC','RV'},...
             {'Tasks','InstructC'}};
         inK   = {{},{},{},{},{}};
-        evalX = {1,3};
         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
         method = {'GLS'};
         
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
-            'runs',[1:16],'sn',sn);
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
         save(fullfile(baseDir,'results','test_GLM_physio.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_Physio'
         what = 'R_Bc'; % what to plot - here correlation on 
-        sn = [2 3 4 5]; 
+        sn = [1:5]; 
         vararginoptions(varargin,{'what','sn'});
 
         D=load('test_GLM_physio.mat');
-        
-        sn = [1:4]; 
+         
         num_subj = length(sn); 
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
-        % style={':',':','-','-','-'}; 
+        style={':',':','-','-','-'}; 
         for s=1:num_subj 
             subplot(num_subj,2,(s-1)*2+1); 
             barplot(D.roi,D.(what),'split',[D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV','none'},'facecolor',color); 
-            title('performance of task differences');
+            title('different ROIs');
             ylabel(sprintf('SN %d',sn(s)));
             subplot(num_subj,2,(s-1)*2+2); 
-            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s) & D.evalX==2,'leg',{'Retro HR','Retro Resp','HR','RV','none'},'facecolor',color); 
-                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
-            title('R of Physio-regressor');
+            lineplot(D.run,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV','none'},'linecolor',color,...
+                    'linestyle',style,'linewidth',2);
+            title('Different Runs across ROIs');
         end; 
-            barplot(D.roi,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV'},'facecolor',color); 
-                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
-            title('R of Physio-regressor');
-        end; 
+
     
     case 'test_GLM_script'
         model = {{'Tasks','Instruct'},...
