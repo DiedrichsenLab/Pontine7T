@@ -912,7 +912,7 @@ switch(what)
             subplot(num_subj,2,(s-1)*2+1); 
             barplot(D.roi,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'HpassOLS','OLS','HpassGLS','GLS'},'facecolor',color); 
             title('Different ROIs');
-            ylabel(sprintf('SN %d',subj_name(s)));
+            ylabel(sprintf('%s',subj_name{s}));
             subplot(num_subj,2,(s-1)*2+2); 
             lineplot(D.run,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'HpassOLS','OLS','HpassGLS','GLS'},'linecolor',color,...
                     'linestyle',style,'linewidth',2); % {'HpassOLS','HpassGLS','OLS','GLS'} 
@@ -948,7 +948,7 @@ switch(what)
             subplot(num_subj,2,(s-1)*2+1); 
             barplot(D.roi,D.(what),'split',[D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV','none'},'facecolor',color); 
             title('different ROIs');
-            ylabel(sprintf('SN %d',subj_name(s)));
+            ylabel(sprintf('%s',subj_name{s}));
             subplot(num_subj,2,(s-1)*2+2); 
             lineplot(D.run,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV','none'},'linecolor',color,...
                     'linestyle',style,'linewidth',2);
@@ -996,7 +996,7 @@ switch(what)
             subplot(num_subj,2,(s-1)*2+1); 
             barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV','none'},'facecolor',color); 
             title('performance of task differences');
-            ylabel(sprintf('SN %d',subj_name(s)));
+            ylabel(sprintf('%s',subj_name{s}));
             subplot(num_subj,2,(s-1)*2+2); 
             barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV'},'facecolor',color); 
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
@@ -1029,7 +1029,7 @@ switch(what)
             subplot(num_subj,2,(s-1)*2+1); 
             barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
             title('performance of task differences');
-            ylabel(sprintf('SN %d',subj_name(s)));
+            ylabel(sprintf('%s',subj_name{s}));
             subplot(num_subj,2,(s-1)*2+2); 
             barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
@@ -1062,7 +1062,7 @@ switch(what)
             subplot(num_subj,2,(s-1)*2+1); 
             barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
             title('performance of task differences');
-            ylabel(sprintf('SN %d',subj_name(s)));
+            ylabel(sprintf('%s',subj_name{s}));
             subplot(num_subj,2,(s-1)*2+2); 
             barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
@@ -1095,7 +1095,7 @@ switch(what)
             subplot(num_subj,2,(s-1)*2+1); 
             barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
             title('performance of task differences');
-            ylabel(sprintf('SN %d',subj_name(s)));
+            ylabel(sprintf('%s',subj_name{s}));
             subplot(num_subj,2,(s-1)*2+2); 
             barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
@@ -1128,7 +1128,7 @@ switch(what)
             subplot(num_subj,2,(s-1)*2+1); 
             barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
             title('performance of task differences');
-            ylabel(sprintf('SN %d',subj_name(s)));
+            ylabel(sprintf('%s',subj_name{s}));
             subplot(num_subj,2,(s-1)*2+2); 
             barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
                     % {'HpassOLS','HpassGLS','OLS','GLS'} 
