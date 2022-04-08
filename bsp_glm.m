@@ -461,7 +461,7 @@ switch(what)
         keyboard;
         
     case 'TS:getRawTs'                % Get raw timeseries and save them
-        % bsp_imana('TS:getRawTs',1,1,'dentate');
+        % bsp_glm('TS:getRawTs',1,1);
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
         
@@ -488,6 +488,35 @@ switch(what)
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
             end
         end
+    case 'TS:getRawTs_csf'                % Get raw timeseries and save them
+        % bsp_glm('TS:getRawTs_csf',1,1);
+        sn=varargin{1}; % subjNum
+        glm=varargin{2}; % glmNum
+        
+        glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        
+        for s=sn,
+            glmDirSubj=fullfile(glmDir, subj_name{s});
+            load(fullfile(glmDirSubj,'SPM.mat'));
+            
+            % load data
+            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions_csf.mat')));
+            % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
+            
+            % Get the raw data files
+            V=SPM.xY.VY;
+            VresMS = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
+            
+            % Get time series data
+            for r = 1:length(R)
+                Y = region_getdata(V,R{r});  % Data is N x P
+                resMS = region_getdata(VresMS,R{r});
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
+                save(filename,'Y','resMS','-v7.3');
+                fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
+            end
+        end    
+    
     case 'test_GLM' 
         % Get crossval R2 and R from GLM for different designs
         % As an evaluation, it uses only the differences between the
@@ -1135,19 +1164,40 @@ switch(what)
             title('R of Mov-filter');
         end; 
         
-    case 'test_GLM_GLS_csf_only'
+    case 'test_GLM_lowfreq_csf_rois'
         % Compare different methods to deal with auto-correlated noise
         % And sporardic artifacts
-        sn = [1:4];
-        model = {{'Tasks','Instruct'}};
-        inK   = {};
-        roi = {'csf'};
-        method = {'GLS'};
+        sn = [1:5];
+        model = {{'Tasks','Instruct'},...
+            {'Tasks','Instruct'}};
+        inK   = {{'Hpass'},...
+            {}};
+        roi = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
+        method = {'OLS','GLS'};
         
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',{[1]},...
-            'runs',[1:16],'sn',sn);
-        save(fullfile(baseDir,'results','test_GLM_gls_csf.mat'),'-struct','D');
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
+        save(fullfile(baseDir,'results','test_GLM_lowfreq_csf_rois.mat'),'-struct','D');
         varargout={D};
+    
+    case 'plot_GLM_lowfreq_csf_rois'
+        what = 'R'; % what to plot - here correlation on 
+        sn = [1:5]; 
+        vararginoptions(varargin,{'what','sn'});
+
+        D=load('test_GLM_lowfreq_csf_rois.mat');
+        num_subj = length(sn); 
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1]}; 
+        style={':',':','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,2,(s-1)*2+1); 
+            barplot(D.roi,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'HpassOLS','OLS','HpassGLS','GLS'},'facecolor',color); 
+            title('Different ROIs');
+            ylabel(sprintf('%s',subj_name{s}));
+            subplot(num_subj,2,(s-1)*2+2); 
+            lineplot(D.run,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'HpassOLS','OLS','HpassGLS','GLS'},'linecolor',color,...
+                    'linestyle',style,'linewidth',2); % {'HpassOLS','HpassGLS','OLS','GLS'} 
+            title('Different Runs across ROIs');
+        end; 
         
     case 'physio_reg' % Examines the covariance of physiological regressors with main regressors 
         sn = [4]; 
