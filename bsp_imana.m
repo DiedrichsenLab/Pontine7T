@@ -19,8 +19,8 @@ fmapDir         ='/fieldmaps';
 % PRE-PROCESSING 
 subj_pilot = {'S99'};
 loc_AC_pilot = {[79;127;127]};
-subj_name = {'S98','S97','S96','S95','S01','S02','S03'};
-loc_AC={[80;129;120];[77;125;129];[90;129;138];[78;131;127];[77;125;122];[74;115;116];[81;128;123]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+subj_name = {'S98','S97','S96','S95','S01','S02','S03','S04'};
+loc_AC={[80;129;120];[77;125;129];[90;129;138];[78;131;127];[77;125;122];[74;115;116];[81;128;123];[78;128;118]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [1,16];  % first and last behavioural run numbers
@@ -175,6 +175,7 @@ switch(what)
             data={};
             for i = 1:length(runs),
                 for j=1:numTRs-numDummys;
+                    
                     data{i}{j,1}=sprintf('run_%2.2d.nii,%d',runs(i),j);
                 end;
             end;
@@ -453,6 +454,25 @@ switch(what)
             save(fullfile(regSubjDir,'regions.mat'),'R');
         end
         
+    case 'ROI:define_csf'                 % Defines ROIs for brain structures
+        % Before runing this, create masks for different structures
+        sn=4; 
+        regions={'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
+        
+        vararginoptions(varargin,{'sn','regions'}); 
+        for s=sn
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            for r = 1:length(regions)
+                file = fullfile(regSubjDir,sprintf('csf_mask_%s.nii',regions{r}));
+                R{r}.type = 'roi_image';
+                R{r}.file= file;
+                R{r}.name = regions{r};
+                R{r}.value = 1;
+            end
+            R=region_calcregions(R);                
+            save(fullfile(regSubjDir,'regions_csf.mat'),'R');
+        end
+        
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
         % make sure that you reslice into 2mm^3 resolution
@@ -546,7 +566,7 @@ switch(what)
             cd ..
         end
     case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
-        sn=5; 
+        sn=7; 
         run = [1:16]; 
         stop = true; 
         vararginoptions(varargin,{'sn','run','stop'}); 
