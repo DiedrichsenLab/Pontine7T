@@ -885,6 +885,198 @@ switch(what)
             end % ROI
         end % Subjects
         varargout = {D};
+        
+    case 'test_GLM_notask' 
+        % Get crossval R2 and R from GLM for different designs
+        % As an evaluation, it uses only the differences between the
+        % task-related regressors across all voxel
+        % Input arguments :
+        %    sn: Subject number
+        %    roi: Cell array of ROI names 
+        %    inK: List of terms in the pre-filtering matrix (cell array)
+        %    inX: List of terms in the design matrix
+        %    reg: Regression method: OLS, GLS, Ridge_pcm, Tikhonov_pcm..
+        % Output arguments: 
+        %   D: Data Frame holding the evaluation results with fields
+        %   D.sn: Subject number (real)
+        %   D.roi: Cell array of ROI names
+        %   D.model: Specific combination in inX and inK regressors
+        %   D.method: Regression method (reg)
+        %   D.run: Run that served as test set
+        %   USING THE ENTIRE MODEL (TASKS, INSTRUCTION, NUISANCE)
+        %   THIS IS AFTER ANYTHING IN INK IS REMOVED - I.E. THE DATA IS
+        %   FILTERED AND WEIGHTED (W)
+        %   D.R: Predictive R of the whole model (against observed ts) **
+        %   D.R2: Predictive R2 of the whole model
+        %   USING TASK RELATED REGRESSORS ONLY: 
+        %   D.R_Y: Predictived R on predicted vs. observed time series
+        %   D.R_B: Predictive R on beta estimates (not centered)
+        %   D.R_Bc: Predictive R on beta estimates (centered) **
+        %   D.R_Yp: Predictive R on predicted vs. fitted time series (nc)
+        %   D.R_Ypc: Predictive R on predicted vs. fitted time series (centered)
+        sn = 3;
+        glm = 1;
+        roi = {'dentate'};%{'cerebellum_gray','dentate','brainstem','pontine'};
+        inK = {};                   % Terms in filtering matrix - except for intercept
+        inX = {}; % Terms in the design matrix
+        reg = {'OLS','GLS'};  % Regression methods
+        runs = [1:16];
+        D = []; % Result structure
+        % Get the posible options to test
+        vararginoptions(varargin,{'sn','roi','inK','inX','reg','runs'});
+        
+        % Load SPM file
+        for s = sn
+            glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+            glmDirSubj = fullfile(glmDir, subj_name{s});
+            load(fullfile(glmDirSubj,'SPM.mat'));
+            INFO = load(fullfile(glmDirSubj,'SPM_info.mat'));
+            nRuns = length(SPM.nscan);
+            
+            % Get the Data (Y)
+            for r=1:length(roi) % Loop over ROIs
+                fprintf('SN: %d, ROI: %s\n',s,roi{r});
+                % Load raw time series
+                load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',roi{r})));
+                % Voxel-wise prewhiten the data
+                Y = bsxfun(@rdivide,Y,sqrt(resMS));
+                checksum = sum(abs(Y),1);
+                
+                badindx = isnan(checksum) | checksum==0;
+                if sum(badindx)>0
+                    warning('%d Nans or 0 in ts file',sum(badindx));
+                    Y = Y(:,~badindx);
+                end
+                
+                for model = 1:length(inX)
+%                     if (inX{model}{1}~='Tasks')
+%                         error('First group of regressors in design matrix needs to be Tasks'); 
+%                     end
+                    
+                    % Add regressors of no interest to X0
+                    X0 = [];
+                    if (~isempty(inK) && ~isempty(inK{model}))
+                        for t=1:length(inK{model})
+                            X0 = [X0 get_feature(inK{model}{t},s,SPM,INFO,1,1,1)];
+                        end
+                    end
+                    
+                    % Add intercept to X0
+                    X0 = [X0 SPM.xX.X(:,SPM.xX.iB)];
+                    
+                    % Get the design matrix (only task related and intercepts)
+                    X = [];
+                    group = []; % regressor group
+                    row = [];
+                    i = 0 ;
+                    
+                    % Add regressor of no interest to X
+                    for t=1:length(inX{model})
+                        x = get_feature(inX{model}{t},s,SPM,INFO,0,1,1);
+                        k = size(x,2);
+                        indx = [i+1:i+k];
+                        group(indx)=t;
+                        X(:,indx) = x;
+                        i = i + k;
+                    end
+                    N = size(X,1);
+                    
+                    % Get weight/whitening matrix
+                    W = SPM.xX.W;
+                    
+                    % Make run indicator
+                    row=zeros(N,1);
+                    for rn=1:nRuns
+                        row(SPM.Sess(rn).row,1)=rn;
+                    end;
+                    row(~ismember(row,runs))=0;
+                    
+                    for method=1:length(reg) % Loop over different methods
+                                                
+                        % Filtering design matrix and data
+                        switch(reg{method})
+                            case {'OLS'}
+                                R         = eye(N)-X0*pinv(X0);
+                                Xr        = R*X;    % KWX
+                                Yr        = R*Y;
+                            case {'GLS','ridge_fixed','tikhonov_pcm'}
+                                R         = eye(N)-W*X0*pinv(W*X0);
+                                Yr        = R*W*Y;
+                                Xr        = R*W*X;
+                        end
+                        fprintf('%s:',reg{method});
+                        % Crossvalidated approach
+                        for rn=runs
+                            
+                            trainI = find(row~=rn & row>0);
+                            testI  = find(row==rn);
+                            
+                            tic;
+                            % Now estimate with the favorite regression approach
+                            switch(reg{method})
+                                case {'OLS','GLS','WLS','GLS_WLS'}
+                                    Btrain = pinv(Xr(trainI,:))*Yr(trainI,:);
+                                    Btest  = pinv(Xr(testI, :))*Yr(testI,:);
+                                    theta = [];
+                                case 'ridge_fixed'
+                                    alpha = 1;
+                                    Xtrain = Xr(trainI,:);
+                                    Xtest  = Xr(testI, :);
+                                    Btrain = (Xtrain' * Xtrain + eye(size(Xtrain,2))* alpha) \ (Xtrain' * Yr(trainI,:));
+                                    Btest  = (Xtest'  * Xtest  + eye(size(Xtest,2)) * alpha) \ (Xtest'  * Yr(testI,:));
+                                    theta = [];
+                                case 'ridge_pcm'
+                                    group0 = ones(1,size(Xr,2));
+                                    if (rn==1)
+                                        [theta,fitINFO]=pcm_fitModelRegression(Xr,Yr,group0,X0);
+                                    end
+                                    Btrain = pcm_estimateRegression(Xr(trainI,:),Yr(trainI,:),group0,X0(trainI,:),theta);
+                                    Btest  = pcm_estimateRegression(Xr(testI,:), Yr(testI,:), group0,X0(testI,:), theta);
+                                case 'tikhonov_pcm'
+                                    if (rn==1)
+                                        [theta,fitINFO]=pcm_fitModelRegression(Xr,Yr,group,X0);
+                                    end
+                                    Btrain = pcm_estimateRegression(Xr(trainI,:),Yr(trainI,:),group,X0(trainI,:),theta);
+                                    Btest  = pcm_estimateRegression(Xr(testI,:), Yr(testI,:), group,X0(testI,:), theta);
+                            end
+                            fprintf('.');
+                            % Performance valuation using only task-related regressors
+                            time = toc;
+                            % Record performance
+                            T.roi = roi(r);
+                            T.run  = rn;
+                            T.sn   = s;
+                            T.subjID = subj_name{s};
+                            T.method  = reg(method);
+                            T.methodN = method;
+                            T.model = model;
+                            T.theta = nan(1,5);
+                            T.theta(1:length(theta)) = theta;
+                            T.time = time;
+                            % Evaluation of the overall model: against observed time series  
+                            T.R        = calc_cosang(Xr(testI,:)*Btrain,Yr(testI,:)); 
+                            T.R2       = calc_R2(Xr(testI,:)*Btrain,Yr(testI,:));
+                            % Evalation of the task-related regressors
+                            % alone 
+                            evindx = find(group==1);
+                            q = length(evindx); 
+                            C = eye(q)-ones(q)/q; 
+                            Btr = Btrain(evindx,:); % Task-related beta weights from training set 
+                            Bte = Btest(evindx,:);  % Task-related beta weights from test run 
+                            Xte = Xr(testI,evindx); % Design martrix for the test run (task related regressors) 
+                            T.R_Y      = calc_cosang(Xte*Btr,Yr(testI,:)); % R of between predicted and observed time series
+                            T.R_B      = calc_cosang(Btr,Bte);             % R of between predicted and observed task betas (non-centered)                            
+                            T.R_Bc     = calc_cosang(C*Btr,C*Bte);         % R of between predicted and observed task betas (centered)
+                            T.R_Yp     = calc_cosang(Xte*Btr,Xte*Bte);     % R of between predicted vs. fitted time series (non-centered)                            
+                            T.R_Ypc    = calc_cosang(Xte*C*Btr,Xte*C*Bte); % R of between predicted vs. fitted time series (centered)
+                            D = addstruct(D,T);
+                        end % runs
+                        fprintf('\n');
+                    end % regression methods
+                end % Model terms
+            end % ROI
+        end % Subjects
+        varargout = {D};
     
     case 'F-test'                     % F-test to compare between p01 and p02
         % example: bsp_imana('F-test',1);
