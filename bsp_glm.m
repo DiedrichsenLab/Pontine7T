@@ -677,6 +677,7 @@ switch(what)
                             T.roi = roi(r);
                             T.run  = rn;
                             T.sn   = s;
+                            T.subjID = subj_name{s};
                             T.method  = reg(method);
                             T.methodN = method;
                             T.model = model;
@@ -862,6 +863,7 @@ switch(what)
                                     T.roi = roi(r);
                                     T.run  = rn;
                                     T.sn   = s;
+                                    T.subjID = subj_name{s};
                                     T.method  = reg(method);
                                     T.methodN = method;
                                     T.evalX = ev;
