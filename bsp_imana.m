@@ -316,7 +316,8 @@ switch(what)
             phase  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_sess_%d.nii',sessn));
             magnitude_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
             rad    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_rads_sess_%d',sessn));
-            command = sprintf('fsl_prepare_fieldmap SIEMENS %s %s %s 1.02', phase, magnitude_bet, rad)
+            echospace = 1.02/3;
+            command = sprintf('fsl_prepare_fieldmap SIEMENS %s %s %s %f', phase, magnitude_bet, rad, echospace)
             system(command)
             
             fprintf('phasediff fieldmap converted to rad/s for %s \n',subj_name{sn(s)})
