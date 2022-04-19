@@ -326,24 +326,24 @@ switch(what)
         % Run FSL's epi_reg, using output from optiBET (ANAT:bet)
         % example: bsp_imana('FUNC:epi_reg',1,1)
         sn=varargin{1}; % subjNum
-        %sessn=varargin{2}; %sessNum
+        sessn=varargin{2}; %sessNum
         
         subjs=length(sn);
         for s=1:subjs,
-            %fmap    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_rads_sess_%d.nii.gz',sessn));
-            %fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii.gz',sessn));
-            %fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
+            fmap    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_rads_sess_%d.nii.gz',sessn));
+            fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii.gz',sessn));
+            fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
             wmseg   = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2anatomical.nii');
             meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii');
             t1      = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii');
             t1_bet  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical_optiBET_brain.nii.gz');
             out     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg');
-            %echospace = 0.00102/3;
-            %pedir = 'z';
-            command = sprintf('epi_reg --wmseg=%s --epi=%s --t1=%s --t1brain=%s --out=%s', ...
-                wmseg, meanepi, t1, t1_bet, out)
-            %command = sprintf('epi_reg --wmseg=%s --epi=%s --t1=%s --t1brain=%s --fmap=%s --fmapmag=%s --fmapmagbrain=%s --out=%s --echospacing=%f --pedir=%s', ...
-            %   wmseg, meanepi, t1, t1_bet, fmap, fmapmag, fmapmagbrain, out, echospace, pedir)
+            echospace = 0.00102/3;
+            pedir = 'z';
+            %command = sprintf('epi_reg --wmseg=%s --epi=%s --t1=%s --t1brain=%s --out=%s', ...
+            %    wmseg, meanepi, t1, t1_bet, out)
+            command = sprintf('epi_reg --wmseg=%s --epi=%s --t1=%s --t1brain=%s --fmap=%s --fmapmag=%s --fmapmagbrain=%s --out=%s --echospacing=%f --pedir=%s', ...
+               wmseg, meanepi, t1, t1_bet, fmap, fmapmag, fmapmagbrain, out, echospace, pedir)
             system(command)
             fprintf('epi_reg completed for %s \n',subj_name{sn(s)})
             fprintf('Check the registration using FSLeyes or some other visualization software.')
