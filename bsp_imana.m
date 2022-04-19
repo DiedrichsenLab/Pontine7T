@@ -566,7 +566,7 @@ switch(what)
             cd ..
         end
     case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
-        sn=7; 
+        sn=8; 
         run = [1:16]; 
         stop = true; 
         vararginoptions(varargin,{'sn','run','stop'}); 
