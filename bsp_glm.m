@@ -1177,6 +1177,74 @@ switch(what)
                     'linestyle',style,'linewidth',2);
             title('Different Runs across ROIs');
         end; 
+        
+    case 'test_GLM_notask_Physio'
+        sn = [1:5];
+        model = {{'Retro_HR'},...
+            {'Retro_RESP'},...
+            {'HR'},...
+            {'RV'}};
+        inK   = {{},{},{},{}};
+        roi = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM_notask','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
+        save(fullfile(baseDir,'results','test_GLM_notask_physio.mat'),'-struct','D');
+        varargout={D};
+    
+    case 'plot_GLM_notask_Physio'
+        what = 'R_Bc'; % what to plot - here correlation on 
+        sn = [1:5]; 
+        vararginoptions(varargin,{'what','sn'});
+
+        D=load('test_GLM_notask_physio.mat');
+         
+        num_subj = length(sn); 
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
+        style={':',':','-','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,2,(s-1)*2+1); 
+            barplot(D.roi,D.(what),'split',[D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV'},'facecolor',color); 
+            title('different ROIs');
+            ylabel(sprintf('%s',subj_name{s}));
+            subplot(num_subj,2,(s-1)*2+2); 
+            lineplot(D.run,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV'},'linecolor',color,...
+                    'linestyle',style,'linewidth',2);
+            title('Different Runs across ROIs');
+        end; 
+        
+    case 'test_GLM_notask_Mov'
+        sn = [1:5];
+        model = {{'Mov'},...
+            {'MovPCA'}};
+        inK   = {{},{}};
+        roi = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM_notask','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
+        save(fullfile(baseDir,'results','test_GLM_notask_mov.mat'),'-struct','D');
+        varargout={D};
+    
+    case 'plot_GLM_notask_Mov'
+        what = 'R_Bc'; % what to plot - here correlation on 
+        sn = [1:5]; 
+        vararginoptions(varargin,{'what','sn'});
+
+        D=load('test_GLM_notask_mov.mat');
+         
+        num_subj = length(sn); 
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
+        style={':',':','-','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,2,(s-1)*2+1); 
+            barplot(D.roi,D.(what),'split',[D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA'},'facecolor',color); 
+            title('different ROIs');
+            ylabel(sprintf('%s',subj_name{s}));
+            subplot(num_subj,2,(s-1)*2+2); 
+            lineplot(D.run,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA'},'linecolor',color,...
+                    'linestyle',style,'linewidth',2);
+            title('Different Runs across ROIs');
+        end; 
 
     
     case 'test_GLM_script'
@@ -1192,206 +1260,6 @@ switch(what)
         save(fullfile(baseDir,'results','test_GLM_5.mat'),'-struct','D');
         varargout={D};
         
-    case 'test_GLM_Physio_Filter'
-        sn = [1:4];
-        model = {{'Tasks','InstructC'},...
-            {'Tasks','InstructC'},...
-            {'Tasks','InstructC'},...
-            {'Tasks','InstructC'},...
-            {'Tasks','InstructC'}};
-        inK   = {{'Retro_HR'},{'Retro_RESP'},{'HR'},{'RV'},{}};
-        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        method = {'GLS'};
-        
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,...
-            'runs',[1:16],'sn',sn);
-        save(fullfile(baseDir,'results','test_GLM_physio_filter.mat'),'-struct','D');
-        varargout={D};
-    
-    case 'plot_GLM_Physio_Filter'
-        D=load('test_GLM_physio_filter.mat');
-        
-        sn = [1:4]; 
-        num_subj = length(sn); 
-        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
-        % style={':',':','-','-','-'}; 
-        for s=1:num_subj 
-            subplot(num_subj,2,(s-1)*2+1); 
-            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV','none'},'facecolor',color); 
-            title('performance of task differences');
-            ylabel(sprintf('%s',subj_name{s}));
-            subplot(num_subj,2,(s-1)*2+2); 
-            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Retro HR','Retro Resp','HR','RV'},'facecolor',color); 
-                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
-            title('R of Physio-filter');
-        end; 
-        
-    case 'test_GLM_CSF'
-        sn = [1:4];
-        model = {{'Tasks','InstructC','CSF'},...
-            {'Tasks','InstructC','CSFPCAindiv'},...
-            {'Tasks','InstructC','CSFPCAall'},...
-            {'Tasks','InstructC'}};
-        inK   = {{},{},{},{}};
-        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        method = {'GLS'};
-        
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,...
-            'runs',[1:16],'sn',sn);
-        save(fullfile(baseDir,'results','test_GLM_csf.mat'),'-struct','D');
-        varargout={D};
-    
-    case 'plot_GLM_CSF'
-        D=load('test_GLM_csf.mat');
-        
-        sn = [1:4]; 
-        num_subj = length(sn); 
-        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
-        % style={':',':','-','-','-'}; 
-        for s=1:num_subj 
-            subplot(num_subj,2,(s-1)*2+1); 
-            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
-            title('performance of task differences');
-            ylabel(sprintf('%s',subj_name{s}));
-            subplot(num_subj,2,(s-1)*2+2); 
-            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
-                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
-            title('R of CSF');
-        end; 
-    
-    case 'test_GLM_CSF_Filter'
-        sn = [1:4];
-        model = {{'Tasks','InstructC'},...
-            {'Tasks','InstructC'},...
-            {'Tasks','InstructC'},...
-            {'Tasks','InstructC'}};
-        inK   = {{'CSF'},{'CSFPCAindiv'},{'CSFPCAall'},{}};
-        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        method = {'GLS'};
-        
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,...
-            'runs',[1:16],'sn',sn);
-        save(fullfile(baseDir,'results','test_GLM_csf_filter.mat'),'-struct','D');
-        varargout={D};
-    
-    case 'plot_GLM_CSF_Filter'
-        D=load('test_GLM_csf_filter.mat');
-        
-        sn = [1:4]; 
-        num_subj = length(sn); 
-        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
-        % style={':',':','-','-','-'}; 
-        for s=1:num_subj 
-            subplot(num_subj,2,(s-1)*2+1); 
-            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
-            title('performance of task differences');
-            ylabel(sprintf('%s',subj_name{s}));
-            subplot(num_subj,2,(s-1)*2+2); 
-            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'CSF','CSF PCAindiv','CSF PCAall','none'},'facecolor',color); 
-                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
-            title('R of CSF-filter');
-        end; 
-        
-    case 'test_GLM_Mov'
-        sn = [1:4];
-        model = {{'Tasks','InstructC','Mov'},...
-            {'Tasks','InstructC','MovPCA'},...
-            {'Tasks','InstructC'}};
-        inK   = {{},{},{},{}};
-        evalX = {[1]};
-        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        method = {'GLS'};
-        
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
-            'runs',[1:16],'sn',sn);
-        save(fullfile(baseDir,'results','test_GLM_mov.mat'),'-struct','D');
-        varargout={D};
-    
-    case 'plot_GLM_Mov'
-        D=load('test_GLM_mov.mat');
-        
-        sn = [1:4]; 
-        num_subj = length(sn); 
-        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
-        % style={':',':','-','-','-'}; 
-        for s=1:num_subj 
-            subplot(num_subj,2,(s-1)*2+1); 
-            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
-            title('performance of task differences');
-            ylabel(sprintf('%s',subj_name{s}));
-            subplot(num_subj,2,(s-1)*2+2); 
-            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
-                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
-            title('R of Mov');
-        end; 
-    
-    case 'test_GLM_Mov_Filter'
-        sn = [1:4];
-        model = {{'Tasks','InstructC'},...
-            {'Tasks','InstructC'},...
-            {'Tasks','InstructC'}};
-        inK   = {{'Mov'},{'MovPCA'},{}};
-        evalX = {[1]};
-        roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        method = {'GLS'};
-        
-        D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'inK',inK,'evalX',evalX,...
-            'runs',[1:16],'sn',sn);
-        save(fullfile(baseDir,'results','test_GLM_mov_filter.mat'),'-struct','D');
-        varargout={D};
-    
-    case 'plot_GLM_Mov_Filter'
-        D=load('test_GLM_mov_filter.mat');
-        
-        sn = [1:4]; 
-        num_subj = length(sn); 
-        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[0.5 0.5 0.5]}; 
-        % style={':',':','-','-','-'}; 
-        for s=1:num_subj 
-            subplot(num_subj,2,(s-1)*2+1); 
-            barplot(D.roi,D.Rc,'split',[D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
-            title('performance of task differences');
-            ylabel(sprintf('%s',subj_name{s}));
-            subplot(num_subj,2,(s-1)*2+2); 
-            barplot(D.roi,D.R,'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'Mov','MovPCA','none'},'facecolor',color); 
-                    % {'HpassOLS','HpassGLS','OLS','GLS'} 
-            title('R of Mov-filter');
-        end; 
-        
-    case 'test_GLM_lowfreq_csf_rois'
-        % Compare different methods to deal with auto-correlated noise
-        % And sporardic artifacts
-        sn = [1:5];
-        model = {{'Tasks','Instruct'},...
-            {'Tasks','Instruct'}};
-        inK   = {{'Hpass'},...
-            {}};
-        roi = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
-        method = {'OLS','GLS'};
-        
-        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
-        save(fullfile(baseDir,'results','test_GLM_lowfreq_csf_rois.mat'),'-struct','D');
-        varargout={D};
-    
-    case 'plot_GLM_lowfreq_csf_rois'
-        what = 'R'; % what to plot - here correlation on 
-        sn = [1:5]; 
-        vararginoptions(varargin,{'what','sn'});
-
-        D=load('test_GLM_lowfreq_csf_rois.mat');
-        num_subj = length(sn); 
-        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1]}; 
-        style={':',':','-','-'}; 
-        for s=1:num_subj 
-            subplot(num_subj,2,(s-1)*2+1); 
-            barplot(D.roi,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'HpassOLS','OLS','HpassGLS','GLS'},'facecolor',color); 
-            title('Different ROIs');
-            ylabel(sprintf('%s',subj_name{s}));
-            subplot(num_subj,2,(s-1)*2+2); 
-            lineplot(D.run,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'HpassOLS','OLS','HpassGLS','GLS'},'linecolor',color,...
-                    'linestyle',style,'linewidth',2); % {'HpassOLS','HpassGLS','OLS','GLS'} 
-            title('Different Runs across ROIs');
-        end; 
         
     case 'physio_reg' % Examines the covariance of physiological regressors with main regressors 
         sn = [4]; 
