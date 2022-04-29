@@ -127,7 +127,7 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii');
+            img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
             command = sprintf('bash /srv/diedrichsen/shell/optiBET.sh -i %s', img)
             system(command)
             fprintf('optiBET completed for %s \n',subj_name{sn(s)})
@@ -297,7 +297,7 @@ switch(what)
             command_ero = sprintf('fslmaths %s -ero -bin %s', in_ero, out_ero)
             system(command_ero)
             
-            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii',sessn));
+            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('mmagnitudeavg_sess_%d.nii',sessn));
             out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
             command_mask = sprintf('fslmaths %s -mul %s %s', in_fmap, out_ero, out_fmap)
             system(command_mask)
@@ -335,12 +335,12 @@ switch(what)
         subjs=length(sn);
         for s=1:subjs,
             fmap    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_rads_sess_%d.nii.gz',sessn));
-            fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d.anat',sessn),sprintf('T1_biascorr.nii.gz'));
+            fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii'));
             fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
             wmseg   = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2anatomical.nii');
             meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii');
-            t1      = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii');
-            t1_bet  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical_optiBET_brain.nii.gz');
+            t1      = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
+            t1_bet  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii.gz');
             out     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg');
             echospace = 0.00102/3;
             pedir = 'z';
