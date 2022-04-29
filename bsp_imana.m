@@ -234,22 +234,56 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
         end    
-        
-    case 'FMAP:bias_correct' % Bias correct the average magnitue fmap image
-        % example: bsp_imana('FMAP:bias_correct',1,1)
+    
+    case 'FMAP:segmentation'          % Segmentation + Normalisation
+        % example: bsp_imana('FMAP:segmentation',1,1)
         sn=varargin{1}; % subjNum
         sessn=varargin{2}; %sessNum
         
         subjs=length(sn);
+        
+        SPMhome=fileparts(which('spm.m'));
+        J=[];
         for s=1:subjs,
-            in_bias  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii',sessn));
-            out_bias = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn));
-            command_bias = sprintf('fsl_anat --strongbias --nocrop --noreg --nosubcortseg --noseg -i %s -o %s', in_bias, out_bias)
-            system(command_bias)
-            
-            fprintf('fieldmap bias correction completed for %s \n',subj_name{sn(s)})
-            fprintf('Check the results in FSLeyes or some other visualization software.')
-        end
+            J.channel.vols = {fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii',sessn))};
+            J.channel.biasreg = 0.001;
+            J.channel.biasfwhm = 60;
+            J.channel.write = [0 0];
+            J.tissue(1).tpm = {fullfile(SPMhome,'tpm/TPM.nii,1')};
+            J.tissue(1).ngaus = 1;
+            J.tissue(1).native = [1 0];
+            J.tissue(1).warped = [0 0];
+            J.tissue(2).tpm = {fullfile(SPMhome,'tpm/TPM.nii,2')};
+            J.tissue(2).ngaus = 1;
+            J.tissue(2).native = [1 0];
+            J.tissue(2).warped = [0 0];
+            J.tissue(3).tpm = {fullfile(SPMhome,'tpm/TPM.nii,3')};
+            J.tissue(3).ngaus = 2;
+            J.tissue(3).native = [1 0];
+            J.tissue(3).warped = [0 0];
+            J.tissue(4).tpm = {fullfile(SPMhome,'tpm/TPM.nii,4')};
+            J.tissue(4).ngaus = 3;
+            J.tissue(4).native = [1 0];
+            J.tissue(4).warped = [0 0];
+            J.tissue(5).tpm = {fullfile(SPMhome,'tpm/TPM.nii,5')};
+            J.tissue(5).ngaus = 4;
+            J.tissue(5).native = [1 0];
+            J.tissue(5).warped = [0 0];
+            J.tissue(6).tpm = {fullfile(SPMhome,'tpm/TPM.nii,6')};
+            J.tissue(6).ngaus = 2;
+            J.tissue(6).native = [0 0];
+            J.tissue(6).warped = [0 0];
+            J.warp.mrf = 1;
+            J.warp.cleanup = 1;
+            J.warp.reg = [0 0.001 0.5 0.05 0.2];
+            J.warp.affreg = 'mni';
+            J.warp.fwhm = 0;
+            J.warp.samp = 3;
+            J.warp.write = [1 1];
+            matlabbatch{1}.spm.spatial.preproc=J;
+            spm_jobman('run',matlabbatch);
+            fprintf('Check segmentation results for %s\n', subj_name{sn(s)})
+        end;
         
     case 'FMAP:mask_brain_extract'                % Create brain extracted magnitude FMAP image
         % example: bsp_imana('FMAP:mask_brain_extract',1,1)
@@ -258,21 +292,21 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            
-            in_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d.anat',sessn),sprintf('T1_biascorr.nii.gz'));
-            out_bet  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
-            command_bet = sprintf('bet %s %s -R', in_bet, out_bet)
-            system(command_bet)
-            
-            in_ero  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
-            out_ero = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_mask_sess_%d.nii.gz',sessn));
+            in_ero  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('c3magnitudeavg_sess_%d.nii',sessn));
+            out_ero = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('c3magnitudeavg_mask_sess_%d.nii',sessn));
             command_ero = sprintf('fslmaths %s -ero -bin %s', in_ero, out_ero)
             system(command_ero)
             
-
+            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii',sessn));
+            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
+            command_mask = sprintf('fslmaths %s -mul %s %s', in_fmap, out_ero, out_fmap)
+            system(command_mask)
             
             fprintf('fieldmap brain extraction completed for %s \n',subj_name{sn(s)})
             fprintf('Check the bet fieldmap in FSLeyes or some other visualization software.')
+        end    
+    
+    
         end
         
     case 'FMAP:prepare_fieldmap'                % Convert phasediff fieldmap to rads/s
@@ -319,27 +353,61 @@ switch(what)
             fprintf('Check the registration using FSLeyes or some other visualization software.')
         end
         
-    case 'FMAP:apply_transform' % Apply transform matrix estimated in epi_reg step
-        % example: bsp_imana('FMAP:apply_transform',1,1,[1:4])
+     case 'FUNC:coreg_meanepi'        % Coregister meanrun_01 to meanrun_01_func2struct
+        % Need meanrun_01 in epi resolution coregistered to anatomical
+        % example: bsp_imana('FUNC:coreg',1)
         sn=varargin{1}; % subjNum
-        sessn=varargin{2}; %sessNum
-        runs=varargin{3}; %runNum
         
         subjs=length(sn);
+        
+        J = [];
         for s=1:subjs,
-            for r=1:length(runs),
-                in_func  = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('rrun_%2.2d_std.nii',runs(r)));
-                %in_ref = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_std.nii');
-                in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii');
-                out_func = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d_std_preproc_3.nii',runs(r)));
-                transform_mat = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.mat');
-                command_apply = sprintf('applyxfm4D %s %s %s %s -singlematrix', in_func, in_ref, out_func, transform_mat)
-                system(command_apply)           
-            end
             
-            fprintf('apply transform completed for %s \n',subj_name{sn(s)})
-            fprintf('Check the results in FSLeyes or some other visualization software.')
+            cd(fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n']));
+            
+            J.ref = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.nii')};
+            J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii')};
+            J.other = {''};
+            J.eoptions.cos_fun = 'nmi';
+            J.eoptions.sep = [4 2];
+            J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+            J.eoptions.fwhm = [7 7];
+            matlabbatch{1}.spm.spatial.coreg.estimate=J;
+            spm_jobman('run',matlabbatch);
+            fprintf('mean epi coregistered for %s \n',subj_name{sn(s)})
+            command = sprintf('cp %s %s',fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii'),fullfile(baseDir,imagingDir,subj_name{sn(s)},'rmeanrun_01.nii'))
+            system(command)
         end    
+        
+   case 'FUNC:make_samealign'        % Align functional images to rmeanepi of run 1, session 1
+        % Aligns all functional images from both sessions
+        % to rmeanepi of run 1 of session 1
+        % example: bsp_imana('FUNC:make_samealign',1,[1:16])
+        sn=varargin{1}; % subjNum
+        runs=varargin{2}; % runNum
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            
+            cd(fullfile(baseDir,imagingDir,subj_name{sn(s)}));
+            
+            % Select image for reference
+            % For ants-registered data: TSE 
+            % P{1} = fullfile(fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii'));
+            % for tradition way: rmeanepi 
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn(s)},'rmeanrun_01.nii'));
+            
+            % Select images to be realigned
+            Q={};
+            for r=1:numel(runs)
+              Q{end+1}    = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii',runs(r)));
+            end;
+            
+            % Run spmj_makesamealign_nifti
+            spmj_makesamealign_nifti(char(P),char(Q));
+            fprintf('functional images realigned for %s \n',subj_name{sn(s)})
+        end
         
     case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
         % Run gunzip on the output file from epi_reg step
@@ -619,7 +687,7 @@ switch(what)
         end
     case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
         sn=9; 
-        run = [1:9]; 
+        run = [1:8]; 
         stop = true; 
         vararginoptions(varargin,{'sn','run','stop'}); 
         
