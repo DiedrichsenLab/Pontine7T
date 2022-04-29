@@ -342,7 +342,7 @@ switch(what)
             t1      = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
             t1_bet  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii.gz');
             out     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg');
-            echospace = 0.00102/3;
+            echospace = 0.00102/3;  %echo spacing / parallel acceleration factor (e.g., SENSE, GRAPPA, ASSET, etc.)
             pedir = 'z';
             %command = sprintf('epi_reg --wmseg=%s --epi=%s --t1=%s --t1brain=%s --out=%s', ...
             %    wmseg, meanepi, t1, t1_bet, out)
@@ -351,6 +351,21 @@ switch(what)
             system(command)
             fprintf('epi_reg completed for %s \n',subj_name{sn(s)})
             fprintf('Check the registration using FSLeyes or some other visualization software.')
+        end
+     
+    case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
+        % Run gunzip on the output file from epi_reg step
+        % example: bsp_imana('FUNC:gunzip',1)
+        sn=varargin{1}; % subjNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            in     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.nii.gz');
+            out    = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.nii');
+            % gunzip -c file.gz > /THERE/file
+            command = sprintf('gunzip -c %s > %s', in, out)
+            system(command)
+            fprintf('gunzip completed for %s \n',subj_name{sn(s)})
         end
         
      case 'FUNC:coreg_meanepi'        % Coregister meanrun_01 to meanrun_01_func2struct
@@ -407,21 +422,6 @@ switch(what)
             % Run spmj_makesamealign_nifti
             spmj_makesamealign_nifti(char(P),char(Q));
             fprintf('functional images realigned for %s \n',subj_name{sn(s)})
-        end
-        
-    case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
-        % Run gunzip on the output file from epi_reg step
-        % example: bsp_imana('FUNC:gunzip',1)
-        sn=varargin{1}; % subjNum
-        
-        subjs=length(sn);
-        for s=1:subjs,
-            in     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.nii.gz');
-            out    = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.nii');
-            % gunzip -c file.gz > /THERE/file
-            command = sprintf('gunzip -c %s > %s', in, out)
-            system(command)
-            fprintf('gunzip completed for %s \n',subj_name{sn(s)})
         end
    
     
