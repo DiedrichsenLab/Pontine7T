@@ -353,7 +353,7 @@ switch(what)
             fprintf('Check the registration using FSLeyes or some other visualization software.')
         end
      
-    case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
+     case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
         % Run gunzip on the output file from epi_reg step
         % example: bsp_imana('FUNC:gunzip',1)
         sn=varargin{1}; % subjNum
