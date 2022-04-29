@@ -82,7 +82,7 @@ switch(what)
             J.channel.vols = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii,1')};
             J.channel.biasreg = 0.001;
             J.channel.biasfwhm = 60;
-            J.channel.write = [0 0];
+            J.channel.write = [0 1];
             J.tissue(1).tpm = {fullfile(SPMhome,'tpm/TPM.nii,1')};
             J.tissue(1).ngaus = 1;
             J.tissue(1).native = [1 0];
@@ -248,7 +248,7 @@ switch(what)
             J.channel.vols = {fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii',sessn))};
             J.channel.biasreg = 0.001;
             J.channel.biasfwhm = 60;
-            J.channel.write = [0 0];
+            J.channel.write = [0 1];
             J.tissue(1).tpm = {fullfile(SPMhome,'tpm/TPM.nii,1')};
             J.tissue(1).ngaus = 1;
             J.tissue(1).native = [1 0];
