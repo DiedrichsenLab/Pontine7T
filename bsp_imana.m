@@ -332,7 +332,7 @@ switch(what)
         subjs=length(sn);
         for s=1:subjs,
             fmap    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_rads_sess_%d.nii.gz',sessn));
-            fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii'));
+            fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
             fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
             wmseg   = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2anatomical.nii');
             meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii');
