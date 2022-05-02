@@ -305,9 +305,6 @@ switch(what)
             fprintf('fieldmap brain extraction completed for %s \n',subj_name{sn(s)})
             fprintf('Check the bet fieldmap in FSLeyes or some other visualization software.')
         end    
-    
-    
-        end
         
     case 'FMAP:prepare_fieldmap'                % Convert phasediff fieldmap to rads/s
         % example: bsp_imana('FMAP:prepare_fieldmap',1,1)
