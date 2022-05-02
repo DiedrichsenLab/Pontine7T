@@ -218,7 +218,7 @@ switch(what)
         
         for s=1:subjs,
             
-            cd(fullfile(baseDir,fmapDir,subj_name{sn(s)}));
+            cd(fullfile(baseDir,fmapDir,subj_name{sn(s)}),sprintf('fmap_sess_%d',sessn));
             
             J.input = {sprintf('magnitude1_sess_%d.nii,1',sessn)
                        sprintf('magnitude2_sess_%d.nii,1',sessn)};
@@ -245,7 +245,7 @@ switch(what)
         SPMhome=fileparts(which('spm.m'));
         J=[];
         for s=1:subjs,
-            J.channel.vols = {fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_sess_%d.nii',sessn))};
+            J.channel.vols = {fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d.nii',sessn))};
             J.channel.biasreg = 0.001;
             J.channel.biasfwhm = 60;
             J.channel.write = [0 1];
@@ -292,13 +292,13 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            in_ero  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('c3magnitudeavg_sess_%d.nii',sessn));
-            out_ero = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('c3magnitudeavg_mask_sess_%d.nii',sessn));
+            in_ero  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c3magnitudeavg_sess_%d.nii',sessn));
+            out_ero = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c3magnitudeavg_mask_sess_%d.nii',sessn));
             command_ero = sprintf('fslmaths %s -ero -bin %s', in_ero, out_ero)
             system(command_ero)
             
-            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('mmagnitudeavg_sess_%d.nii',sessn));
-            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
+            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
+            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
             command_mask = sprintf('fslmaths %s -mul %s %s', in_fmap, out_ero, out_fmap)
             system(command_mask)
             
@@ -313,9 +313,9 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            phase  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_sess_%d.nii',sessn));
-            magnitude_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
-            rad    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_rads_sess_%d',sessn));
+            phase  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_sess_%d.nii',sessn));
+            magnitude_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
+            rad    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_rads_sess_%d',sessn));
             echospace = 1.02;
             command = sprintf('fsl_prepare_fieldmap SIEMENS %s %s %s %f', phase, magnitude_bet, rad, echospace)
             system(command)
@@ -331,9 +331,9 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            fmap    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('phasediff_rads_sess_%d.nii.gz',sessn));
+            fmap    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_rads_sess_%d.nii.gz',sessn));
             fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
-            fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
+            fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
             wmseg   = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2anatomical.nii');
             meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii');
             t1      = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
@@ -367,7 +367,7 @@ switch(what)
         
      case 'FUNC:coreg_meanepi'        % Coregister meanrun_01 to meanrun_01_func2struct
         % Need meanrun_01 in epi resolution coregistered to anatomical
-        % example: bsp_imana('FUNC:coreg',1)
+        % example: bsp_imana('FUNC:coreg_meanepi',1)
         sn=varargin{1}; % subjNum
         
         subjs=length(sn);
@@ -394,7 +394,7 @@ switch(what)
    case 'FUNC:make_samealign'        % Align functional images to rmeanepi of run 1, session 1
         % Aligns all functional images from both sessions
         % to rmeanepi of run 1 of session 1
-        % example: bsp_imana('FUNC:make_samealign',1,[1:16])
+        % example: bsp_imana('FUNC:make_samealign',1,[1:8])
         sn=varargin{1}; % subjNum
         runs=varargin{2}; % runNum
         
@@ -439,7 +439,7 @@ switch(what)
         % Create the dentate mask in the imaging folder using the tse
         % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
         sn=varargin{1}; %subjNum
-        % example: 'sc1_sc2_imana('SUIT:normalise_dentate',1)
+        % example: 'bsp_imana('SUIT:normalise_dartel',1)'
         
         cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
         job.subjND.gray       = {'c_anatomical_seg1.nii'};
