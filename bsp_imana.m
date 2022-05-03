@@ -210,7 +210,7 @@ switch(what)
    
     case 'FUNC:create_mean_epis'   % Calculate mean EPIs for runs
         % Calculate mean EPIs for run(s) acquired closest to fieldmaps
-        % example bsp_imana('FUNC:create_mean_epis',1,[8,16])
+        % example bsp_imana('FUNC:create_mean_epis',1,[8 16])
         sn=varargin{1}; % subjNum
         runs=varargin{2}; % runNum
         
@@ -222,12 +222,16 @@ switch(what)
                 out_meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii.gz',runs(r)));
                 command_meanepi = sprintf('fslmaths %s -Tmean %s', in_epi, out_meanepi)
                 system(command_meanepi)
-                fprintf('mean epi completed for %d \n',runs(r))
+                fprintf('mean epi completed for run %d \n',runs(r))
                 
-                out     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runs(r)));
-                command = sprintf('gunzip -c %s > %s', out_meanepi, out)
-                system(command)
-                fprintf('gunzip completed for %d \n',runs(r))
+                out = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runs(r)));
+                command_gunzip = sprintf('gunzip -c %s > %s', out_meanepi, out)
+                system(command_gunzip)
+                fprintf('gunzip completed for run %d \n',runs(r))
+                
+                command_rm = sprintf('rm %s',out_meanepi)
+                system(command_rm)
+                fprintf('gzipped file removed for run %d \n',runs(r))
             end
         end          
         
@@ -392,7 +396,7 @@ switch(what)
         
      case 'FUNC:coreg_meanepi'        % Coregister meanrun_01 to meanrun_01_func2struct
         % Need meanrun_01 in epi resolution coregistered to anatomical
-        % example: bsp_imana('FUNC:coreg_meanepi',1)
+        % example: bsp_imana('FUNC:coreg_meanepi',1,8)
         sn=varargin{1}; % subjNum
         runnum=varargin{2} %runNum
         
@@ -422,7 +426,7 @@ switch(what)
         % to rmeanepi of run 1 of session 1
         % example: bsp_imana('FUNC:make_samealign',1,8,[1:8])
         sn=varargin{1}; % subjNum
-        runs=varargin{2}; % runNum used for coregistration
+        runnum=varargin{2}; % runNum used for coregistration
         runs=varargin{3}; % runNum to coregister
         
         subjs=length(sn);
