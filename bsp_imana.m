@@ -56,7 +56,7 @@ switch(what)
         %       PRE-PROCESSING section at top of this file
         % 3. AC coordinate sets should be listed in the same order
         %       as subjects in subj_name.
-        % example: bsp_imana('ANAT:centre_AC',1)
+        % example: bsp_imana('ANAT:center_AC',1)
         sn=varargin{1}; % subjNum
         
         subjs=length(sn);
