@@ -208,6 +208,29 @@ switch(what)
             fprintf('realigned epi''s moved for %s \n',subj_name{sn(s)})
         end
    
+    case 'FUNC:create_mean_epis'   % Calculate mean EPIs for runs
+        % Calculate mean EPIs for run(s) acquired closest to fieldmaps
+        % example bsp_imana('FUNC:create_mean_epis',1,[8,16])
+        sn=varargin{1}; % subjNum
+        runs=varargin{2}; % runNum
+        
+        subjs = length(sn);
+        
+        for s=1:subjs,
+            for r=1:length(runs);
+                in_epi = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii',runs(r)));
+                out_meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii.gz',runs(r)));
+                command_meanepi = sprintf('fslmaths %s -Tmean %s', in_epi, out_meanepi)
+                system(command_meanepi)
+                fprintf('mean epi completed for %d \n',runs(r))
+                
+                out     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runs(r)));
+                command = sprintf('gunzip -c %s > %s', out_meanepi, out)
+                system(command)
+                fprintf('gunzip completed for %d \n',runs(r))
+            end
+        end          
+        
     case 'FMAP:average_magnitudes'        % Average magnitude images for each session
         % Averages the two magnitude images for each session
         % example: bsp_imana('FMAP:average_magnitudes',1,1)
@@ -325,9 +348,10 @@ switch(what)
         
     case 'FUNC:epi_reg_meanepi'        % Registration of meanepi.nii to anatomical.nii
         % Run FSL's epi_reg, using output from optiBET (ANAT:bet)
-        % example: bsp_imana('FUNC:epi_reg_meanepi',1,1)
+        % example: bsp_imana('FUNC:epi_reg_meanepi',1,1,8)
         sn=varargin{1}; % subjNum
         sessn=varargin{2}; %sessNum
+        runnum=varargin{3}; %runNum
         
         subjs=length(sn);
         for s=1:subjs,
@@ -335,10 +359,10 @@ switch(what)
             fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
             fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
             wmseg   = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2anatomical.nii');
-            meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii');
+            meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runnum));
             t1      = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
             t1_bet  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii.gz');
-            out     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg');
+            out     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct_epireg',runnum));
             echospace = 0.00102/3;  %echo spacing / parallel acceleration factor (e.g., SENSE, GRAPPA, ASSET, etc.)
             pedir = 'z';
             %command = sprintf('epi_reg --wmseg=%s --epi=%s --t1=%s --t1brain=%s --out=%s', ...
@@ -352,13 +376,14 @@ switch(what)
      
      case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
         % Run gunzip on the output file from epi_reg step
-        % example: bsp_imana('FUNC:gunzip',1)
+        % example: bsp_imana('FUNC:gunzip',1,8)
         sn=varargin{1}; % subjNum
+        runnum=varargin{2}; %runNum
         
         subjs=length(sn);
         for s=1:subjs,
-            in     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.nii.gz');
-            out    = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.nii');
+            in     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct_epireg.nii.gz',runnum));
+            out    = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct_epireg.nii',runnum));
             % gunzip -c file.gz > /THERE/file
             command = sprintf('gunzip -c %s > %s', in, out)
             system(command)
@@ -369,6 +394,7 @@ switch(what)
         % Need meanrun_01 in epi resolution coregistered to anatomical
         % example: bsp_imana('FUNC:coreg_meanepi',1)
         sn=varargin{1}; % subjNum
+        runnum=varargin{2} %runNum
         
         subjs=length(sn);
         
@@ -377,8 +403,8 @@ switch(what)
             
             cd(fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n']));
             
-            J.ref = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01_func2struct_epireg.nii')};
-            J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii')};
+            J.ref = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct_epireg.nii',runnum))};
+            J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runnum))};
             J.other = {''};
             J.eoptions.cos_fun = 'nmi';
             J.eoptions.sep = [4 2];
@@ -387,16 +413,17 @@ switch(what)
             matlabbatch{1}.spm.spatial.coreg.estimate=J;
             spm_jobman('run',matlabbatch);
             fprintf('mean epi coregistered for %s \n',subj_name{sn(s)})
-            command = sprintf('cp %s %s',fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],'meanrun_01.nii'),fullfile(baseDir,imagingDir,subj_name{sn(s)},'rmeanrun_01.nii'))
+            command = sprintf('cp %s %s',fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runnum)),fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('rmeanrun_%2.2d.nii',runnum)))
             system(command)
         end    
         
    case 'FUNC:make_samealign'        % Align functional images to rmeanepi of run 1, session 1
         % Aligns all functional images from both sessions
         % to rmeanepi of run 1 of session 1
-        % example: bsp_imana('FUNC:make_samealign',1,[1:8])
+        % example: bsp_imana('FUNC:make_samealign',1,8,[1:8])
         sn=varargin{1}; % subjNum
-        runs=varargin{2}; % runNum
+        runs=varargin{2}; % runNum used for coregistration
+        runs=varargin{3}; % runNum to coregister
         
         subjs=length(sn);
         
@@ -408,7 +435,7 @@ switch(what)
             % For ants-registered data: TSE 
             % P{1} = fullfile(fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii'));
             % for tradition way: rmeanepi 
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn(s)},'rmeanrun_01.nii'));
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('rmeanrun_%2.2d.nii',runnum)));
             
             % Select images to be realigned
             Q={};
