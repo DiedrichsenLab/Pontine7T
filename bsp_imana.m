@@ -193,7 +193,7 @@ switch(what)
             in_c2  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2tse.nii,1');
             in_c3  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c3tse.nii,1');
             out_tse_mask = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_mask.nii,1');
-            command_mask = sprintf('fslmaths %s -add %s -add %s -bin %s', in_c1, in_c2, in_c3 out_tse_mask)
+            command_mask = sprintf('fslmaths %s -add %s -add %s -bin %s', in_c1, in_c2, in_c3, out_tse_mask)
             system(command_mask)
             
             in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse.nii,1');
