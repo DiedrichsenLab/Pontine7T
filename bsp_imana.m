@@ -133,6 +133,94 @@ switch(what)
             fprintf('optiBET completed for %s \n',subj_name{sn(s)})
             fprintf('Check the output of optiBET using FSLeyes or some other visualization software.')
         end
+    
+    case 'ANAT:segmentationTSE'          % Segmentation + Normalisation
+        % example: bsp_imana('ANAT:segmentationTSE',1)
+        sn=varargin{1}; % subjNum
+        
+        subjs=length(sn);
+        
+        SPMhome=fileparts(which('spm.m'));
+        J=[];
+        for s=1:subjs,
+            J.channel.vols = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse.nii,1')};
+            J.channel.biasreg = 0.001;
+            J.channel.biasfwhm = 60;
+            J.channel.write = [0 1];
+            J.tissue(1).tpm = {fullfile(SPMhome,'tpm/TPM.nii,1')};
+            J.tissue(1).ngaus = 1;
+            J.tissue(1).native = [1 0];
+            J.tissue(1).warped = [0 0];
+            J.tissue(2).tpm = {fullfile(SPMhome,'tpm/TPM.nii,2')};
+            J.tissue(2).ngaus = 1;
+            J.tissue(2).native = [1 0];
+            J.tissue(2).warped = [0 0];
+            J.tissue(3).tpm = {fullfile(SPMhome,'tpm/TPM.nii,3')};
+            J.tissue(3).ngaus = 2;
+            J.tissue(3).native = [1 0];
+            J.tissue(3).warped = [0 0];
+            J.tissue(4).tpm = {fullfile(SPMhome,'tpm/TPM.nii,4')};
+            J.tissue(4).ngaus = 3;
+            J.tissue(4).native = [1 0];
+            J.tissue(4).warped = [0 0];
+            J.tissue(5).tpm = {fullfile(SPMhome,'tpm/TPM.nii,5')};
+            J.tissue(5).ngaus = 4;
+            J.tissue(5).native = [1 0];
+            J.tissue(5).warped = [0 0];
+            J.tissue(6).tpm = {fullfile(SPMhome,'tpm/TPM.nii,6')};
+            J.tissue(6).ngaus = 2;
+            J.tissue(6).native = [0 0];
+            J.tissue(6).warped = [0 0];
+            J.warp.mrf = 1;
+            J.warp.cleanup = 1;
+            J.warp.reg = [0 0.001 0.5 0.05 0.2];
+            J.warp.affreg = 'mni';
+            J.warp.fwhm = 0;
+            J.warp.samp = 3;
+            J.warp.write = [1 1];
+            matlabbatch{1}.spm.spatial.preproc=J;
+            spm_jobman('run',matlabbatch);
+            fprintf('Check segmentation results for %s\n', subj_name{sn(s)})
+        end;   
+    
+    case 'ANAT:tse_brain_extract'                % Create brain extracted TSE image
+        % example: bsp_imana('ANAT:tse_brain_extract',1)
+        sn=varargin{1}; % subjNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            in_c1  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c1tse.nii,1');
+            in_c2  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2tse.nii,1');
+            in_c3  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c3tse.nii,1');
+            out_tse_mask = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_mask.nii,1');
+            command_mask = sprintf('fslmaths %s -add %s -add %s -bin %s', in_c1, in_c2, in_c3 out_tse_mask)
+            system(command_mask)
+            
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse.nii,1');
+            out_tse_brain  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_brain.nii,1');
+            command_mask = sprintf('fslmaths %s -mul %s %s', in_tse, out_tse_mask, out_tse_brain)
+            system(command_mask)
+            
+            fprintf('tse brain extraction completed for %s \n',subj_name{sn(s)})
+            fprintf('Check the bet tse in FSLeyes or some other visualization software.')
+        end        
+    
+    case 'ANAT:coregister_tse'                % Coregister TSE to anatomical
+        % example: bsp_imana('ANAT:coregister_tse',1)
+        sn=varargin{1}; % subjNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_brain.nii');
+            in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii');
+            out_mat = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_to_anatomical_mi.mat');
+            out_tse  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_to_anatomical_mi');
+            command_mask = sprintf('flirt -in %s -ref %s -dof 6 -cost mutualinfo -omat %s -out %s', in_tse, in_ref, out_mat, out_tse)
+            system(command_mask)
+            
+            fprintf('tse coregistration completed for %s \n',subj_name{sn(s)})
+            fprintf('Check the results in FSLeyes or some other visualization software.')
+        end        
         
     case 'FUNC:remDum'                % Remove the extra dummy scans from all functional runs.
         % funtional runs have to be named as run_01-r.nii, run_02-r.nii ...
