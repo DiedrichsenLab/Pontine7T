@@ -189,15 +189,15 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            in_c1  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c1tse.nii,1');
-            in_c2  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2tse.nii,1');
-            in_c3  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c3tse.nii,1');
-            out_tse_mask = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_mask.nii,1');
+            in_c1  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c1tse.nii');
+            in_c2  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2tse.nii');
+            in_c3  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c3tse.nii');
+            out_tse_mask = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_mask.nii');
             command_mask = sprintf('fslmaths %s -add %s -add %s -bin %s', in_c1, in_c2, in_c3, out_tse_mask)
             system(command_mask)
             
-            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse.nii,1');
-            out_tse_brain  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_brain.nii,1');
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse.nii');
+            out_tse_brain  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_brain.nii');
             command_mask = sprintf('fslmaths %s -mul %s %s', in_tse, out_tse_mask, out_tse_brain)
             system(command_mask)
             
