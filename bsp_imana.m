@@ -333,11 +333,11 @@ switch(what)
         
         for s=1:subjs,
             
-            cd(fullfile(baseDir,fmapDir,subj_name{sn(s)}),sprintf('fmap_sess_%d',sessn));
+            cd(fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn)));
             
             J.input = {sprintf('magnitude1_sess_%d.nii,1',sessn)
                        sprintf('magnitude2_sess_%d.nii,1',sessn)};
-            J.output = sprintf('magnitudeavg_sess_%d.nii',sessn);
+            J.output = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d.nii',sessn));
             J.outdir = {fullfile(baseDir,fmapDir,subj_name{sn(s)})};
             J.expression = '(i1+i2)/2';
             J.var = struct('name', {}, 'value', {});
