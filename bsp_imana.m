@@ -409,7 +409,8 @@ switch(what)
         for s=1:subjs,
             in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
             out_fmap_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_brain_sess_%d.nii',sessn));
-            command_bet = ('bet %s %s -R', in_fmap, out_fmap_bet)
+            command_bet = sprintf('bet %s %s -R', in_fmap, out_fmap_bet)
+            system(command_bet)
             
             fprintf('fieldmap brain extraction completed for %s \n',subj_name{sn(s)})
             fprintf('Check the bet fieldmap in FSLeyes or some other visualization software.')
