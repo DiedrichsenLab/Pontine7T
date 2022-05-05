@@ -403,7 +403,7 @@ switch(what)
     case 'FMAP:bet_magnitude'       %Skull strip bias corrected averaged FMAP magnitude image
         % example: bsp_imana('FMAP:bet_magnitude',1,1)
         sn=varargin{1}; %subjNum
-        sessn=vararing{2}; %sessNumb
+        sessn=varargin{2}; %sessNum
         
         subjs=1:length(sn);
         for s=1:subjs,
