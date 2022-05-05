@@ -399,28 +399,39 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('Check segmentation results for %s\n', subj_name{sn(s)})
         end;
+    
+    case 'FMAP:bet_magnitude'       %Skull strip bias corrected averaged FMAP magnitude image
+        % example: bsp_imana('FMAP:bet_magnitude',1,1)
+        sn=varargin{1}; %subjNum
+        sessn=vararing{2}; %sessNumb
         
-    case 'FMAP:mask_brain_extract'                % Create brain extracted magnitude FMAP image
-        % example: bsp_imana('FMAP:mask_brain_extract',1,1)
+        subjs=1:length(sn);
+        for s=1:subjs,
+            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
+            out_fmap_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_brain_sess_%d.nii',sessn));
+            command_bet = ('bet %s %s -R', in_fmap, out_fmap_bet)
+            
+            fprintf('fieldmap brain extraction completed for %s \n',subj_name{sn(s)})
+            fprintf('Check the bet fieldmap in FSLeyes or some other visualization software.')
+            
+        end
+            
+        
+    case 'FMAP:erode_bet_image'                % Erode FMAP magnitude bet image
+        % example: bsp_imana('FMAP:erode_bet_image',1,1)
         sn=varargin{1}; % subjNum
         sessn=varargin{2}; %sessNum
         
         subjs=length(sn);
         for s=1:subjs,
-            in_c1  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c1magnitudeavg_sess_%d.nii',sessn));
-            in_c2  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c3magnitudeavg_sess_%d.nii',sessn));
-            in_c3  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c3magnitudeavg_sess_%d.nii',sessn));
-            out_ero = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_mask_sess_%d.nii',sessn));
-            command_ero = sprintf('fslmaths %s -add %s -add %s -ero -bin %s', in_c1, in_c2, in_c3, out_ero)
+            
+            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_brain_sess_%d.nii',sessn));
+            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
+            command_ero = sprintf('fslmaths %s -ero %s', in_fmap, out_fmap)
             system(command_ero)
             
-            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
-            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
-            command_mask = sprintf('fslmaths %s -mul %s %s', in_fmap, out_ero, out_fmap)
-            system(command_mask)
-            
-            fprintf('fieldmap brain extraction completed for %s \n',subj_name{sn(s)})
-            fprintf('Check the bet fieldmap in FSLeyes or some other visualization software.')
+            fprintf('fieldmap erosion completed for %s \n',subj_name{sn(s)})
+            fprintf('Check the eroded fieldmap in FSLeyes or some other visualization software.')
         end    
         
     case 'FMAP:prepare_fieldmap'                % Convert phasediff fieldmap to rads/s
