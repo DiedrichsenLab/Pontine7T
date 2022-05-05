@@ -407,9 +407,11 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            in_ero  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c3magnitudeavg_sess_%d.nii',sessn));
-            out_ero = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c3magnitudeavg_mask_sess_%d.nii',sessn));
-            command_ero = sprintf('fslmaths %s -ero -bin %s', in_ero, out_ero)
+            in_c1  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c1magnitudeavg_sess_%d.nii',sessn));
+            in_c2  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c3magnitudeavg_sess_%d.nii',sessn));
+            in_c3  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('c3magnitudeavg_sess_%d.nii',sessn));
+            out_ero = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_mask_sess_%d.nii',sessn));
+            command_ero = sprintf('fslmaths %s -add %s -add %s -ero -bin %s', in_c1, in_c2, in_c3, out_ero)
             system(command_ero)
             
             in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
