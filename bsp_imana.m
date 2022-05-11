@@ -130,8 +130,15 @@ switch(what)
             img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
             command = sprintf('bash /srv/diedrichsen/shell/optiBET.sh -i %s', img)
             system(command)
+            
+            in = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii.gz');
+            out = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_brain.nii.gz');
+            copy_command = sprintf('cp %s %s', in, out)
+            system(copy_command)
+            
             fprintf('optiBET completed for %s \n',subj_name{sn(s)})
             fprintf('Check the output of optiBET using FSLeyes or some other visualization software.')
+           
         end
     
     case 'ANAT:segmentationTSE'          % Segmentation + Normalisation
