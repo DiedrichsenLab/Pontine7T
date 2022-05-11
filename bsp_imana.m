@@ -408,7 +408,7 @@ switch(what)
         subjs=1:length(sn);
         for s=1:subjs,
             in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
-            out_fmap_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_brain_sess_%d.nii',sessn));
+            out_fmap_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d_bet.nii.gz',sessn));
             command_bet = sprintf('bet %s %s -R', in_fmap, out_fmap_bet)
             system(command_bet)
             
@@ -426,8 +426,8 @@ switch(what)
         subjs=length(sn);
         for s=1:subjs,
             
-            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_brain_sess_%d.nii',sessn));
-            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii',sessn));
+            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d_bet.nii.gz',sessn));
+            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d_brain.nii.gz',sessn));
             command_ero = sprintf('fslmaths %s -ero %s', in_fmap, out_fmap)
             system(command_ero)
             
@@ -443,7 +443,7 @@ switch(what)
         subjs=length(sn);
         for s=1:subjs,
             phase  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_sess_%d.nii',sessn));
-            magnitude_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
+            magnitude_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d_brain.nii.gz',sessn));
             rad    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_rads_sess_%d',sessn));
             echospace = 1.02;
             command = sprintf('fsl_prepare_fieldmap SIEMENS %s %s %s %f', phase, magnitude_bet, rad, echospace)
@@ -463,7 +463,7 @@ switch(what)
         for s=1:subjs,
             fmap    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_rads_sess_%d.nii.gz',sessn));
             fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
-            fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_bet_sess_%d.nii.gz',sessn));
+            fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d_brain.nii.gz',sessn));
             wmseg   = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2anatomical.nii');
             meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runnum));
             t1      = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
