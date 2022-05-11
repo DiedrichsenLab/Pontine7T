@@ -248,7 +248,7 @@ switch(what)
         end
     case 'FUNC:realign'               % Realign functional images (both sessions)
         % SPM realigns all volumes to the first volume of first run
-        % example: bsp_imana('FUNC:realign',1,[1:4])
+        % example: bsp_imana('FUNC:realign',1,[1:16])
         
         sn=varargin{1}; %subjNum
         runs=varargin{2}; % runNum
@@ -273,7 +273,7 @@ switch(what)
 
     case 'FUNC:move_data'             % Move realigned data
         % Moves image data from imaging_data_raw into imaging_data.
-        % example: bsp_imana('FUNC:move_data',1,[1:4])
+        % example: bsp_imana('FUNC:move_data',1,[1:16])
         sn=varargin{1}; % subjNum
         runs=varargin{2}; % runNum
         
@@ -557,6 +557,7 @@ switch(what)
     
     case 'SUIT:isolate'               % Segment cerebellum into grey and white matter
         % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
+        % example: 'bsp_imana('SUIT:isolate',1)'
         sn=varargin{1};
         %         spm fmri
         for s=sn,
