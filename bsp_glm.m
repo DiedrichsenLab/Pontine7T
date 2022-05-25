@@ -44,7 +44,7 @@ switch(what)
         sn=varargin{1}; % subjNum
         tissues = [1:3];
         
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmeanrun_01.nii'));
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rmeanrun_08.nii'));
         for i=1:length(tissues)
             P{i+1}=fullfile(baseDir,anatomicalDir,subj_name{sn},sprintf('c%danatomical.nii',tissues(i)));
         end
