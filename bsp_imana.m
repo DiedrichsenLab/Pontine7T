@@ -516,7 +516,7 @@ switch(what)
             
             cd(fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n']));
             
-            J.ref = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct_epireg.nii',runnum))};
+            J.ref = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct.nii',runnum))};
             J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runnum))};
             J.other = {''};
             J.eoptions.cos_fun = 'nmi';
