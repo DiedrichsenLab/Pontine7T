@@ -156,8 +156,6 @@ switch(what)
             fprintf('Check the results in FSLeyes or some other visualization software.')
         end        
             
-            
-    
     case 'ANAT:coregister_tse'                % Coregister TSE to anatomical
         % example: bsp_imana('ANAT:coregister_tse',1)
         sn=varargin{1}; % subjNum
@@ -303,7 +301,14 @@ switch(what)
             fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
         end    
         
-    
+     case 'FUNC:run_feat_coregistrations'    %Run run_feat_coregistrations.sh shell script
+         sn=varargin{1}; %subjNum
+         sessn=varargin{2}; %sessNum
+         
+         command_feat = sprintf('bash /srv/diedrichsen/shell/run_feat_coregistrations.sh %s %s', sn, sessn)
+         system(command_feat)
+         
+         fprintf('feat coregistration completed for %s \n',subj_name{sn(s)})
      
      case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
         % Run gunzip on the output file from epi_reg step
