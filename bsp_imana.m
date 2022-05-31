@@ -357,22 +357,7 @@ switch(what)
             fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
         end    
         
-    case 'FMAP:prepare_fieldmap'                % Convert phasediff fieldmap to rads/s
-        % example: bsp_imana('FMAP:prepare_fieldmap',1,1)
-        sn=varargin{1}; % subjNum
-        sessn=varargin{2}; %sessNum
-        
-        subjs=length(sn);
-        for s=1:subjs,
-            phase  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_sess_%d.nii',sessn));
-            magnitude_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d_brain.nii.gz',sessn));
-            rad    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_rads_sess_%d',sessn));
-            echospace = 1.02;
-            command = sprintf('fsl_prepare_fieldmap SIEMENS %s %s %s %f', phase, magnitude_bet, rad, echospace)
-            system(command)
-            
-            fprintf('phasediff fieldmap converted to rad/s for %s \n',subj_name{sn(s)})
-        end
+    
      
      case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
         % Run gunzip on the output file from epi_reg step
