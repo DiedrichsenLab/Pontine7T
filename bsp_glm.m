@@ -33,12 +33,12 @@ sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session numb
 %========================================================================================================================
 switch(what)
     case 'GLM:do'
-        bsp_glm('GLM:glm1',[5],[1:16]);
-        bsp_glm('GLM:glm2',[5],[1:16]);
-        bsp_glm('GLM:estimate',[5],1);
-        bsp_glm('GLM:estimate',[5],2);
-        bsp_glm('GLM:Fcontrast','sn', [5], 'glm', 1, 'type', 'task');
-        bsp_glm('GLM:Fcontrast','sn', [5], 'glm', 2, 'type', 'task');
+        bsp_glm('GLM:glm1',[7],[1:16]);
+        bsp_glm('GLM:glm2',[7],[1:16]);
+        bsp_glm('GLM:estimate',[7],1);
+        bsp_glm('GLM:estimate',[7],2);
+        bsp_glm('GLM:Fcontrast','sn', [7], 'glm', 1, 'type', 'task');
+        bsp_glm('GLM:Fcontrast','sn', [7], 'glm', 2, 'type', 'task');
     
     case 'GLM:makeMask' % Changed to include CSF
         sn=varargin{1}; % subjNum
