@@ -141,7 +141,22 @@ switch(what)
            
         end
     
-    
+    case 'ANAT:biascorrect_tse'               % Bias correct TSE 
+        % example: bsp_imana('ANAT:biascorrect_tse',1)
+        sn=varargin{1}; %subjNum
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse.nii');
+            out_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse'):
+            command_bias = sprintf('fsl_anat --nononlinreg --strongbias --nocrop --noreg --nosubcortseg --noseg --clobber -t T2 -i %s -o %s', in_tse, out_tse)
+            system(command_bias)
+            
+            fprintf('tse bias correction completed for %s \n',subj_name{sn(s)})
+            fprintf('Check the results in FSLeyes or some other visualization software.')
+        end        
+            
+            
     
     case 'ANAT:coregister_tse'                % Coregister TSE to anatomical
         % example: bsp_imana('ANAT:coregister_tse',1)
@@ -149,10 +164,10 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_brain.nii');
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_anat','TS_biascorr.nii.gz');
             in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii');
-            out_mat = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_to_anatomical_mi.mat');
-            out_tse  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_to_anatomical_mi');
+            out_mat = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi.mat');
+            out_tse  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi');
             command_mask = sprintf('flirt -in %s -ref %s -usesqform -searchrx -45 45 -searchry -45 45 -searchrz -45 45 -dof 6 -cost mutualinfo -omat %s -out %s', in_tse, in_ref, out_mat, out_tse)
             system(command_mask)
             
