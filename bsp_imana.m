@@ -164,7 +164,7 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_anat','TS_biascorr.nii.gz');
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse.anat','TS_biascorr.nii.gz');
             in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii');
             out_mat = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi.mat');
             out_tse  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi');
