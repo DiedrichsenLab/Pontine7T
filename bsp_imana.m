@@ -222,7 +222,7 @@ switch(what)
             in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii');
             out_mat = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_to_anatomical_mi.mat');
             out_tse  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'mtse_to_anatomical_mi');
-            command_mask = sprintf('flirt -in %s -ref %s -dof 6 -cost mutualinfo -omat %s -out %s', in_tse, in_ref, out_mat, out_tse)
+            command_mask = sprintf('flirt -in %s -ref %s -usesqform -searchrx -45 45 -searchry -45 45 -searchrz -45 45 -dof 6 -cost mutualinfo -omat %s -out %s', in_tse, in_ref, out_mat, out_tse)
             system(command_mask)
             
             fprintf('tse coregistration completed for %s \n',subj_name{sn(s)})
