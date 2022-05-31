@@ -356,91 +356,6 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
         end    
-    
-    case 'FMAP:segmentation'          % Segmentation + Normalisation
-        % example: bsp_imana('FMAP:segmentation',1,1)
-        sn=varargin{1}; % subjNum
-        sessn=varargin{2}; %sessNum
-        
-        subjs=length(sn);
-        
-        SPMhome=fileparts(which('spm.m'));
-        J=[];
-        for s=1:subjs,
-            J.channel.vols = {fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d.nii',sessn))};
-            J.channel.biasreg = 0.001;
-            J.channel.biasfwhm = 60;
-            J.channel.write = [0 1];
-            J.tissue(1).tpm = {fullfile(SPMhome,'tpm/TPM.nii,1')};
-            J.tissue(1).ngaus = 1;
-            J.tissue(1).native = [1 0];
-            J.tissue(1).warped = [0 0];
-            J.tissue(2).tpm = {fullfile(SPMhome,'tpm/TPM.nii,2')};
-            J.tissue(2).ngaus = 1;
-            J.tissue(2).native = [1 0];
-            J.tissue(2).warped = [0 0];
-            J.tissue(3).tpm = {fullfile(SPMhome,'tpm/TPM.nii,3')};
-            J.tissue(3).ngaus = 2;
-            J.tissue(3).native = [1 0];
-            J.tissue(3).warped = [0 0];
-            J.tissue(4).tpm = {fullfile(SPMhome,'tpm/TPM.nii,4')};
-            J.tissue(4).ngaus = 3;
-            J.tissue(4).native = [1 0];
-            J.tissue(4).warped = [0 0];
-            J.tissue(5).tpm = {fullfile(SPMhome,'tpm/TPM.nii,5')};
-            J.tissue(5).ngaus = 4;
-            J.tissue(5).native = [1 0];
-            J.tissue(5).warped = [0 0];
-            J.tissue(6).tpm = {fullfile(SPMhome,'tpm/TPM.nii,6')};
-            J.tissue(6).ngaus = 2;
-            J.tissue(6).native = [0 0];
-            J.tissue(6).warped = [0 0];
-            J.warp.mrf = 1;
-            J.warp.cleanup = 1;
-            J.warp.reg = [0 0.001 0.5 0.05 0.2];
-            J.warp.affreg = 'mni';
-            J.warp.fwhm = 0;
-            J.warp.samp = 3;
-            J.warp.write = [1 1];
-            matlabbatch{1}.spm.spatial.preproc=J;
-            spm_jobman('run',matlabbatch);
-            fprintf('Check segmentation results for %s\n', subj_name{sn(s)})
-        end;
-    
-    case 'FMAP:bet_magnitude'       %Skull strip bias corrected averaged FMAP magnitude image
-        % example: bsp_imana('FMAP:bet_magnitude',1,1)
-        sn=varargin{1}; %subjNum
-        sessn=varargin{2}; %sessNum
-        
-        subjs=1:length(sn);
-        for s=1:subjs,
-            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
-            out_fmap_bet = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d_bet.nii.gz',sessn));
-            command_bet = sprintf('bet %s %s -R', in_fmap, out_fmap_bet)
-            system(command_bet)
-            
-            fprintf('fieldmap brain extraction completed for %s \n',subj_name{sn(s)})
-            fprintf('Check the bet fieldmap in FSLeyes or some other visualization software.')
-            
-        end
-            
-        
-    case 'FMAP:erode_bet_image'                % Erode FMAP magnitude bet image
-        % example: bsp_imana('FMAP:erode_bet_image',1,1)
-        sn=varargin{1}; % subjNum
-        sessn=varargin{2}; %sessNum
-        
-        subjs=length(sn);
-        for s=1:subjs,
-            
-            in_fmap = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d_bet.nii.gz',sessn));
-            out_fmap  = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d_brain.nii.gz',sessn));
-            command_ero = sprintf('fslmaths %s -ero %s', in_fmap, out_fmap)
-            system(command_ero)
-            
-            fprintf('fieldmap erosion completed for %s \n',subj_name{sn(s)})
-            fprintf('Check the eroded fieldmap in FSLeyes or some other visualization software.')
-        end    
         
     case 'FMAP:prepare_fieldmap'                % Convert phasediff fieldmap to rads/s
         % example: bsp_imana('FMAP:prepare_fieldmap',1,1)
@@ -457,34 +372,6 @@ switch(what)
             system(command)
             
             fprintf('phasediff fieldmap converted to rad/s for %s \n',subj_name{sn(s)})
-        end
-        
-    case 'FUNC:epi_reg_meanepi'        % Registration of meanepi.nii to anatomical.nii
-        % Run FSL's epi_reg, using output from optiBET (ANAT:bet)
-        % example: bsp_imana('FUNC:epi_reg_meanepi',1,1,8)
-        sn=varargin{1}; % subjNum
-        sessn=varargin{2}; %sessNum
-        runnum=varargin{3}; %runNum
-        
-        subjs=length(sn);
-        for s=1:subjs,
-            fmap    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('phasediff_rads_sess_%d.nii.gz',sessn));
-            fmapmag    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('mmagnitudeavg_sess_%d.nii',sessn));
-            fmapmagbrain    = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d_brain.nii.gz',sessn));
-            wmseg   = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c2anatomical.nii');
-            meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runnum));
-            t1      = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
-            t1_bet  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii.gz');
-            out     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct_epireg',runnum));
-            echospace = 0.00102/3;  %echo spacing / parallel acceleration factor (e.g., SENSE, GRAPPA, ASSET, etc.)
-            pedir = 'z';
-            %command = sprintf('epi_reg --wmseg=%s --epi=%s --t1=%s --t1brain=%s --out=%s', ...
-            %    wmseg, meanepi, t1, t1_bet, out)
-            command = sprintf('epi_reg --wmseg=%s --epi=%s --t1=%s --t1brain=%s --fmap=%s --fmapmag=%s --fmapmagbrain=%s --out=%s --echospacing=%f --pedir=%s', ...
-               wmseg, meanepi, t1, t1_bet, fmap, fmapmag, fmapmagbrain, out, echospace, pedir)
-            system(command)
-            fprintf('epi_reg completed for %s \n',subj_name{sn(s)})
-            fprintf('Check the registration using FSLeyes or some other visualization software.')
         end
      
      case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
