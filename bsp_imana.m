@@ -512,15 +512,14 @@ switch(what)
         end
     
     case 'ROI:reslice_csf_seg'       %Resample csf segmentation into epi resolution
-        % usage 'bsp_imana('ROI:resample_csf_seg',1)'
+        % usage 'bsp_imana('ROI:reslice_csf_seg',1)'
         sn=varargin{1};
-        
         J = [];
-        for s=sn
-            ref = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
-            source = fullfile(baseDir,anatomicalDir,subj_name{s},'c3anatomical.nii');
-            J.ref = ref;
-            J.source = source;
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            J.ref = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn(s)},'mask.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c3anatomical.nii')};
             J.roptions.interp = 0;
             J.roptions.wrap = [0 0 0];
             J.roptions.mask = 0;
@@ -529,7 +528,35 @@ switch(what)
             matlabbatch{1}.spm.spatial.coreg.write = J;
             spm_jobman('run',matlabbatch);
             fprintf('c3anatomical resliced for %s \n',subj_name{sn(s)})
-        end     
+            fprintf('Manually select a threshold for masking CSF ROIs')
+        end  
+        
+    case 'ROI:mask_csf_rois'        % Mask CSF rois with subject-specific CSF segmentation
+        % example: bsp_imana('ROI:mask_csf_rois',1,0.9)
+        sn=varargin{1}; % subjNum
+        thresh=varargin{2}; %threshold value for CSF segmentation
+        images = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            for im=1:length(images)
+                J.input = {fullfile(baseDir,anatomicalDir,subj_name{s},'rc3anatomical.nii')
+                           fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))};
+                J.output = fullfile(regSubjDir,sprintf('csfm_mask_%s.nii',images{im}));
+                J.outdir = {fullfile(regSubjDir)};
+                J.expression = sprintf('i2.*(i1>%f)',thresh);
+                J.var = struct('name', {}, 'value', {});
+                J.options.dmtx = 0;
+                J.options.mask = 0;
+                J.options.interp = 1;
+                J.options.dtype = 4;
+                matlabbatch{1}.spm.util.imcalc=J;
+                spm_jobman('run',matlabbatch);
+            end
+            fprintf('csf ROIs masked for %s \n',subj_name{sn(s)})
+        end    
         
     case 'ROI:cerebellar_gray' 
         sn=varargin{1};
