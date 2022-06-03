@@ -21,7 +21,7 @@ subj_pilot = {'S99','S06','S02'};
 loc_AC_pilot = {[79;127;127];[78;128;118];[74;115;116]};
 subj_name = {'S98','S97','S96','S95','S01','S03','S04','S07'};
 loc_AC={[80;129;120];[77;125;129];[90;129;138];[78;131;127];[77;125;122];[81;128;123];[78;126;118];[78;127;112]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
-csf_thresh={0.5};
+csf_thresh={0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2};
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [1,16];  % first and last behavioural run numbers
@@ -542,13 +542,17 @@ switch(what)
         
         for s=1:subjs,
             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{sn(s)});
-            thresh = csf_thresh{sn(s)};
+            thresh = csf_thresh{sn(s)}
+            %expression=sprintf('i2.*(i1>%f)',thresh)
+            expression=sprintf('i1.*(i2>%f)',thresh)
             for im=1:length(images)
-                J.input = {fullfile(baseDir,anatomicalDir,subj_name{s},'rc3anatomical.nii')
-                           fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))};
+                %J.input = {fullfile(baseDir,anatomicalDir,subj_name{s},'rc3anatomical.nii')
+                %           fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))};
+                J.input = {fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))
+                           fullfile(baseDir,anatomicalDir,subj_name{s},'rc3anatomical.nii')};
                 J.output = fullfile(regSubjDir,sprintf('csfm_mask_%s.nii',images{im}));
                 J.outdir = {fullfile(regSubjDir)};
-                J.expression = sprintf('i2.*(i1>%f)',thresh);
+                J.expression = expression;
                 J.var = struct('name', {}, 'value', {});
                 J.options.dmtx = 0;
                 J.options.mask = 0;
