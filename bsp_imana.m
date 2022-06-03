@@ -21,6 +21,7 @@ subj_pilot = {'S99','S06','S02'};
 loc_AC_pilot = {[79;127;127];[78;128;118];[74;115;116]};
 subj_name = {'S98','S97','S96','S95','S01','S03','S04','S07'};
 loc_AC={[80;129;120];[77;125;129];[90;129;138];[78;131;127];[77;125;122];[81;128;123];[78;126;118];[78;127;112]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+csf_thresh={0.5};
 %========================================================================================================================
 % GLM INFO
 funcRunNum  = [1,16];  % first and last behavioural run numbers
@@ -532,15 +533,16 @@ switch(what)
         end  
         
     case 'ROI:mask_csf_rois'        % Mask CSF rois with subject-specific CSF segmentation
-        % example: bsp_imana('ROI:mask_csf_rois',1,0.9)
+        % example: bsp_imana('ROI:mask_csf_rois',1)
         sn=varargin{1}; % subjNum
-        thresh=varargin{2}; %threshold value for CSF segmentation
+        %thresh=varargin{2}; %threshold value for CSF segmentation
         images = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
         
         subjs=length(sn);
         
         for s=1:subjs,
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{sn(s)});
+            thresh = csf_thresh{sn(s)};
             for im=1:length(images)
                 J.input = {fullfile(baseDir,anatomicalDir,subj_name{s},'rc3anatomical.nii')
                            fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))};
