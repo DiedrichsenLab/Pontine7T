@@ -162,7 +162,7 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse.anat','TS_biascorr.nii.gz');
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse.anat','T2_biascorr.nii.gz');
             in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii');
             out_mat = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi.mat');
             out_tse  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi');
@@ -301,12 +301,19 @@ switch(what)
             fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
         end    
         
-     case 'FUNC:run_feat_coregistrations'    %Run run_feat_coregistrations.sh shell script
+     case 'FUNC:run_feat_coregistration'    %Run run_feat_coregistrations.sh shell script
+         % example: bsp_imana('FUNC:run_feat_coregistration',1,1)
          sn=varargin{1}; %subjNum
          sessn=varargin{2}; %sessNum
          
-         command_feat = sprintf('bash /srv/diedrichsen/shell/run_feat_coregistrations.sh %s %s', sn, sessn)
-         system(command_feat)
+         subjs=length(sn);
+         for s=1:subjs,
+             
+            subjID = strip(subj_name{sn(s)},'left','S') 
+            command_feat = sprintf('bash /srv/diedrichsen/shell/run_feat_coregistration.sh %s %2.2d', subjID, sessn)
+            system(command_feat)
+            
+         end
          
          fprintf('feat coregistration completed for %s \n',subj_name{sn(s)})
      
@@ -503,6 +510,26 @@ switch(what)
 
             end
         end
+    
+    case 'ROI:reslice_csf_seg'       %Resample csf segmentation into epi resolution
+        % usage 'bsp_imana('ROI:resample_csf_seg',1)'
+        sn=varargin{1};
+        
+        J = [];
+        for s=sn
+            ref = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
+            source = fullfile(baseDir,anatomicalDir,subj_name{s},'c3anatomical.nii');
+            J.ref = ref;
+            J.source = source;
+            J.roptions.interp = 0;
+            J.roptions.wrap = [0 0 0];
+            J.roptions.mask = 0;
+            J.roptions.prefix = 'r';
+        
+            matlabbatch{1}.spm.spatial.coreg.write = J;
+            spm_jobman('run',matlabbatch);
+            fprintf('c3anatomical resliced for %s \n',subj_name{sn(s)})
+        end     
         
     case 'ROI:cerebellar_gray' 
         sn=varargin{1};
