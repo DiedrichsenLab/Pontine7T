@@ -579,11 +579,7 @@ switch(what)
                     Y = Y(:,~badindx);
                 end
                 
-                for model = 1:length(inX)
-                    if (inX{model}{1}~='Tasks')
-                        error('First group of regressors in design matrix needs to be Tasks'); 
-                    end
-                    
+                for model = 1:length(inX)                    
                     % Add regressors of no interest to X0
                     X0 = [];
                     if (~isempty(inK) && ~isempty(inK{model}))
@@ -687,7 +683,7 @@ switch(what)
                             % Evaluation of the overall model: against observed time series  
                             T.R        = calc_cosang(Xr(testI,:)*Btrain,Yr(testI,:)); 
                             T.R2       = calc_R2(Xr(testI,:)*Btrain,Yr(testI,:));
-                            % Evalation of the task-related regressors
+                            % Evalation of the first set of regressor alone
                             % alone 
                             evindx = find(group==1);
                             q = length(evindx); 
