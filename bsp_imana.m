@@ -164,7 +164,7 @@ switch(what)
         subjs=length(sn);
         for s=1:subjs,
             in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse.anat','T2_biascorr.nii.gz');
-            in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii');
+            in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
             out_mat = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi.mat');
             out_tse  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi');
             command_mask = sprintf('flirt -in %s -ref %s -usesqform -searchrx -45 45 -searchry -45 45 -searchrz -45 45 -dof 6 -cost mutualinfo -omat %s -out %s', in_tse, in_ref, out_mat, out_tse)
@@ -326,8 +326,8 @@ switch(what)
         
         subjs=length(sn);
         for s=1:subjs,
-            in     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct_epireg.nii.gz',runnum));
-            out    = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2struct_epireg.nii',runnum));
+            in     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2highres.nii.gz',runnum));
+            out    = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2highres.nii',runnum));
             % gunzip -c file.gz > /THERE/file
             command = sprintf('gunzip -c %s > %s', in, out)
             system(command)
@@ -578,7 +578,7 @@ switch(what)
         
     case 'ROI:define'                 % Defines ROIs for brain structures
         % Before runing this, create masks for different structures
-        sn=5; 
+        sn=8; 
         regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
         
         vararginoptions(varargin,{'sn','regions'}); 
@@ -597,21 +597,21 @@ switch(what)
         
     case 'ROI:define_csf'                 % Defines ROIs for brain structures
         % Before runing this, create masks for different structures
-        sn=4; 
+        sn=[4]; 
         regions={'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
         
         vararginoptions(varargin,{'sn','regions'}); 
         for s=sn
             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
             for r = 1:length(regions)
-                file = fullfile(regSubjDir,sprintf('csf_mask_%s.nii',regions{r}));
+                file = fullfile(regSubjDir,sprintf('csfm_mask_%s.nii',regions{r}));
                 R{r}.type = 'roi_image';
                 R{r}.file= file;
                 R{r}.name = regions{r};
                 R{r}.value = 1;
             end
             R=region_calcregions(R);                
-            save(fullfile(regSubjDir,'regions_csf.mat'),'R');
+            save(fullfile(regSubjDir,'regions_csfm.mat'),'R');
         end
         
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
@@ -707,8 +707,8 @@ switch(what)
             cd ..
         end
     case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
-        sn=9; 
-        run = [1:8]; 
+        sn=8; 
+        run = [1:16]; 
         stop = true; 
         vararginoptions(varargin,{'sn','run','stop'}); 
         
