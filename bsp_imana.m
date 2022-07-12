@@ -511,6 +511,29 @@ switch(what)
 
             end
         end
+        
+    case 'ROI:make_GMWM_mask'        % Create GM-WM exclusion mask
+        % example: bsp_imana('ROI:make_GMWM_mask',1)
+        sn=varargin{1}; % subjNum
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            J.input = {fullfile(baseDir,anatomicalDir,subj_name{s},'c1anatomical.nii')
+                       fullfile(baseDir,anatomicalDir,subj_name{s},'c2anatomical.nii')};
+            J.output = fullfile(baseDir,anatomicalDir,subj_name{s},'gm_wm_exclusion_mask.nii');
+            J.outdir = {fullfile(baseDir,anatomicalDir,subj_name{s})};
+            J.expression = (i1+i2)<0.0005;
+            J.var = struct('name', {}, 'value', {});
+            J.options.dmtx = 0;
+            J.options.mask = 0;
+            J.options.interp = 1;
+            J.options.dtype = 4;
+            matlabbatch{1}.spm.util.imcalc=J;
+            spm_jobman('run',matlabbatch);
+            
+            fprintf('GM-WM exlusion mask created for %s \n',subj_name{sn(s)})
+        end    
     
     case 'ROI:reslice_csf_seg'       %Resample csf segmentation into epi resolution
         % usage 'bsp_imana('ROI:reslice_csf_seg',1)'
@@ -535,7 +558,6 @@ switch(what)
     case 'ROI:mask_csf_rois'        % Mask CSF rois with subject-specific CSF segmentation
         % example: bsp_imana('ROI:mask_csf_rois',1)
         sn=varargin{1}; % subjNum
-        %thresh=varargin{2}; %threshold value for CSF segmentation
         images = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
         
         subjs=length(sn);
@@ -543,11 +565,8 @@ switch(what)
         for s=1:subjs,
             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{sn(s)});
             thresh = csf_thresh{sn(s)}
-            %expression=sprintf('i2.*(i1>%f)',thresh)
             expression=sprintf('i1.*(i2>%f)',thresh)
             for im=1:length(images)
-                %J.input = {fullfile(baseDir,anatomicalDir,subj_name{s},'rc3anatomical.nii')
-                %           fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))};
                 J.input = {fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))
                            fullfile(baseDir,anatomicalDir,subj_name{s},'rc3anatomical.nii')};
                 J.output = fullfile(regSubjDir,sprintf('csfm_mask_%s.nii',images{im}));
