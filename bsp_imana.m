@@ -543,7 +543,7 @@ switch(what)
         
         for s=1:subjs,
             J.ref = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn(s)},'mask.nii')};
-            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c3anatomical.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'gm_wm_exclusion_mask.nii')};
             J.roptions.interp = 0;
             J.roptions.wrap = [0 0 0];
             J.roptions.mask = 0;
@@ -551,8 +551,7 @@ switch(what)
         
             matlabbatch{1}.spm.spatial.coreg.write = J;
             spm_jobman('run',matlabbatch);
-            fprintf('c3anatomical resliced for %s \n',subj_name{sn(s)})
-            fprintf('Manually select a threshold for masking CSF ROIs')
+            fprintf('gm-wm exclusion mask resliced for %s \n',subj_name{sn(s)})
         end  
     
     case 'ROI:reslice_csf_seg'       %Resample csf segmentation into epi resolution
@@ -563,7 +562,7 @@ switch(what)
         
         for s=1:subjs,
             J.ref = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn(s)},'mask.nii')};
-            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'gm_wm_exclusion_mask.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c3anatomical.nii')};
             J.roptions.interp = 0;
             J.roptions.wrap = [0 0 0];
             J.roptions.mask = 0;
@@ -571,7 +570,8 @@ switch(what)
         
             matlabbatch{1}.spm.spatial.coreg.write = J;
             spm_jobman('run',matlabbatch);
-            fprintf('gm-wm exclusion mask resliced for %s \n',subj_name{sn(s)})
+            fprintf('c3anatomical resliced for %s \n',subj_name{sn(s)})
+            fprintf('Manually select a threshold for masking CSF ROIs')
         end  
         
     case 'ROI:mask_csf_rois'        % Mask CSF rois with subject-specific CSF segmentation
@@ -668,7 +668,7 @@ switch(what)
         for s=sn
             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
             for r = 1:length(regions)
-                file = fullfile(regSubjDir,sprintf('csfm_mask_%s.nii',regions{r}));
+                file = fullfile(regSubjDir,sprintf('csfgm_mask_%s.nii',regions{r}));
                 R{r}.type = 'roi_image';
                 R{r}.file= file;
                 R{r}.name = regions{r};
