@@ -512,8 +512,8 @@ switch(what)
             end
         end
         
-    case 'ROI:make_GMWM_mask'        % Create GM-WM exclusion mask
-        % example: bsp_imana('ROI:make_GMWM_mask',1)
+    case 'ROI:make_gmwm_mask'        % Create GM-WM exclusion mask
+        % example: bsp_imana('ROI:make_gmwm_mask',1)
         sn=varargin{1}; % subjNum
         
         subjs=length(sn);
