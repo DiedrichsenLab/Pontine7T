@@ -523,7 +523,7 @@ switch(what)
                        fullfile(baseDir,anatomicalDir,subj_name{s},'c2anatomical.nii')};
             J.output = fullfile(baseDir,anatomicalDir,subj_name{s},'gm_wm_exclusion_mask.nii');
             J.outdir = {fullfile(baseDir,anatomicalDir,subj_name{s})};
-            J.expression = (i1+i2)<0.0005;
+            J.expression = '(i1+i2)<0.0005';
             J.var = struct('name', {}, 'value', {});
             J.options.dmtx = 0;
             J.options.mask = 0;
@@ -533,10 +533,10 @@ switch(what)
             spm_jobman('run',matlabbatch);
             
             fprintf('GM-WM exlusion mask created for %s \n',subj_name{sn(s)})
-        end    
-    
-    case 'ROI:reslice_csf_seg'       %Resample csf segmentation into epi resolution
-        % usage 'bsp_imana('ROI:reslice_csf_seg',1)'
+        end 
+        
+    case 'ROI:reslice_gmwm_mask'       %Resample gm-wm exclusion mask into epi resolution
+        % usage 'bsp_imana('ROI:reslice_gmwm_mask',1)'
         sn=varargin{1};
         J = [];
         subjs=length(sn);
@@ -553,6 +553,25 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('c3anatomical resliced for %s \n',subj_name{sn(s)})
             fprintf('Manually select a threshold for masking CSF ROIs')
+        end  
+    
+    case 'ROI:reslice_csf_seg'       %Resample csf segmentation into epi resolution
+        % usage 'bsp_imana('ROI:reslice_csf_seg',1)'
+        sn=varargin{1};
+        J = [];
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            J.ref = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn(s)},'mask.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'gm_wm_exclusion_mask.nii')};
+            J.roptions.interp = 0;
+            J.roptions.wrap = [0 0 0];
+            J.roptions.mask = 0;
+            J.roptions.prefix = 'r';
+        
+            matlabbatch{1}.spm.spatial.coreg.write = J;
+            spm_jobman('run',matlabbatch);
+            fprintf('gm-wm exclusion mask resliced for %s \n',subj_name{sn(s)})
         end  
         
     case 'ROI:mask_csf_rois'        % Mask CSF rois with subject-specific CSF segmentation
@@ -572,6 +591,32 @@ switch(what)
                 J.output = fullfile(regSubjDir,sprintf('csfm_mask_%s.nii',images{im}));
                 J.outdir = {fullfile(regSubjDir)};
                 J.expression = expression;
+                J.var = struct('name', {}, 'value', {});
+                J.options.dmtx = 0;
+                J.options.mask = 0;
+                J.options.interp = 1;
+                J.options.dtype = 4;
+                matlabbatch{1}.spm.util.imcalc=J;
+                spm_jobman('run',matlabbatch);
+            end
+            fprintf('csf ROIs masked for %s \n',subj_name{sn(s)})
+        end  
+        
+    case 'ROI:mask_csf_rois_gmwm'        % Mask CSF rois with subject-specific GM-WM exclusion mask
+        % example: bsp_imana('ROI:mask_csf_rois_gmwm',1)
+        sn=varargin{1}; % subjNum
+        images = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{sn(s)});
+            for im=1:length(images)
+                J.input = {fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))
+                           fullfile(baseDir,anatomicalDir,subj_name{s},'rgm_wm_exclusion_mask.nii')};
+                J.output = fullfile(regSubjDir,sprintf('csfgm_mask_%s.nii',images{im}));
+                J.outdir = {fullfile(regSubjDir)};
+                J.expression = 'i1.*i2';
                 J.var = struct('name', {}, 'value', {});
                 J.options.dmtx = 0;
                 J.options.mask = 0;
