@@ -668,14 +668,14 @@ switch(what)
         for s=sn
             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
             for r = 1:length(regions)
-                file = fullfile(regSubjDir,sprintf('csfgm_ero_mask_%s.nii',regions{r}));
+                file = fullfile(regSubjDir,sprintf('csfgm_mask_%s.nii',regions{r}));
                 R{r}.type = 'roi_image';
                 R{r}.file= file;
                 R{r}.name = regions{r};
                 R{r}.value = 1;
             end
             R=region_calcregions(R);                
-            save(fullfile(regSubjDir,'regions_csfgm_ero.mat'),'R');
+            save(fullfile(regSubjDir,'regions_csfgm.mat'),'R');
         end
         
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM

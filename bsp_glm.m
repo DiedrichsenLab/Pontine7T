@@ -500,7 +500,7 @@ switch(what)
             load(fullfile(glmDirSubj,'SPM.mat'));
             
             % load data
-            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions_csfgm_ero.mat')));
+            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions_csfgm.mat')));
             % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Get the raw data files
