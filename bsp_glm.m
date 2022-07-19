@@ -500,7 +500,7 @@ switch(what)
             load(fullfile(glmDirSubj,'SPM.mat'));
             
             % load data
-            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions_csfm.mat')));
+            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions_csfgm_ero.mat')));
             % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Get the raw data files
@@ -1087,7 +1087,7 @@ switch(what)
         method = {'GLS'};
         
         D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
-        save(fullfile(baseDir,'results','test_GLM_physio_full_model_csf.mat'),'-struct','D');
+        save(fullfile(baseDir,'results','test_GLM_physio_full_model_csf_gmmask.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_Physio_full_model_csf'
@@ -1152,6 +1152,49 @@ switch(what)
             title('different ROIs');
             ylabel(sprintf('%s',subj_name{sn(s)}));
         end;
+        
+    case 'test_GLM_Physio_task_model_csf'
+        sn = [1:8];
+        model = {{'Tasks','InstructC'},...
+            {'Tasks','InstructC','Retro_HR'},...
+            {'Tasks','InstructC','Retro_RESP'},...
+            {'Tasks','InstructC','HR'},...
+            {'Tasks','InstructC','RV'},...
+            {'Tasks','InstructC','Retro_HR','Retro_RESP'},...
+            {'Tasks','InstructC','Retro_HR','HR'},...
+            {'Tasks','InstructC','Retro_HR','RV'},...
+            {'Tasks','InstructC','Retro_RESP','HR'},...
+            {'Tasks','InstructC','Retro_RESP','RV'},...
+            {'Tasks','InstructC','HR','RV'},...
+            {'Tasks','InstructC','Retro_HR','Retro_RESP','HR'},...
+            {'Tasks','InstructC','Retro_HR','Retro_RESP','RV'},...
+            {'Tasks','InstructC','Retro_RESP','HR','RV'},...
+            {'Tasks','InstructC','Retro_HR','Retro_RESP','HR','RV'}
+            };
+        inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
+        roi = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
+        method = {'GLS'};
+        
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
+        save(fullfile(baseDir,'results','test_GLM_physio_task_model_csf_gmmask_ero.mat'),'-struct','D');
+        varargout={D};
+        
+   case 'plot_GLM_Physio_task_model_csf'
+        what = 'R'; % what to plot - here correlation on 
+        sn = [1:4]; 
+        vararginoptions(varargin,{'what','sn'});
+
+        D=load('test_GLM_physio_task_model_csf_gmmask_ero.mat');
+         
+        num_subj = length(sn);
+        color={[0.7 0 0],[0 0 0.7],[0 0.7 0],[1 0.4 0.4],[0.4 0.4 1],[0.4 1 0.4],[0.8 0 0],[0 0 0.8],[0 0.8 0],[1 0.5 0.5],[0.5 0.5 1],[0.5 1 0.5],[0.9 0 0],[0 0 0.9],[0.5 0.5 0.5]}; 
+        style={':',':','-','-','-'}; 
+        for s=1:num_subj 
+            subplot(num_subj,1,(s-1)*1+1);
+            barplot(D.roi,D.(what),'split',[D.model],'subset',D.sn==sn(s),'leg',{'Task','Task+RetHR','Task+RetRESP','Task+HR','Task+RV','Task+RetHR+RetRESP','Task+RetHR+HR','Task+RetHR+RV','Task+RetRESP+HR','Task+RetRESP+RV','Task+HR+RV','Task+RetHR+RetRESP+HR','Task+RetHR+RetRESP+RV','Task+RetRESP+HR+RV','Task+RetHR+RetRESP+HR+RV'},'facecolor',color); 
+            title('R for different ROIs');
+            ylabel(sprintf('%s',subj_name{sn(s)}));
+        end;     
         
     case 'test_GLM_lowfreq_csf'
         % Compare different methods to deal with auto-correlated noise
