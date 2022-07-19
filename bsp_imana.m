@@ -523,7 +523,7 @@ switch(what)
                        fullfile(baseDir,anatomicalDir,subj_name{s},'c2anatomical.nii')};
             J.output = fullfile(baseDir,anatomicalDir,subj_name{s},'gm_wm_exclusion_mask.nii');
             J.outdir = {fullfile(baseDir,anatomicalDir,subj_name{s})};
-            J.expression = '(i1+i2)<0.0005';
+            J.expression = '(i1+i2)<1e-6';
             J.var = struct('name', {}, 'value', {});
             J.options.dmtx = 0;
             J.options.mask = 0;
@@ -661,21 +661,21 @@ switch(what)
         
     case 'ROI:define_csf'                 % Defines ROIs for brain structures
         % Before runing this, create masks for different structures
-        sn=[4]; 
+        sn=[1:8]; 
         regions={'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
         
         vararginoptions(varargin,{'sn','regions'}); 
         for s=sn
             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
             for r = 1:length(regions)
-                file = fullfile(regSubjDir,sprintf('csfgm_mask_%s.nii',regions{r}));
+                file = fullfile(regSubjDir,sprintf('csfgm_ero_mask_%s.nii',regions{r}));
                 R{r}.type = 'roi_image';
                 R{r}.file= file;
                 R{r}.name = regions{r};
                 R{r}.value = 1;
             end
             R=region_calcregions(R);                
-            save(fullfile(regSubjDir,'regions_csfm.mat'),'R');
+            save(fullfile(regSubjDir,'regions_csfgm_ero.mat'),'R');
         end
         
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
