@@ -447,7 +447,8 @@ switch(what)
                     sourceDir = suitSubjDir; 
                     source = fullfile(sourceDir,'anatomical.nii'); 
                     job.subj.resample = {source};
-                    outDir = suitSubjDir; 
+%                     outDir = suitSubjDir; 
+                    outDir = baseDir;
                     job.vox           = [1 1 1];
                 case 'TSE'
                     sourceDir = fullfile(baseDir,'anatomicals',subj_name{s}); 
@@ -465,7 +466,7 @@ switch(what)
             end
             suit_reslice_dartel(job);   
             source=fullfile(sourceDir,'*wd*');
-            movefile(source,outDir);
+             movefile(source,outDir);
         end
 
    case 'ROI:inv_reslice'              % Defines ROIs for brain structures
@@ -686,7 +687,6 @@ switch(what)
         type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
         mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
         
-        v
         subjs=length(sn);
         
         for s=1:subjs,
