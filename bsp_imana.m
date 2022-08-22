@@ -847,6 +847,30 @@ switch(what)
         % alignment by appending the prefix 'r' to the current file
         % So if you continually update rtse, you'll end up with a file
         % called r...rrrtsei.
+
+    case 'ANAT:resliceTSE'       % Reslice coregistered TSE to anatomical
+        % usage 'bsp_imana('ANAT:resliceTSE',1)'
+        sn=varargin{1};
+        J = [];
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            in = fullfile(baseDir,anatomicalDir,subj_name{sn},'tse_coreg.nii')
+            out= fullfile(baseDir,anatomicalDir,subj_name{sn},'temp_tse_coreg_resampled.nii')
+            copy_command = sprintf('cp %s %s', in, out)
+            system(copy_command)
+
+            J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'temp_tse_coreg_resampled.nii')};
+            J.roptions.interp = 0;
+            J.roptions.wrap = [0 0 0];
+            J.roptions.mask = 0;
+            J.roptions.prefix = 'r';
+        
+            matlabbatch{1}.spm.spatial.coreg.write = J;
+            spm_jobman('run',matlabbatch);
+            fprintf('TSE resliced for %s \n',subj_name{sn(s)})
+        end  
         
      case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
         % (2) Manually seed the functional/anatomical registration
