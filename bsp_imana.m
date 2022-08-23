@@ -855,13 +855,8 @@ switch(what)
         subjs=length(sn);
         
         for s=1:subjs,
-            in = fullfile(baseDir,anatomicalDir,subj_name{sn},'tse_coreg.nii')
-            out= fullfile(baseDir,anatomicalDir,subj_name{sn},'temp_tse_coreg_resampled.nii')
-            copy_command = sprintf('cp %s %s', in, out)
-            system(copy_command)
-
             J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
-            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'temp_tse_coreg_resampled.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse_coreg.nii')};
             J.roptions.interp = 0;
             J.roptions.wrap = [0 0 0];
             J.roptions.mask = 0;
