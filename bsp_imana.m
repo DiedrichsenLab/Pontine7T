@@ -302,7 +302,7 @@ switch(what)
             fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
         end    
         
-     case 'FUNC:run_feat_coregistration'    %Run run_feat_coregistrations.sh shell script
+    case 'FUNC:run_feat_coregistration'    %Run run_feat_coregistrations.sh shell script
          % example: bsp_imana('FUNC:run_feat_coregistration',1,1)
          sn=varargin{1}; %subjNum
          sessn=varargin{2}; %sessNum
@@ -318,7 +318,7 @@ switch(what)
          
          fprintf('feat coregistration completed for %s \n',subj_name{sn(s)})
      
-     case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
+    case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
         % Run gunzip on the output file from epi_reg step
         % example: bsp_imana('FUNC:gunzip',1,8)
         sn=varargin{1}; % subjNum
@@ -334,7 +334,7 @@ switch(what)
             fprintf('gunzip completed for %s \n',subj_name{sn(s)})
         end
         
-     case 'FUNC:coreg_meanepi'        % Coregister meanrun_01 to meanrun_01_func2struct
+    case 'FUNC:coreg_meanepi'       % Coregister meanrun_01 to meanrun_01_func2struct
         % Need meanrun_01 in epi resolution coregistered to anatomical
         % example: bsp_imana('FUNC:coreg_meanepi',1,8)
         sn=varargin{1}; % subjNum
@@ -361,7 +361,7 @@ switch(what)
             system(command)
         end    
         
-   case 'FUNC:make_samealign'        % Align functional images to rmeanepi of run 1, session 1
+    case 'FUNC:make_samealign'      % Align functional images to rmeanepi of run 1, session 1
         % Aligns all functional images from both sessions
         % to rmeanepi of run 1 of session 1
         % example: bsp_imana('FUNC:make_samealign',1,8,[1:8])
@@ -393,7 +393,7 @@ switch(what)
         end
    
     
-    case 'SUIT:isolate'               % Segment cerebellum into grey and white matter
+    case 'SUIT:isolate'             % Segment cerebellum into grey and white matter
         % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
         % example: 'bsp_imana('SUIT:isolate',1)'
         sn=varargin{1};
@@ -407,7 +407,7 @@ switch(what)
             suit_isolate_seg({fullfile(suitSubjDir,'anatomical.nii')},'keeptempfiles',1);
         end
         
-    case 'SUIT:normalise_dartel'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
+    case 'SUIT:normalise_dartel'    % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse
         % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
         sn=varargin{1}; %subjNum
@@ -419,7 +419,7 @@ switch(what)
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dartel(job);
         
-    case 'SUIT:normalise_dentate'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
+    case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse 
         sn=varargin{1}; %subjNum
         % example: 'sc1_sc2_imana('SUIT:normalise_dentate',1)
@@ -431,7 +431,7 @@ switch(what)
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dentate(job);
     
-    case 'SUIT:reslice_ana'               % Reslice the contrast images from first-level GLM
+    case 'SUIT:reslice_ana'         % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,'anatomical')
         % make sure that you reslice into 2mm^3 resolution
         sn=varargin{1}; % subjNum
@@ -469,7 +469,47 @@ switch(what)
              movefile(source,outDir);
         end
 
-   case 'ROI:inv_reslice'              % Defines ROIs for brain structures
+    case 'ROI:group_define'         % Defines the group regions from the group-space images
+        regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
+        
+        vararginoptions(varargin,{'regions'}); 
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        for r = 1:length(regions)
+            file = fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r}));
+            R{r}.type = 'roi_image';
+            R{r}.file= file;
+            R{r}.name = regions{r};
+            R{r}.value = 1;
+        end
+        R=region_calcregions(R);                
+        save(fullfile(regGroupDir,'regions.mat'),'R');
+    case 'ROI:group_exclude'         % Finds overlapping voxels in group space 
+        regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
+        
+        vararginoptions(varargin,{'regions'}); 
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        for r = 1:length(regions)
+            V(r)=spm_vol(fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r})));
+            X(:,:,:,r)=spm_read_vols(V(r));
+            
+        end; 
+        M=sum(X,4);
+        indx=find(M>1);
+        [i,j,k]=ind2sub(V(1).dim,indx)
+        keyboard; 
+    case 'ROI:group_cifti'         % Example of saving region of interest data as a cifti - here labels 
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        load(fullfile(regGroupDir,'regions.mat'));
+        % Make labels 
+        for r=1:length(R)
+            data{r}=ones(size(R{r}.data,1),1)*r; 
+        end; 
+        dname = {'roi_label'}; 
+        V=spm_vol('SUIT.nii'); % space defining image
+        C=region_make_cifti(R,V,'data',data,'dtype','scalars');
+        cifti_write(C,'regions.dscalar.nii'); 
+        
+    case 'ROI:inv_reslice'              % OLD: Inverse reslices the ROI images to individual space
         sn=varargin{1}; 
         images = {'csf','pontine','olive','dentate','rednucleus'}; 
         groupDir = fullfile(baseDir,'RegionOfInterest','group');
@@ -874,7 +914,7 @@ switch(what)
         
      %%%%% Unused cases %%%%%%
      
-     case 'ANAT:coregTSE'                 % Adjust TSE to anatomical image REQUIRES USER INPUT
+    case 'ANAT:coregTSE'                 % Adjust TSE to anatomical image REQUIRES USER INPUT
         % (2) Manually seed the functional/anatomical registration
         % - Do "coregtool" on the matlab command window
         % - Select anatomical image and tse image to overlay
@@ -912,7 +952,7 @@ switch(what)
         % So if you continually update rtse, you'll end up with a file
         % called r...rrrtsei.
         
-     case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
+    case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
         % (2) Manually seed the functional/anatomical registration
         % - Do "coregtool" on the matlab command window
         % - Select anatomical image and meanepi image to overlay
@@ -931,7 +971,7 @@ switch(what)
         matlabbatch{1}.spm.spatial.coreg.estimate=J;
         spm_jobman('run',matlabbatch);
         
-     case 'FUNC:correct deform'        % Correct Magnetic field deformations using antsRegEpi.sh
+    case 'FUNC:correct deform'        % Correct Magnetic field deformations using antsRegEpi.sh
        
 end
         

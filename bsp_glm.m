@@ -898,7 +898,7 @@ switch(what)
         SPM.xCon=spm_FcUtil('Set','SignalEffects', 'F', 'c',con,SPM.xX.xKXs);
         spm_contrasts(SPM);
         
-   case 'test_GLM_script'
+    case 'test_GLM_script'
         model = {{'Tasks','Instruct'},...
             {'Tasks','Instruct','Retro_HR'},...
             {'Tasks','Instruct','Retro_RESP'},...
@@ -1222,7 +1222,7 @@ switch(what)
         save(fullfile(baseDir,'results','test_GLM_physio_task_model_csf_gmmask.mat'),'-struct','D');
         varargout={D};
         
-   case 'plot_GLM_Physio_task_model_csf'
+    case 'plot_GLM_Physio_task_model_csf'
         what = 'R'; % what to plot - here correlation on 
         sn = [1:4]; 
         vararginoptions(varargin,{'what','sn'});
@@ -1258,7 +1258,7 @@ switch(what)
         save(fullfile(baseDir,'results','test_GLM_physio_task_motion_csf_gmmask.mat'),'-struct','D');
         varargout={D};
         
-   case 'plot_GLM_Physio_task_motion_csf'
+    case 'plot_GLM_Physio_task_motion_csf'
         what = 'R'; % what to plot - here correlation on 
         sn = [5:8]; 
         vararginoptions(varargin,{'what','sn'});
@@ -1290,7 +1290,7 @@ switch(what)
         save(fullfile(baseDir,'results','test_GLM_physio_task_acompcor_csf_gmmask.mat'),'-struct','D');
         varargout={D};
         
-   case 'plot_GLM_Physio_task_acompcor_csf'
+    case 'plot_GLM_Physio_task_acompcor_csf'
         what = 'R'; % what to plot - here correlation on 
         sn = [5:8]; 
         vararginoptions(varargin,{'what','sn'});
@@ -1325,7 +1325,7 @@ switch(what)
         save(fullfile(baseDir,'results','test_GLM_physio_task_csf_csf_gmmask.mat'),'-struct','D');
         varargout={D};
         
-   case 'plot_GLM_Physio_task_csf_csf'
+    case 'plot_GLM_Physio_task_csf_csf'
         what = 'R'; % what to plot - here correlation on 
         sn = [5:8]; 
         vararginoptions(varargin,{'what','sn'});
@@ -1665,7 +1665,7 @@ switch(what)
             title('Different Runs across ROIs');
         end; 
         
-   case 'test_GLM_notask_Physio_filter'
+    case 'test_GLM_notask_Physio_filter'
         sn = [1:8];
         model = {{'Mov'},...
             {'Mov'},...
@@ -1746,7 +1746,6 @@ switch(what)
         D=bsp_glm('test_GLM','roi',roi,'reg',method,'inX',model,'runs',[1:10]);
         save(fullfile(baseDir,'results','test_GLM_5.mat'),'-struct','D');
         varargout={D};
-        
         
     case 'physio_reg' % Examines the covariance of physiological regressors with main regressors 
         sn = [1:8]; 
