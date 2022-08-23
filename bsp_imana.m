@@ -875,7 +875,7 @@ switch(what)
         
         for s=1:subjs,
             J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
-            J.source = {fullfile(baseDir,suitDir,subj_name{sn},'c_anatomical_pcereb.nii')};
+            J.source = {fullfile(baseDir,suitDir,anatomicalDir,subj_name{sn},'c_anatomical_pcereb.nii')};
             J.roptions.interp = 0;
             J.roptions.wrap = [0 0 0];
             J.roptions.mask = 0;
