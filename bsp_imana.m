@@ -866,6 +866,25 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('TSE resliced for %s \n',subj_name{sn(s)})
         end  
+
+    case 'ANAT:reslice_pcereb'       % Reslice coregistered TSE to anatomical
+        % usage 'bsp_imana('ANAT:resliceTSE',1)'
+        sn=varargin{1};
+        J = [];
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+            J.source = {fullfile(baseDir,suitDir,subj_name{sn},'c_anatomical_pcereb.nii')};
+            J.roptions.interp = 0;
+            J.roptions.wrap = [0 0 0];
+            J.roptions.mask = 0;
+            J.roptions.prefix = 'r';
+        
+            matlabbatch{1}.spm.spatial.coreg.write = J;
+            spm_jobman('run',matlabbatch);
+            fprintf('TSE resliced for %s \n',subj_name{sn(s)})
+        end  
         
      case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
         % (2) Manually seed the functional/anatomical registration
