@@ -432,7 +432,7 @@ switch(what)
         suit_normalize_dentate(job);
     
     case 'SUIT:reslice_ana'               % Reslice the anatomical images to check suit normalizations
-        % example: bsm_imana('SUIT:reslice',1,'anatomical')
+        % example: bsp_imana('SUIT:reslice',1,'anatomical')
         % make sure that you reslice into 2mm^3 resolution
         sn=varargin{1}; % subjNum
         image=varargin{2}; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
