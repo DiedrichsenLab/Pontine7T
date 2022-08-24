@@ -508,8 +508,42 @@ switch(what)
         V=spm_vol('SUIT.nii'); % space defining image
         C=region_make_cifti(R,V,'data',data,'dtype','scalars');
         cifti_write(C,'regions.dscalar.nii'); 
+    case 'ROI:make_mask'
+        sn = [1:8];
+        vararginoptions(varargin,{'sn'}); 
+        for s=sn 
+            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
+            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},'c_anatomical_pcereb_corr.nii'); 
+            outfile = fullfile(baseDir,'RegionOfInterest','data',subj_name{s},'pcereb_mask.nii'); 
+            Vi(1)=spm_vol(glm_mask); 
+            Vi(2)=spm_vol(pcorr); 
+            spm_imcalc(Vi,outfile,'i1>0 & i2>0'); 
+        end
+    case 'ROI:deformation'              % Deform ROIs into individual space and retain mapping. 
+        sn = [1:8]; 
+        saveasimg = 0; 
+        region_file = 'regions.mat';
+        def_dir = 'suit/anatomicals';
+        def_img = 'c_anatomical_seg1'; 
+        vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
-    case 'ROI:inv_reslice'              % OLD: Inverse reslices the ROI images to individual space
+        groupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        groupR = load(fullfile(groupDir,region_file)); 
+        for s = sn
+            mask = fullfile(baseDir,'RegionOfInterest','data',subj_name{s},'pcereb_mask.nii');
+            Vmask = spm_vol(mask); 
+            Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
+            mat = fullfile(baseDir,def_dir,subj_name{s},['Affine_' def_img '.mat']);
+            R=region_deformation(groupR.R,{Def,mat},'mask',glm_mask);
+            outdir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            save(fullfile(outdir,[subj_name{s} '_' region_file]),'R'); 
+            if (saveasimg)
+                for r=1:length(R)
+                    region_saveasimg(R{r},Vmask,'name',fullfile(outdir,[R{r}.name '_mask.nii'])); 
+                end
+            end
+        end
+    case 'ROI:inv_reslice'              % OLD: Inverse reslices the ROI images to individual space. Do not use. 
         sn=varargin{1}; 
         images = {'csf','pontine','olive','dentate','rednucleus'}; 
         groupDir = fullfile(baseDir,'RegionOfInterest','group');
