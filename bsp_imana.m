@@ -431,7 +431,7 @@ switch(what)
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dentate(job);
     
-    case 'SUIT:reslice_ana'               % Reslice the contrast images from first-level GLM
+    case 'SUIT:reslice_ana'               % Reslice the anatomical images to check suit normalizations
         % example: bsm_imana('SUIT:reslice',1,'anatomical')
         % make sure that you reslice into 2mm^3 resolution
         sn=varargin{1}; % subjNum
@@ -883,7 +883,7 @@ switch(what)
         
             matlabbatch{1}.spm.spatial.coreg.write = J;
             spm_jobman('run',matlabbatch);
-            fprintf('TSE resliced for %s \n',subj_name{sn(s)})
+            fprintf('Cerebellar mask resliced for %s \n',subj_name{sn(s)})
         end  
         
      case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
