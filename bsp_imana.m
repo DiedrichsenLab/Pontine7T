@@ -622,7 +622,7 @@ switch(what)
         type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
         mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
         
-        v
+        
         subjs=length(sn);
         
         for s=1:subjs,
