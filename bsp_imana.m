@@ -536,7 +536,7 @@ switch(what)
             mat = fullfile(baseDir,def_dir,subj_name{s},['Affine_' def_img '.mat']);
             R=region_deformation(groupR.R,{Def,mat},'mask',mask);
             outdir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            save(fullfile(outdir,[subj_name{s} '_' region_file]),'R'); 
+            save(fullfile(outdir,[region_file]),'R'); 
             if (saveasimg)
                 for r=1:length(R)
                     region_saveasimg(R{r},Vmask,'name',fullfile(outdir,[R{r}.name '_mask.nii'])); 
