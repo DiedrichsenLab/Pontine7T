@@ -418,7 +418,13 @@ switch(what)
         job.subjND.white      = {'c_anatomical_seg2.nii'};
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dartel(job);
-        
+     case 'SUIT:save_dartel_def'    
+        % Saves the dartel flow field as a deformation file. 
+        for sn = [1:length(subj_name)]
+            cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
+            anat_name = 'anatomical';
+            suit_save_darteldef(anat_name);
+        end; 
     case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse 
         sn=varargin{1}; %subjNum
