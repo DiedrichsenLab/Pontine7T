@@ -302,7 +302,7 @@ switch(what)
             fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
         end    
         
-     case 'FUNC:run_feat_coregistration'    %Run run_feat_coregistrations.sh shell script
+    case 'FUNC:run_feat_coregistration'    %Run run_feat_coregistrations.sh shell script
          % example: bsp_imana('FUNC:run_feat_coregistration',1,1)
          sn=varargin{1}; %subjNum
          sessn=varargin{2}; %sessNum
@@ -318,7 +318,7 @@ switch(what)
          
          fprintf('feat coregistration completed for %s \n',subj_name{sn(s)})
      
-     case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
+    case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
         % Run gunzip on the output file from epi_reg step
         % example: bsp_imana('FUNC:gunzip',1,8)
         sn=varargin{1}; % subjNum
@@ -334,7 +334,7 @@ switch(what)
             fprintf('gunzip completed for %s \n',subj_name{sn(s)})
         end
         
-     case 'FUNC:coreg_meanepi'        % Coregister meanrun_01 to meanrun_01_func2struct
+    case 'FUNC:coreg_meanepi'       % Coregister meanrun_01 to meanrun_01_func2struct
         % Need meanrun_01 in epi resolution coregistered to anatomical
         % example: bsp_imana('FUNC:coreg_meanepi',1,8)
         sn=varargin{1}; % subjNum
@@ -361,7 +361,7 @@ switch(what)
             system(command)
         end    
         
-   case 'FUNC:make_samealign'        % Align functional images to rmeanepi of run 1, session 1
+    case 'FUNC:make_samealign'      % Align functional images to rmeanepi of run 1, session 1
         % Aligns all functional images from both sessions
         % to rmeanepi of run 1 of session 1
         % example: bsp_imana('FUNC:make_samealign',1,8,[1:8])
@@ -393,7 +393,7 @@ switch(what)
         end
    
     
-    case 'SUIT:isolate'               % Segment cerebellum into grey and white matter
+    case 'SUIT:isolate'             % Segment cerebellum into grey and white matter
         % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
         % example: 'bsp_imana('SUIT:isolate',1)'
         sn=varargin{1};
@@ -407,7 +407,7 @@ switch(what)
             suit_isolate_seg({fullfile(suitSubjDir,'anatomical.nii')},'keeptempfiles',1);
         end
         
-    case 'SUIT:normalise_dartel'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
+    case 'SUIT:normalise_dartel'    % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse
         % LAUNCH SPM FMRI BEFORE RUNNING!!!!!
         sn=varargin{1}; %subjNum
@@ -418,8 +418,14 @@ switch(what)
         job.subjND.white      = {'c_anatomical_seg2.nii'};
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dartel(job);
-        
-    case 'SUIT:normalise_dentate'     % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
+     case 'SUIT:save_dartel_def'    
+        % Saves the dartel flow field as a deformation file. 
+        for sn = [1:length(subj_name)]
+            cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
+            anat_name = 'anatomical';
+            suit_save_darteldef(anat_name);
+        end; 
+    case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse 
         sn=varargin{1}; %subjNum
         % example: 'sc1_sc2_imana('SUIT:normalise_dentate',1)
@@ -431,7 +437,7 @@ switch(what)
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dentate(job);
     
-    case 'SUIT:reslice_ana'               % Reslice the contrast images from first-level GLM
+    case 'SUIT:reslice_ana'         % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,'anatomical')
         % make sure that you reslice into 2mm^3 resolution
         sn=varargin{1}; % subjNum
@@ -468,8 +474,158 @@ switch(what)
             source=fullfile(sourceDir,'*wd*');
              movefile(source,outDir);
         end
+    case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
+        % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
+        % make sure that you reslice into 2mm^3 resolution
+        sn=2; % subjNum
+        glm=1; % glmNum
+        type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
+        mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            switch type
+                case 'betas'
+                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
+                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
+                    images='beta_0';
+                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
+                    cd(glmSubjDir);
+                case 'contrast'
+                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
+                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
+                    images='con';
+                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
+                    cd(glmSubjDir);
+                case 'ResMS'
+                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
+                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
+                    images='ResMS';
+                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
+                    cd(glmSubjDir);
+                case 'cerebellarGrey'
+                    source=dir(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c1anatomical.nii')); % image to be resliced
+                    cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)}));
+            end
+            job.subj.affineTr = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'Affine_c_anatomical_seg1.mat')};
+            job.subj.flowfield= {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'u_a_c_anatomical_seg1.nii')};
+            job.subj.resample = {source.name};
+            job.subj.mask     = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},sprintf('%s.nii',mask))};
+            job.vox           = [1 1 1];
+            % Replace Nans with zeros to avoid big holes in the the data 
+            for i=1:length(source)
+                V=spm_vol(source(i).name); 
+                X=spm_read_vols(V); 
+                X(isnan(X))=0; 
+                spm_write_vol(V,X); 
+            end; 
+            suit_reslice_dartel(job);
+            
+            source=fullfile(glmSubjDir,'*wd*');
+            dircheck(fullfile(outDir));
+            destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
+            movefile(source,destination);
 
-   case 'ROI:inv_reslice'              % Defines ROIs for brain structures
+            fprintf('%s have been resliced into suit space \n',type)
+        end
+    case 'SUIT:map_to_flat' 
+        sn = 2; 
+        glm = 1; 
+        vararginoptions(varargin,{'sn','glm','type','mask'});
+        source_dir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn});
+        source=dir(fullfile(source_dir,'wdcon*')); % images to be resliced
+        for i=1:length(source)
+            name{i} = fullfile(source_dir,source(i).name); 
+        end; 
+        MAP = suit_map2surf(name); 
+        % G = surf_makeFuncGifti
+        set(gcf,'PaperPosition',[2 2 15 7]);
+        wysiwyg; 
+        for i=1:10 
+            subplot(2,5,i); 
+            suit_plotflatmap(MAP(:,i),'cscale',[-1.5 1.5]); 
+            n = source(i).name(7:end-4); 
+            n(n=='_')=' '; 
+            title(n); 
+        end; 
+        
+
+    case 'ROI:group_define'         % Defines the group regions from the group-space images
+        regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
+        
+        vararginoptions(varargin,{'regions'}); 
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        for r = 1:length(regions)
+            file = fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r}));
+            R{r}.type = 'roi_image';
+            R{r}.file= file;
+            R{r}.name = regions{r};
+            R{r}.value = 1;
+        end
+        R=region_calcregions(R);                
+        save(fullfile(regGroupDir,'regions.mat'),'R');
+    case 'ROI:group_exclude'         % Finds overlapping voxels in group space 
+        regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
+        
+        vararginoptions(varargin,{'regions'}); 
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        for r = 1:length(regions)
+            V(r)=spm_vol(fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r})));
+            X(:,:,:,r)=spm_read_vols(V(r));
+            
+        end; 
+        M=sum(X,4);
+        indx=find(M>1);
+        [i,j,k]=ind2sub(V(1).dim,indx)
+        keyboard; 
+    case 'ROI:group_cifti'         % Example of saving region of interest data as a cifti - here labels 
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        load(fullfile(regGroupDir,'regions.mat'));
+        % Make labels 
+        for r=1:length(R)
+            data{r}=ones(size(R{r}.data,1),1)*r; 
+        end; 
+        dname = {'roi_label'}; 
+        V=spm_vol('SUIT.nii'); % space defining image
+        C=region_make_cifti(R,V,'data',data,'dtype','scalars');
+        cifti_write(C,'regions.dscalar.nii'); 
+    case 'ROI:make_mask'
+        sn = [1:8];
+        vararginoptions(varargin,{'sn'}); 
+        for s=sn 
+            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
+            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},'c_anatomical_pcereb_corr.nii'); 
+            outfile = fullfile(baseDir,'RegionOfInterest','data',subj_name{s},'pcereb_mask.nii'); 
+            Vi(1)=spm_vol(glm_mask); 
+            Vi(2)=spm_vol(pcorr); 
+            spm_imcalc(Vi,outfile,'i1>0 & i2>0'); 
+        end
+    case 'ROI:deformation'              % Deform ROIs into individual space and retain mapping. 
+        sn = [1:8]; 
+        saveasimg = 0; 
+        region_file = 'regions.mat';
+        def_dir = 'suit/anatomicals';
+        def_img = 'c_anatomical_seg1'; 
+        vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
+        
+        groupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        groupR = load(fullfile(groupDir,region_file)); 
+        for s = sn
+            mask = fullfile(baseDir,'RegionOfInterest','data',subj_name{s},'pcereb_mask.nii');
+            Vmask = spm_vol(mask); 
+            Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
+            mat = fullfile(baseDir,def_dir,subj_name{s},['Affine_' def_img '.mat']);
+            R=region_deformation(groupR.R,{Def,mat},'mask',mask);
+            outdir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            save(fullfile(outdir,[region_file]),'R'); 
+            if (saveasimg)
+                for r=1:length(R)
+                    region_saveasimg(R{r},Vmask,'name',fullfile(outdir,[R{r}.name '_mask.nii'])); 
+                end
+            end
+        end
+    case 'ROI:inv_reslice'              % OLD: Inverse reslices the ROI images to individual space. Do not use. 
         sn=varargin{1}; 
         images = {'csf','pontine','olive','dentate','rednucleus'}; 
         groupDir = fullfile(baseDir,'RegionOfInterest','group');
@@ -679,82 +835,6 @@ switch(what)
             save(fullfile(regSubjDir,'regions_csfgm.mat'),'R');
         end
         
-    case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
-        % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
-        % make sure that you reslice into 2mm^3 resolution
-        sn=2; % subjNum
-        glm=1; % glmNum
-        type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
-        mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
-        
-        subjs=length(sn);
-        
-        for s=1:subjs,
-            switch type
-                case 'betas'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
-                    images='beta_0';
-                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
-                    cd(glmSubjDir);
-                case 'contrast'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
-                    images='con';
-                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
-                    cd(glmSubjDir);
-                case 'ResMS'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
-                    images='ResMS';
-                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
-                    cd(glmSubjDir);
-                case 'cerebellarGrey'
-                    source=dir(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c1anatomical.nii')); % image to be resliced
-                    cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)}));
-            end
-            job.subj.affineTr = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'Affine_c_anatomical_seg1.mat')};
-            job.subj.flowfield= {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'u_a_c_anatomical_seg1.nii')};
-            job.subj.resample = {source.name};
-            job.subj.mask     = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},sprintf('%s.nii',mask))};
-            job.vox           = [1 1 1];
-            % Replace Nans with zeros to avoid big holes in the the data 
-            for i=1:length(source)
-                V=spm_vol(source(i).name); 
-                X=spm_read_vols(V); 
-                X(isnan(X))=0; 
-                spm_write_vol(V,X); 
-            end; 
-            suit_reslice_dartel(job);
-            
-            source=fullfile(glmSubjDir,'*wd*');
-            dircheck(fullfile(outDir));
-            destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
-            movefile(source,destination);
-
-            fprintf('%s have been resliced into suit space \n',type)
-        end
-    case 'SUIT:map_to_flat' 
-        sn = 2; 
-        glm = 1; 
-        vararginoptions(varargin,{'sn','glm','type','mask'});
-        source_dir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn});
-        source=dir(fullfile(source_dir,'wdcon*')); % images to be resliced
-        for i=1:length(source)
-            name{i} = fullfile(source_dir,source(i).name); 
-        end; 
-        MAP = suit_map2surf(name); 
-        % G = surf_makeFuncGifti
-        set(gcf,'PaperPosition',[2 2 15 7]);
-        wysiwyg; 
-        for i=1:10 
-            subplot(2,5,i); 
-            suit_plotflatmap(MAP(:,i),'cscale',[-1.5 1.5]); 
-            n = source(i).name(7:end-4); 
-            n(n=='_')=' '; 
-            title(n); 
-        end; 
-        
         
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
@@ -874,7 +954,7 @@ switch(what)
         
      %%%%% Unused cases %%%%%%
      
-     case 'ANAT:coregTSE'                 % Adjust TSE to anatomical image REQUIRES USER INPUT
+    case 'ANAT:coregTSE'                 % Adjust TSE to anatomical image REQUIRES USER INPUT
         % (2) Manually seed the functional/anatomical registration
         % - Do "coregtool" on the matlab command window
         % - Select anatomical image and tse image to overlay
@@ -911,8 +991,46 @@ switch(what)
         % alignment by appending the prefix 'r' to the current file
         % So if you continually update rtse, you'll end up with a file
         % called r...rrrtsei.
+
+    case 'ANAT:resliceTSE'       % Reslice coregistered TSE to anatomical
+        % usage 'bsp_imana('ANAT:resliceTSE',1)'
+        sn=varargin{1};
+        J = [];
+        subjs=length(sn);
         
-     case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
+        for s=1:subjs,
+            J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse_coreg.nii')};
+            J.roptions.interp = 0;
+            J.roptions.wrap = [0 0 0];
+            J.roptions.mask = 0;
+            J.roptions.prefix = 'r';
+        
+            matlabbatch{1}.spm.spatial.coreg.write = J;
+            spm_jobman('run',matlabbatch);
+            fprintf('TSE resliced for %s \n',subj_name{sn(s)})
+        end  
+
+    case 'ANAT:reslice_pcereb'       % Reslice coregistered TSE to anatomical
+        % usage 'bsp_imana('ANAT:resliceTSE',1)'
+        sn=varargin{1};
+        J = [];
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+            J.source = {fullfile(baseDir,suitDir,anatomicalDir,subj_name{sn},'c_anatomical_pcereb.nii')};
+            J.roptions.interp = 0;
+            J.roptions.wrap = [0 0 0];
+            J.roptions.mask = 0;
+            J.roptions.prefix = 'r';
+        
+            matlabbatch{1}.spm.spatial.coreg.write = J;
+            spm_jobman('run',matlabbatch);
+            fprintf('Cerebellar mask resliced for %s \n',subj_name{sn(s)})
+        end  
+        
+    case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
         % (2) Manually seed the functional/anatomical registration
         % - Do "coregtool" on the matlab command window
         % - Select anatomical image and meanepi image to overlay
@@ -931,7 +1049,7 @@ switch(what)
         matlabbatch{1}.spm.spatial.coreg.estimate=J;
         spm_jobman('run',matlabbatch);
         
-     case 'FUNC:correct deform'        % Correct Magnetic field deformations using antsRegEpi.sh
+    case 'FUNC:correct deform'        % Correct Magnetic field deformations using antsRegEpi.sh
        
 end
         
