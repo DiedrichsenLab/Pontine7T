@@ -947,7 +947,7 @@ switch(what)
         end; 
         
     case 'test_GLM_Physio_full_model'
-        sn = [1:8];
+        sn = [5];
         model = {{'Tasks','InstructC'},...
             {'Retro_HR'},...
             {'Retro_RESP'},...
@@ -982,11 +982,11 @@ switch(what)
             };
         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
 %         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        roi = {'csf','cerebellum_gray'};
-        method = {'GLS'};
+        roi = {'cerebellum_gray'};
+        method = {'tikhonov_pcm'};
         
         D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
-        save(fullfile(baseDir,'results','test_GLM_physio_full_model_gls.mat'),'-struct','D');
+        save(fullfile(baseDir,'results','test_GLM_physio_full_model_tikhonov_temp.mat'),'-struct','D');
         varargout={D};
         
     case 'test_GLM_Physio_full_model_task'
