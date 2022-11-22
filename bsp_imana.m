@@ -569,38 +569,6 @@ switch(what)
             freesurfer_reconall(fullfile(baseDir, freesurferDir), subj_name, ...
                                     fullfile(baseDir, anatomicalDir, subj_name, 'anatomical.nii'));
         end % s (sn)
-    case 'SURF:xhemireg'       % Cross-register surfaces left / right hem
-        % surface-based interhemispheric registration
-        % example: bsp_imana('SURF:xhemireg')
-        
-        sn   = subj_id; % list of subjects
-
-        vararginoptions(varargin, {'sn'})
-        
-        for s = sn
-            % get the subject id folder name
-            subj_name = sprintf('S%02d', s);
-            freesurfer_registerXhem({subj_name}, fullfile(baseDir, freesurferDir),'hemisphere', [1 2]); % For debug... [1 2] orig
-        end % s (sn)
-    case 'SURF:map_ico'        % Align to the new atlas surface (map icosahedron)
-        % Resampels a registered subject surface to a regular isocahedron
-        % This allows things to happen in atlas space - each vertex number
-        % corresponds exactly to an anatomical location
-        % Makes a new folder, called ['x' subj] that contains the remapped subject
-        % Uses function mri_surf2surf
-        % mri_surf2surf: resamples one cortical surface onto another
-        % Example usage: bsp_imana('SURF:map_ico')
-        
-        sn = subj_id; % list of subjects
-        
-        vararginoptions(varargin, {'sn'});
-        
-        for s = sn
-            % get the subject id folder name
-            subj_name = sprintf('S%02d', s);
-            
-            freesurfer_mapicosahedron_xhem(subj_name, fullfile(baseDir, freesurferDir),'smoothing',1,'hemisphere',[1, 2]);
-        end % s (sn)
     case 'SURF:fs2wb'          % Resampling subject from freesurfer fsaverage to fs_LR
         % Example usage: bsp_imana('SURF:fs2wb', 'sn', 95, 'res', 32)
         
