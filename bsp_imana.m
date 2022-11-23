@@ -606,7 +606,7 @@ switch(what)
         for s = sn 
             % get the subject id folder name
             subj_nam = sprintf('S%02d', s);
-            outDir   = fullfile(baseDir, wbDir, 'data'); dircheck(outDir);
+            outDir   = fullfile(baseDir, 'surfaceWB', 'data'); dircheck(outDir);
             surf_resliceFS2WB(subj_nam, fullfile(baseDir, freesurferDir), outDir, 'hemisphere', hemi, 'resolution', sprintf('%dk', res))
         end % s (sn)    
     
