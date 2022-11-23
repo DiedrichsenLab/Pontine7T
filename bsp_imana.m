@@ -578,7 +578,7 @@ switch(what)
         vararginoptions(varargin, {'sn'});
         
         % check if freesurfer directory already exists
-        dircheck(fullfile(baseDir, freesurferDir));
+        dircheck(fullfile(baseDir, 'freesurferDir'));
         
         for s = sn
             % get the subject id folder name
