@@ -578,7 +578,8 @@ switch(what)
         vararginoptions(varargin, {'sn'});
         
         % check if freesurfer directory already exists
-        dircheck(fullfile(baseDir, 'freesurferDir'));
+        freesurferDir   ='/surfaceFreesurfer';
+        dircheck(fullfile(baseDir, freesurferDir));
         
         for s = sn
             % get the subject id folder name
@@ -599,6 +600,7 @@ switch(what)
         % setting some directories:
 %         fs_LRDir = fullfile(baseDir, sprintf('%s_%d', atlas, res));
         
+        freesurferDir   ='/surfaceFreesurfer';
         
         for s = sn 
             % get the subject id folder name
