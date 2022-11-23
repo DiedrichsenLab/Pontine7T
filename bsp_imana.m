@@ -5,10 +5,28 @@ numDummys = 3;                                                              % pe
 numTRs    = 328;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
-baseDir         ='/srv/diedrichsen/data/Cerebellum/Pontine7T';
-if ~exist(baseDir,'dir')
-    baseDir         ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T';
+
+% PATH DEFINITIONS
+
+% Add dependencies to path
+if isdir('/Volumes/diedrichsen_data$/data')
+    workdir='/Volumes/diedrichsen_data$/data';
+elseif isdir('/srv/diedrichsen/data')
+    workdir='/srv/diedrichsen/data';
+else
+    fprintf('Workdir not found. Mount or connect to server and try again.');
 end
+
+addpath(sprintf('%s/../matlab/spm12',workdir));
+addpath(sprintf('%s/../matlab/spm12/toolbox/suit/',workdir));
+addpath(sprintf('%s/../matlab/dataframe',workdir));
+addpath(sprintf('%s/../matlab/imaging/tools/',workdir));
+addpath(sprintf('%s/../matlab/imaging/surfAnalysis/',workdir));
+addpath(sprintf('%s/../matlab/imaging/coregtool/',workdir));
+addpath(sprintf('%s/../matlab/imaging/freesurfer/',workdir));
+
+baseDir=(sprintf('%s/Cerebellum/Pontine7T',workdir));
+
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
@@ -556,11 +574,13 @@ switch(what)
         % FreeSurfer cortical reconstruction process
         % Example usage: bsp_imana('SURF:reconall')
         
+        subj_id = [98, 97, 96, 95, 1, 3, 4, 7];
         sn   = subj_id; % subject list
         
         vararginoptions(varargin, {'sn'});
         
         % check if freesurfer directory already exists
+        freesurferDir   ='/surfaceFreesurfer';
         dircheck(fullfile(baseDir, freesurferDir));
         
         for s = sn
@@ -569,41 +589,10 @@ switch(what)
             freesurfer_reconall(fullfile(baseDir, freesurferDir), subj_name, ...
                                     fullfile(baseDir, anatomicalDir, subj_name, 'anatomical.nii'));
         end % s (sn)
-    case 'SURF:xhemireg'       % Cross-register surfaces left / right hem
-        % surface-based interhemispheric registration
-        % example: bsp_imana('SURF:xhemireg')
-        
-        sn   = subj_id; % list of subjects
-
-        vararginoptions(varargin, {'sn'})
-        
-        for s = sn
-            % get the subject id folder name
-            subj_name = sprintf('S%02d', s);
-            freesurfer_registerXhem({subj_name}, fullfile(baseDir, freesurferDir),'hemisphere', [1 2]); % For debug... [1 2] orig
-        end % s (sn)
-    case 'SURF:map_ico'        % Align to the new atlas surface (map icosahedron)
-        % Resampels a registered subject surface to a regular isocahedron
-        % This allows things to happen in atlas space - each vertex number
-        % corresponds exactly to an anatomical location
-        % Makes a new folder, called ['x' subj] that contains the remapped subject
-        % Uses function mri_surf2surf
-        % mri_surf2surf: resamples one cortical surface onto another
-        % Example usage: bsp_imana('SURF:map_ico')
-        
-        sn = subj_id; % list of subjects
-        
-        vararginoptions(varargin, {'sn'});
-        
-        for s = sn
-            % get the subject id folder name
-            subj_name = sprintf('S%02d', s);
-            
-            freesurfer_mapicosahedron_xhem(subj_name, fullfile(baseDir, freesurferDir),'smoothing',1,'hemisphere',[1, 2]);
-        end % s (sn)
     case 'SURF:fs2wb'          % Resampling subject from freesurfer fsaverage to fs_LR
         % Example usage: bsp_imana('SURF:fs2wb', 'sn', 95, 'res', 32)
         
+        subj_id = [98, 97, 96, 95, 1, 3, 4, 7];
         sn   = subj_id; % list of subjects
         res  = 32;          % resolution of the atlas. options are: 32, 164
         hemi = [1, 2];      % list of hemispheres
@@ -613,11 +602,12 @@ switch(what)
         % setting some directories:
 %         fs_LRDir = fullfile(baseDir, sprintf('%s_%d', atlas, res));
         
+        freesurferDir   ='/surfaceFreesurfer';
         
         for s = sn 
             % get the subject id folder name
             subj_nam = sprintf('S%02d', s);
-            outDir   = fullfile(baseDir, wbDir, 'data'); dircheck(outDir);
+            outDir   = fullfile(baseDir, 'surfaceWB', 'data'); dircheck(outDir);
             surf_resliceFS2WB(subj_nam, fullfile(baseDir, freesurferDir), outDir, 'hemisphere', hemi, 'resolution', sprintf('%dk', res))
         end % s (sn)    
     
