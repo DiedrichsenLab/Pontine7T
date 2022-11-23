@@ -556,6 +556,7 @@ switch(what)
         % FreeSurfer cortical reconstruction process
         % Example usage: bsp_imana('SURF:reconall')
         
+        subj_id = [98, 97, 96, 95, 1, 3, 4, 7];
         sn   = subj_id; % subject list
         
         vararginoptions(varargin, {'sn'});
@@ -572,6 +573,7 @@ switch(what)
     case 'SURF:fs2wb'          % Resampling subject from freesurfer fsaverage to fs_LR
         % Example usage: bsp_imana('SURF:fs2wb', 'sn', 95, 'res', 32)
         
+        subj_id = [98, 97, 96, 95, 1, 3, 4, 7];
         sn   = subj_id; % list of subjects
         res  = 32;          % resolution of the atlas. options are: 32, 164
         hemi = [1, 2];      % list of hemispheres
