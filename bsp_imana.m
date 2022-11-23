@@ -5,10 +5,26 @@ numDummys = 3;                                                              % pe
 numTRs    = 328;                                                            % per run (includes dummies)
 %========================================================================================================================
 % PATH DEFINITIONS
-baseDir         ='/srv/diedrichsen/data/Cerebellum/Pontine7T';
-if ~exist(baseDir,'dir')
-    baseDir         ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T';
+
+% PATH DEFINITIONS
+
+% Add dependencies to path
+if isdir('/Volumes/diedrichsen_data$/data')
+    workdir='/Volumes/diedrichsen_data$/data';
+elseif isdir('/srv/diedrichsen/data')
+    workdir='/srv/diedrichsen/data';
+else
+    fprintf('Workdir not found. Mount or connect to server and try again.');
 end
+
+addpath(sprintf('%s/../matlab/spm12',workdir));
+addpath(sprintf('%s/../matlab/spm12/toolbox/suit/',workdir));
+addpath(sprintf('%s/../matlab/dataframe',workdir));
+addpath(sprintf('%s/../matlab/imaging/tools/',workdir));
+addpath(sprintf('%s/../matlab/imaging/coregtool/',workdir));
+
+baseDir=(sprintf('%s/Cerebellum/Pontine7T',workdir));
+
 imagingDir      ='/imaging_data';
 imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
