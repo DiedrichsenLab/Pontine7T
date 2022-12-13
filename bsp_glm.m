@@ -680,6 +680,7 @@ switch(what)
                             T.theta = nan(1,7);
                             T.theta(1:length(theta)) = theta;
                             T.time = time;
+                            %T.X = reshape(Xr,1,[]);
                             % Evaluation of the overall model: against observed time series  
                             T.R        = calc_cosang(Xr(testI,:)*Btrain,Yr(testI,:)); 
                             T.R2       = calc_R2(Xr(testI,:)*Btrain,Yr(testI,:));
@@ -947,7 +948,7 @@ switch(what)
         end; 
         
     case 'test_GLM_Physio_full_model'
-        sn = [5];
+        sn = [1:8];
         model = {{'Tasks','InstructC'},...
             {'Retro_HR'},...
             {'Retro_RESP'},...
@@ -982,11 +983,11 @@ switch(what)
             };
         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
 %         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        roi = {'cerebellum_gray'};
+        roi = {'simulate'};
         method = {'tikhonov_pcm'};
         
         D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
-        save(fullfile(baseDir,'results','test_GLM_physio_full_model_tikhonov_temp.mat'),'-struct','D');
+        save(fullfile(baseDir,'results','test_GLM_physio_simulate_tikhonov.mat'),'-struct','D');
         varargout={D};
         
     case 'test_GLM_Physio_full_model_task'
