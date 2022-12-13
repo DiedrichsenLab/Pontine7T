@@ -488,34 +488,6 @@ switch(what)
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
             end
         end
-    case 'TS:getRawTs_csf'                % Get raw timeseries and save them
-        % bsp_glm('TS:getRawTs_csf',1,1);
-        sn=varargin{1}; % subjNum
-        glm=varargin{2}; % glmNum
-        
-        glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
-        
-        for s=sn,
-            glmDirSubj=fullfile(glmDir, subj_name{s});
-            load(fullfile(glmDirSubj,'SPM.mat'));
-            
-            % load data
-            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions_csfgm.mat')));
-            % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
-            
-            % Get the raw data files
-            V=SPM.xY.VY;
-            VresMS = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
-            
-            % Get time series data
-            for r = 1:length(R)
-                Y = region_getdata(V,R{r});  % Data is N x P
-                resMS = region_getdata(VresMS,R{r});
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
-                save(filename,'Y','resMS','-v7.3');
-                fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
-            end
-        end    
     
     case 'test_GLM' 
         % Get crossval R2 and R from GLM for different designs
