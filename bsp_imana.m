@@ -691,8 +691,8 @@ switch(what)
         end  
     
         
-    case 'ROI:mask_csf_rois_gmwm'        % Mask CSF rois with subject-specific GM-WM exclusion mask
-        % example: bsp_imana('ROI:mask_csf_rois_gmwm',1)
+    case 'ROI:mask_rois'        % Mask CSF rois with subject-specific GM-WM exclusion mask
+        % example: bsp_imana('ROI:mask_rois',1)
         sn=varargin{1}; % subjNum
         images = {'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','transverseL','transverseR','ventricle4'};
         
@@ -733,7 +733,7 @@ switch(what)
         % Before runing this, create masks for different structures
         sn=8; 
         regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
-        regions={'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','csftransverseL','csftransverseR','csfventricle4'};
+%         regions={'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','csftransverseL','csftransverseR','csfventricle4'};
         
         vararginoptions(varargin,{'sn','regions'}); 
         for s=sn
