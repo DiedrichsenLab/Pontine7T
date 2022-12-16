@@ -30,7 +30,7 @@ case 'simulate_data'
     condition = ones(((numTRs-numDummys)*numRuns),1);
 
 %     thetaSubj = theta(1:numRuns:end,1:2);  %only grab thetas for task and instruction, not constant
-    thetaSubj = [10];
+    thetaSubj = [1e-6];
     design = X(1:numRuns:end,:);
     
     signalVector = signal*ones(numSim,1);
@@ -40,17 +40,15 @@ case 'simulate_data'
         featureTemp = reshape(X(s,:),((numTRs-numDummys)*numRuns),[]);
 %         feature = sum(feature,2);
         feature = num2cell(featureTemp,[1,2]);
-        [M,Z] = pcm_buildModelFromFeatures(feature,'name','pontine','style','rsa_style','type','component');
+        [M,Z] = pcm_buildModelFromFeatures(feature,'name','pontine','style','encoding_style','type','component');
 %         M.Gd = [1 1];   %manually add Gd, Gc, and numGparams, as pcm_buildModelFromFeatures doesn't
 %         M.Gc = [1 0; 0 1];
 %         M.numGparams = 2;
-%         M.Gd = [1];
-%         M.Gc = [1];
         M.numGparams = 1;
         
         numVox = size(feature{1,1},1);
     
-        Ysim = pcm_makeDataset(M,thetaSubj','design',condition','numVox',numVox,'numSim',numSim,'signal',signalVector,'noise',noiseVector);
+        Ysim = pcm_makeDataset(M,thetaSubj','design',featureTemp,'numVox',numVox,'numSim',numSim,'signal',signalVector,'noise',noiseVector);
 
         Y = cell2mat(Ysim)';
         Y = sum(Y,2); %sum along condition dimension to produce single time series per simulated voxel
