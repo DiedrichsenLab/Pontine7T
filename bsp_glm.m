@@ -1021,7 +1021,7 @@ switch(what)
     
     case 'plot_GLM_Physio_full_model_task'
         what = 'R_Bc'; % what to plot - here correlation on 
-        sn = [2 4 6 8]; 
+        sn = [1 4 7 8]; 
         vararginoptions(varargin,{'what','sn'});
 
         D=load('test_GLM_physio_task_model_simulate.mat');
