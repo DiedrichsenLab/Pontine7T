@@ -25,27 +25,28 @@ case 'simulate_data'
     
 
     load(fullfile(fullfile(baseDir,resDir,'/test_GLM_physio_task_instruc_model_tikhonov.mat')));
-    condition = [1 1 1 1 1 1 1 1 1 2]; %condition vector and model G parameters need to match
+%     condition = [1 1 1 1 1 1 1 1 1 2]; %condition vector and model G parameters need to match
 %     condition = [1];
+    condition = ones(((numTRs-numDummys)*numRuns),1);
 
 %     thetaSubj = theta(1:numRuns:end,1:2);  %only grab thetas for task and instruction, not constant
-    thetaSubj = [10 10];
+    thetaSubj = [10];
     design = X(1:numRuns:end,:);
     
     signalVector = signal*ones(numSim,1);
     noiseVector = noise*ones(numSim,1);
 
     for s = 1:length(num_subj);
-        feature = reshape(X(s,:),((numTRs-numDummys)*numRuns),[]);
+        featureTemp = reshape(X(s,:),((numTRs-numDummys)*numRuns),[]);
 %         feature = sum(feature,2);
-        feature = num2cell(feature,[1,2]);
-        [M,Z] = pcm_buildModelFromFeatures(feature,'name','pontine');
-        M.Gd = [1 1];   %manually add Gd, Gc, and numGparams, as pcm_buildModelFromFeatures doesn't
-        M.Gc = [1 0; 0 1];
-        M.numGparams = 2;
+        feature = num2cell(featureTemp,[1,2]);
+        [M,Z] = pcm_buildModelFromFeatures(feature,'name','pontine','style','rsa_style','type','component');
+%         M.Gd = [1 1];   %manually add Gd, Gc, and numGparams, as pcm_buildModelFromFeatures doesn't
+%         M.Gc = [1 0; 0 1];
+%         M.numGparams = 2;
 %         M.Gd = [1];
 %         M.Gc = [1];
-%         M.numGparams = 1;
+        M.numGparams = 1;
         
         numVox = size(feature{1,1},1);
     
@@ -54,7 +55,7 @@ case 'simulate_data'
         Y = cell2mat(Ysim)';
         Y = sum(Y,2); %sum along condition dimension to produce single time series per simulated voxel
         Y = reshape(Y,[],numSim);
-        resMS = ones(1,size(Y,2));
+        resMS = ones(1,size(Y,1));
 
         filename = fullfile(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_simulate_%s.mat',suffix)));
         save(filename,'Y','resMS','-v7.3');
