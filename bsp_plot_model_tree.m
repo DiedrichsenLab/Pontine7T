@@ -1,16 +1,18 @@
 function varargout=bsp_plot_model_tree(what,varargin)
 
+% usage: bsp_plot_model_tree('plot_GLM_Physio_full_model')
+
 subj_name = {'S98','S97','S96','S95','S01','S03','S04','S07'};
 
 switch(what)
     
 case 'plot_GLM_Physio_full_model'
-    roi = {'csf','cerebellum_gray'};
-    what = 'R_Bc'; % what to plot - here correlation on
+    roi = {'simulate'};
+    what = 'R'; % what to plot - here correlation on
     sn = [1:8];
     vararginoptions(varargin,{'roi','what','sn'});
 
-    D=load('test_GLM_physio_full_model_tikhonov.mat');
+    D=load('test_GLM_physio_simulate_tikhonov.mat');
 
     num_subj = length(sn);
     for s=1:num_subj
@@ -57,7 +59,7 @@ case 'plot_GLM_Physio_full_model'
             title(sprintf('%s %s %s',subj_name{sn(s)},roi{r},D.method{1}));
             g.NodeCData = G.Nodes.NodeColors;
             g.MarkerSize = 10;
-            %g.LineWidth = abs(100*G.Edges.Weight);
+            g.LineWidth = abs(100*G.Edges.Weight);
             g.EdgeColor = [0.5 0.5 0.5];
             colorbar
         end

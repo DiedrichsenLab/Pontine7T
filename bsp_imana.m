@@ -687,7 +687,8 @@ switch(what)
         end
     case 'ROI:inv_reslice'              % OLD: Inverse reslices the ROI images to individual space. Do not use. 
         sn=varargin{1}; 
-        images = {'csf','pontine','olive','dentate','rednucleus'}; 
+        images = {'csf','pontine','olive','dentate','rednucleus'};
+%         images = {'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','csftransverseL','csftransverseR','csfventricle4'};
         groupDir = fullfile(baseDir,'RegionOfInterest','group');
         
         for s=sn 
@@ -702,28 +703,6 @@ switch(what)
                 suit_reslice_dartel_inv(job);
                 source=fullfile(suitSubjDir,sprintf('iw_%s_mask_u_a_c_anatomical_seg1.nii',images{im}));
                 dest  = fullfile(regSubjDir,sprintf('%s_mask.nii',images{im}));
-                movefile(source,dest);
-
-            end
-        end
-        
-    case 'ROI:inv_reslice_csf'              % Defines ROIs for brain structures
-        sn=varargin{1}; 
-        images = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'}; 
-        groupDir = fullfile(baseDir,'RegionOfInterest','group');
-        
-        for s=sn 
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
-            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            for im=1:length(images)
-                job.Affine = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
-                job.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
-                job.resample = {fullfile(groupDir,sprintf('csf_mask_%s.nii',images{im}))}; 
-                job.ref     = {glm_mask};
-                suit_reslice_dartel_inv(job);
-                source=fullfile(suitSubjDir,sprintf('iw_csf_mask_%s_u_a_c_anatomical_seg1.nii',images{im}));
-                dest  = fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}));
                 movefile(source,dest);
 
             end
@@ -771,67 +750,20 @@ switch(what)
             fprintf('gm-wm exclusion mask resliced for %s \n',subj_name{sn(s)})
         end  
     
-    case 'ROI:reslice_csf_seg'       %Resample csf segmentation into epi resolution
-        % usage 'bsp_imana('ROI:reslice_csf_seg',1)'
-        sn=varargin{1};
-        J = [];
-        subjs=length(sn);
         
-        for s=1:subjs,
-            J.ref = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn(s)},'mask.nii')};
-            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'c3anatomical.nii')};
-            J.roptions.interp = 0;
-            J.roptions.wrap = [0 0 0];
-            J.roptions.mask = 0;
-            J.roptions.prefix = 'r';
-        
-            matlabbatch{1}.spm.spatial.coreg.write = J;
-            spm_jobman('run',matlabbatch);
-            fprintf('c3anatomical resliced for %s \n',subj_name{sn(s)})
-            fprintf('Manually select a threshold for masking CSF ROIs')
-        end  
-        
-    case 'ROI:mask_csf_rois'        % Mask CSF rois with subject-specific CSF segmentation
-        % example: bsp_imana('ROI:mask_csf_rois',1)
+    case 'ROI:mask_rois'        % Mask CSF rois with subject-specific GM-WM exclusion mask
+        % example: bsp_imana('ROI:mask_rois',1)
         sn=varargin{1}; % subjNum
-        images = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
-        
-        subjs=length(sn);
-        
-        for s=1:subjs,
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{sn(s)});
-            thresh = csf_thresh{sn(s)}
-            expression=sprintf('i1.*(i2>%f)',thresh)
-            for im=1:length(images)
-                J.input = {fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))
-                           fullfile(baseDir,anatomicalDir,subj_name{s},'rc3anatomical.nii')};
-                J.output = fullfile(regSubjDir,sprintf('csfm_mask_%s.nii',images{im}));
-                J.outdir = {fullfile(regSubjDir)};
-                J.expression = expression;
-                J.var = struct('name', {}, 'value', {});
-                J.options.dmtx = 0;
-                J.options.mask = 0;
-                J.options.interp = 1;
-                J.options.dtype = 4;
-                matlabbatch{1}.spm.util.imcalc=J;
-                spm_jobman('run',matlabbatch);
-            end
-            fprintf('csf ROIs masked for %s \n',subj_name{sn(s)})
-        end  
-        
-    case 'ROI:mask_csf_rois_gmwm'        % Mask CSF rois with subject-specific GM-WM exclusion mask
-        % example: bsp_imana('ROI:mask_csf_rois_gmwm',1)
-        sn=varargin{1}; % subjNum
-        images = {'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
+        images = {'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','transverseL','transverseR','ventricle4'};
         
         subjs=length(sn);
         
         for s=1:subjs,
             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{sn(s)});
             for im=1:length(images)
-                J.input = {fullfile(regSubjDir,sprintf('csf_mask_%s.nii',images{im}))
+                J.input = {fullfile(regSubjDir,sprintf('mask_%s.nii',images{im}))
                            fullfile(baseDir,anatomicalDir,subj_name{s},'rgm_wm_exclusion_mask.nii')};
-                J.output = fullfile(regSubjDir,sprintf('csfgm_mask_%s.nii',images{im}));
+                J.output = fullfile(regSubjDir,sprintf('mask_%s.nii',images{im}));
                 J.outdir = {fullfile(regSubjDir)};
                 J.expression = 'i1.*i2';
                 J.var = struct('name', {}, 'value', {});
@@ -861,6 +793,7 @@ switch(what)
         % Before runing this, create masks for different structures
         sn=8; 
         regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
+%         regions={'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','csftransverseL','csftransverseR','csfventricle4'};
         
         vararginoptions(varargin,{'sn','regions'}); 
         for s=sn
@@ -874,25 +807,6 @@ switch(what)
             end
             R=region_calcregions(R);                
             save(fullfile(regSubjDir,'regions.mat'),'R');
-        end
-        
-    case 'ROI:define_csf'                 % Defines ROIs for brain structures
-        % Before runing this, create masks for different structures
-        sn=[1:8]; 
-        regions={'galenic','medulla','midbrain','pons','postdrain','transverseL','transverseR','ventricle4'};
-        
-        vararginoptions(varargin,{'sn','regions'}); 
-        for s=sn
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            for r = 1:length(regions)
-                file = fullfile(regSubjDir,sprintf('csfgm_mask_%s.nii',regions{r}));
-                R{r}.type = 'roi_image';
-                R{r}.file= file;
-                R{r}.name = regions{r};
-                R{r}.value = 1;
-            end
-            R=region_calcregions(R);                
-            save(fullfile(regSubjDir,'regions_csfgm.mat'),'R');
         end
         
         
