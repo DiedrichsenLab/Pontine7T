@@ -680,6 +680,8 @@ switch(what)
                             T.theta = nan(1,7);
                             T.theta(1:length(theta)) = theta;
                             T.time = time;
+                            %T.design = reshape(X,1,[]);
+                            %T.group = group;
                             % Evaluation of the overall model: against observed time series  
                             T.R        = calc_cosang(Xr(testI,:)*Btrain,Yr(testI,:)); 
                             T.R2       = calc_R2(Xr(testI,:)*Btrain,Yr(testI,:));
@@ -990,7 +992,7 @@ switch(what)
         varargout={D};
         
     case 'test_GLM_Physio_full_model_task'
-        sn = [1:8];
+        sn = [1];
         model = {{'Tasks','InstructC'},...
 %             {'Tasks','InstructC','Retro_HR'},...
 %             {'Tasks','InstructC','Retro_HR','Retro_RESP'},...
@@ -1011,20 +1013,20 @@ switch(what)
 %         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
         inK = {{},{}};
 %         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-%         roi = {'simulate_signal35','simulate_snr35-3','simulate_snr35-12','simulate_signal0'};
-        roi = {'cerebellum_gray','csf'};
+        roi = {'simulate_allsignal'};
+%         roi = {'cerebellum_gray'};
         method = {'OLS','GLS','tikhonov_pcm'};
         
         D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
-        save(fullfile(baseDir,'results','test_GLM_physio_task_model_cerebellum.mat'),'-struct','D');
+        save(fullfile(baseDir,'results','test_GLM_physio_task_all_methods_allsignal.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_Physio_full_model_task'
         what = 'R_Bc'; % what to plot - here correlation on 
-        sn = [1 4 7 8]; 
+        sn = [1:4]; 
         vararginoptions(varargin,{'what','sn'});
 
-        D=load('test_GLM_physio_task_model_simulate.mat');
+        D=load('test_GLM_physio_task_all_methods_allsignal.mat');
          
         num_subj = length(sn);
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[1 0.7 0.7],[0.7 0.7 1]};
@@ -1032,7 +1034,7 @@ switch(what)
         for s=1:num_subj 
             subplot(num_subj,1,(s-1)*1+1);
             barplot(D.roi,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'OLS-Task','OLS-All','GLS-Task','GLS-All','Tikhonov-Task','Tikhonov-All'},'facecolor',color); 
-            title('R for different ROIs');
+            title('R-Bc for different ROIs');
             ylabel(sprintf('%s',subj_name{sn(s)}));
         end;  
         
