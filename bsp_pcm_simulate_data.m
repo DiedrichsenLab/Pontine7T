@@ -25,12 +25,10 @@ case 'simulate_data'
     
 
     load(fullfile(fullfile(baseDir,resDir,'/test_GLM_physio_task_instruc_model_tikhonov.mat')));
-%     condition = [1 1 1 1 1 1 1 1 1 2]; %condition vector and model G parameters need to match
-%     condition = [1];
-    condition = ones(((numTRs-numDummys)*numRuns),1);
+    condition = [1 1 1 1 1 1 1 1 1 2]; %condition vector and model G parameters need to match
 
 %     thetaSubj = theta(1:numRuns:end,1:2);  %only grab thetas for task and instruction, not constant
-    thetaSubj = [1e-6];
+    thetaSubj = [1e-6 1e-6];
     design = X(1:numRuns:end,:);
     
     signalVector = signal*ones(numSim,1);
@@ -40,15 +38,14 @@ case 'simulate_data'
         featureTemp = reshape(X(s,:),((numTRs-numDummys)*numRuns),[]);
 %         feature = sum(feature,2);
         feature = num2cell(featureTemp,[1,2]);
-        [M,Z] = pcm_buildModelFromFeatures(feature,'name','pontine','style','encoding_style','type','component');
-%         M.Gd = [1 1];   %manually add Gd, Gc, and numGparams, as pcm_buildModelFromFeatures doesn't
+        [M,Z] = pcm_buildModelFromFeatures(feature,'name','pontine');
+%         M.Gd = [1 1];   
 %         M.Gc = [1 0; 0 1];
-%         M.numGparams = 2;
-        M.numGparams = 1;
+        M.numGparams = 2; %manually add numGparams, as pcm_buildModelFromFeatures doesn't
         
         numVox = size(feature{1,1},1);
     
-        Ysim = pcm_makeDataset(M,thetaSubj','design',featureTemp,'numVox',numVox,'numSim',numSim,'signal',signalVector,'noise',noiseVector);
+        Ysim = pcm_makeDataset(M,thetaSubj','design',condition,'numVox',numVox,'numSim',numSim,'signal',signalVector,'noise',noiseVector);
 
         Y = cell2mat(Ysim)';
         Y = sum(Y,2); %sum along condition dimension to produce single time series per simulated voxel
