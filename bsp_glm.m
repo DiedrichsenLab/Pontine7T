@@ -992,7 +992,7 @@ switch(what)
         varargout={D};
         
     case 'test_GLM_Physio_full_model_task'
-        sn = [1];
+        sn = [1:8];
         model = {{'Tasks','InstructC'},...
 %             {'Tasks','InstructC','Retro_HR'},...
 %             {'Tasks','InstructC','Retro_HR','Retro_RESP'},...
@@ -1013,20 +1013,20 @@ switch(what)
 %         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
         inK = {{},{}};
 %         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
-        roi = {'simulate_allsignal'};
-%         roi = {'cerebellum_gray'};
+%         roi = {'simulate_allsignal'};
+        roi = {'cerebellum_gray'};
         method = {'OLS','GLS','tikhonov_pcm'};
         
         D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
-        save(fullfile(baseDir,'results','test_GLM_physio_task_all_methods_allsignal.mat'),'-struct','D');
+        save(fullfile(baseDir,'results','test_GLM_physio_task_all_methods_cerebellum_S98S07.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_Physio_full_model_task'
         what = 'R_Bc'; % what to plot - here correlation on 
-        sn = [1:4]; 
+        sn = [5:8]; 
         vararginoptions(varargin,{'what','sn'});
 
-        D=load('test_GLM_physio_task_all_methods_allsignal.mat');
+        D=load('test_GLM_physio_task_all_methods_cerebellum_S98S07.mat');
          
         num_subj = length(sn);
         color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[1 0.7 0.7],[0.7 0.7 1]};
