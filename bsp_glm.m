@@ -1031,7 +1031,7 @@ switch(what)
 %         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
         inK = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
 %         roiName = {'regress0.0a', 'regress0.5a', 'regress1.0a', 'regress1.5a'};
-        roiName = {'regress0.0b'};
+        roiName = {'regress2.0c'};
         k = (1:1:50);
 %         k = [1 2 3 4 7 8 12 14 15 17 18 20 21 22 24 25 26 30 31 32 34 35 37 39 40 41 43 44 46 47 49 52 53 54 55 56 58 60 61 62 63 64 65 66 67 69 70 71 74 75];
         for i = 1:50
@@ -1040,7 +1040,7 @@ switch(what)
         method = {'OLS','GLS','tikhonov_pcm'};
         
         D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
-        save(fullfile(baseDir,'results','simulate_GLM_physio_task_allmodels_50sims_regress0.0b_S98.mat'),'-struct','D');
+        save(fullfile(baseDir,'results','simulate_GLM_physio_task_allmodels_50sims_regress2.0c_S98.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_Physio_full_model_task'
@@ -1843,12 +1843,14 @@ switch (what)
             X{rn} = sum(SPM.xX.X(SPM.Sess(rn).row,indx(ii)),2);
         end
     case 'Null'         % Null model - row/column permuted Tasks+InstructC
+        numTRs = 325;
         for rn = 1:nRuns
             A = load(fullfile(baseDir,'simulations','design.mat'));
-            Atemp = A(1:numTRs,:);
+            Atemp = A.X(1:numTRs,:);
             Atemp = Atemp(randperm(size(Atemp,1)),:); % randomly permute rows
             Atemp = Atemp(:,randperm(size(Atemp,2))); % randomly permute columns
-            X{rn} = Atemp;         
+            X{rn} = Atemp;
+        end
     case 'Hpass'        % High pass filter
         for rn = 1:nRuns
             k.HParam = 128;
