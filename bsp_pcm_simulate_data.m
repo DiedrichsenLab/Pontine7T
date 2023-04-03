@@ -15,44 +15,51 @@ switch(what)
 
 case 'simulate_data'
     num_subj = [1:length(subj_name)];
-    numSim = 1; %number of voxels to simulate
-    signal = 1; %integer signal level
-    noise = 0; %integer noise level
-    suffix = 'allsignal'; %suffix for rawts_signal filename
+    numSim = 100; %number of subjects to simulate
+    numVox = 50; %number of voxels to simulate
+    signal = 1; %integer signal level (default = 0.1)
+    noise = 0.75; %integer noise level (default = 1)
+    suffix = 'regress2.0b'; %suffix for rawts_signal filename
     vararginoptions(varargin,{'num_subj','numSim','signal','noise','suffix'});
     
-    %Usage: bsp_pcm_simulate_data('simulate_data','num_subj',1,'numSim',50,'signal',1,'noise',0,'suffix','highSNR');
+    %Usage: bsp_pcm_simulate_data('simulate_data','num_subj',1,'numSim',100,'numVox',50,'signal',1,'noise',0,'suffix','highSNR');
     
 
-    load(fullfile(fullfile(baseDir,resDir,'/test_GLM_physio_task_instruc_model_tikhonov.mat')));
-    condition = [1 1 1 1 1 1 1 1 1 2]; %condition vector and model G parameters need to match
+%     load(fullfile(fullfile(baseDir,simDir,'test_GLM_physio_task_instruc_model_tikhonov.mat')));
+    load(fullfile(fullfile(baseDir,simDir,'test_GLM_physio_all_tikhonov_cerebellum.mat')));
 
-%     thetaSubj = theta(1:numRuns:end,1:2);  %only grab thetas for task and instruction, not constant
-    thetaSubj = [1e-6 1e-6];
-    design = X(1:numRuns:end,:);
+    % exp = 2.0; theta = 0.7
+    % exp = 1.75; theta = 0.56
+    % exp = 1.5; theta = 0.41
+    % exp = 1.25; theta = 0.22
+    % exp = 1.0; theta = 1e-6
+    % exp = 0.75; theta = -0.29
+    % exp = 0.5; theta = -0.7
+    % exp = 0.25; theta = -1.4
+    
+%     thetaSubj = [1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6];
+    thetaSubj = [1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7];
+    X = design(1:numRuns:end,:);
     
     signalVector = signal*ones(numSim,1);
     noiseVector = noise*ones(numSim,1);
 
     for s = 1:length(num_subj);
         featureTemp = reshape(X(s,:),((numTRs-numDummys)*numRuns),[]);
-%         feature = sum(feature,2);
         feature = num2cell(featureTemp,[1,2]);
         [M,Z] = pcm_buildModelFromFeatures(feature,'name','pontine');
-%         M.Gd = [1 1];   
-%         M.Gc = [1 0; 0 1];
-        M.numGparams = 2; %manually add numGparams, as pcm_buildModelFromFeatures doesn't
-        
-        numVox = size(feature{1,1},1);
+        M.numGparams = 20; %manually add numGparams, as pcm_buildModelFromFeatures doesn't
+        M.Gc = M.Gc .* thetaSubj;
+        M.Gd = M.Gd .* thetaSubj;
     
-        Ysim = pcm_makeDataset(M,thetaSubj','design',condition,'numVox',numVox,'numSim',numSim,'signal',signalVector,'noise',noiseVector);
+        Ysim = pcm_makeDataset(M,thetaSubj','design',Z,'numVox',numVox,'numSim',numSim,'signal',signalVector,'noise',noiseVector);
 
-        Y = cell2mat(Ysim)';
-        Y = sum(Y,2); %sum along condition dimension to produce single time series per simulated voxel
-        Y = reshape(Y,[],numSim);
-        resMS = ones(1,size(Y,1));
+        for k = 1:length(Ysim)
+            Y = Ysim{1,k};
+            resMS = ones(1,size(Y,2));
 
-        filename = fullfile(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_simulate_%s.mat',suffix)));
-        save(filename,'Y','resMS','-v7.3');
+            filename = fullfile(fullfile(baseDir,simDir,'data','S98',sprintf('rawts_simulate_%s_%04d.mat',suffix,k)));
+            save(filename,'Y','resMS','-v7.3');
+        end
     end
 end
