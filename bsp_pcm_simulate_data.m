@@ -18,8 +18,8 @@ case 'simulate_data'
     numSim = 100; %number of subjects to simulate
     numVox = 50; %number of voxels to simulate
     signal = 1; %integer signal level (default = 0.1)
-    noise = 0.75; %integer noise level (default = 1)
-    suffix = 'regress2.0b'; %suffix for rawts_signal filename
+    noise = 2.0; %integer noise level (default = 1)
+    suffix = 'regress2.0c'; %suffix for rawts_signal filename
     vararginoptions(varargin,{'num_subj','numSim','signal','noise','suffix'});
     
     %Usage: bsp_pcm_simulate_data('simulate_data','num_subj',1,'numSim',100,'numVox',50,'signal',1,'noise',0,'suffix','highSNR');
@@ -37,8 +37,8 @@ case 'simulate_data'
     % exp = 0.5; theta = -0.7
     % exp = 0.25; theta = -1.4
     
-%     thetaSubj = [1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6];
-    thetaSubj = [1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7];
+    thetaSubj = [1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6 -1e-6];
+%     thetaSubj = [1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 1e-6 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7 0.7];
     X = design(1:numRuns:end,:);
     
     signalVector = signal*ones(numSim,1);
