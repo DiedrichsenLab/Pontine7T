@@ -7,12 +7,12 @@ subj_name = {'S98','S97','S96','S95','S01','S03','S04','S07'};
 switch(what)
     
 case 'plot_GLM_Physio_full_model'
-    roi = {'csf','cerebellum_gray'};
+    roi = {'cerebellum_gray'};
     what = 'R_Bc'; % what to plot - here correlation on
-    sn = [1:8];
+    sn = [1];
     vararginoptions(varargin,{'roi','what','sn'});
 
-    D=load('test_GLM_physio_full_model_tikhonov.mat');
+    D=load('test_GLM_physio_allmodels_tikhonov_S98.mat');
 
     num_subj = length(sn);
     for s=1:num_subj
@@ -43,6 +43,7 @@ case 'plot_GLM_Physio_full_model'
                     'RetHR+HR+RV','RetRESP+HR+RV','Task+RetHR+RetRESP+HR','Task+RetHR+RetRESP+RV','Task+RetHR+HR+RV','Task+RetRESP+HR+RV','RetHR+RetRESP+HR+RV','All'}';
             namesCode = [1:1:32]';
             nodeWeights = [0; avg];
+%             nodeWeights = namesCode;
 %             maxNode = find(nodeWeights == max(nodeWeights));
             NodeTable = table(names,namesCode,nodeWeights,'VariableNames',{'Name','NameCode','NodeWeight'});
             
