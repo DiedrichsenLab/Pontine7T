@@ -1,3 +1,4 @@
+
 function varargout=bsp_glm(what,varargin)
 % GLM analysis for the pontine7T project, starting from preprocessed data
 % (see bsp_imana).
@@ -678,6 +679,8 @@ switch(what)
                             T.method  = reg(method);
                             T.methodN = method;
                             T.model = model;
+                            T.inX = {inX{model}};  %%%%%%%%%%%%%%%%%%%%%%
+                            T.modelL = length(inX{model});  %%%%%%%%%%%%%%
                             T.theta = nan(1,7);
                             T.theta(1:length(theta)) = theta;
                             T.time = time;
@@ -1016,7 +1019,7 @@ switch(what)
             {'Tasks','InstructC','Retro_HR','RV'},...
             {'Tasks','InstructC','Retro_RESP','HR'},...
             {'Tasks','InstructC','Retro_RESP','RV'},...
-            {'Tasks','InstructC','HR','RV'},...
+            {'Tasks','InstructC','HR','RV'},...   %%%%%%
             {'Retro_HR','Retro_RESP','HR'},...
             {'Retro_HR','Retro_RESP','RV'},...
             {'Retro_HR','HR','RV'},...
@@ -1029,18 +1032,43 @@ switch(what)
             {'Tasks','InstructC','Retro_HR','Retro_RESP','HR','RV'}
             };
 %         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
-        inK = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
+        inK = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
 %         roiName = {'regress0.0a', 'regress0.5a', 'regress1.0a', 'regress1.5a'};
-        roiName = {'regress2.0c'};
-        k = (1:1:50);
-%         k = [1 2 3 4 7 8 12 14 15 17 18 20 21 22 24 25 26 30 31 32 34 35 37 39 40 41 43 44 46 47 49 52 53 54 55 56 58 60 61 62 63 64 65 66 67 69 70 71 74 75];
-        for i = 1:50
-            roi{i} = sprintf('simulate_%s_%04d',roiName{1},k(i));
-        end
+        roiName = {'regress2.0x2.0d'};
+        k = 1;
+%         k = (61:1:100);
+%         k = [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 29 30 31 32 33 34 35 36 37 38 39 40 42 43 44 45 46 47 48 49 50 51 52];
+%         for i = 1:40
+%             roi{i} = sprintf('simulate_%s_%04d',roiName{1},k(i));
+%         end
+        roi = {'simulate_regress2.0x2.0d_0001'};
         method = {'OLS','GLS','tikhonov_pcm'};
         
         D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
-        save(fullfile(baseDir,'results','simulate_GLM_physio_task_allmodels_50sims_regress2.0c_S98.mat'),'-struct','D');
+        save(fullfile(baseDir,'results','simulate_GLM_physio_task_allmodels_50sims_regress2.0x2.0d_S98.mat'),'-struct','D');
+        varargout={D};
+        
+    case 'test_GLM_Physio_full_model_task_simulate_test'
+        sn = [1];
+        model = {
+%             {'Tasks','InstructC','Retro_HR','Retro_RESP'},...
+            {'Tasks','InstructC','HR','RV'},...   %%%%%%
+            };
+%         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
+        inK = {{},{}};
+%         roiName = {'regress0.0a', 'regress0.5a', 'regress1.0a', 'regress1.5a'};
+        roiName = {'regress2.0x2.0d'};
+        k = 1;
+%         k = (61:1:100);
+%         k = [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 29 30 31 32 33 34 35 36 37 38 39 40 42 43 44 45 46 47 48 49 50 51 52];
+%         for i = 1:40
+%             roi{i} = sprintf('simulate_%s_%04d',roiName{1},k(i));
+%         end
+        roi = {'simulate_regress2.0x2.0d_0001'};
+        method = {'tikhonov_pcm'};
+        
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
+        save(fullfile(baseDir,'results','simulate_GLM_physio_task_allmodels_50sims_regress2.0x2.0d_S98_test.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_Physio_full_model_task'
