@@ -1,3 +1,4 @@
+
 function varargout=bsp_glm(what,varargin)
 % GLM analysis for the pontine7T project, starting from preprocessed data
 % (see bsp_imana).
@@ -20,6 +21,7 @@ imagingDirRaw   ='/imaging_data_raw';
 anatomicalDir   ='/anatomicals';
 suitDir         ='/suit';
 regDir          ='/RegionOfInterest';
+simDir          ='/simulations';
 %========================================================================================================================
 % PRE-PROCESSING
 subj_name = {'S98','S97','S96','S95','S01','S03','S04','S07'};
@@ -540,7 +542,7 @@ switch(what)
             for r=1:length(roi) % Loop over ROIs
                 fprintf('SN: %d, ROI: %s\n',s,roi{r});
                 % Load raw time series
-                load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',roi{r})));
+                load(fullfile(baseDir,simDir,'data',subj_name{s},sprintf('rawts_%s.mat',roi{r})));
                 % Voxel-wise prewhiten the data
                 Y = bsxfun(@rdivide,Y,sqrt(resMS));
                 checksum = sum(abs(Y),1);
@@ -649,10 +651,11 @@ switch(what)
                             T.method  = reg(method);
                             T.methodN = method;
                             T.model = model;
+                            T.inX = {inX{model}};  %%%%%%%%%%%%%%%%%%%%%%
+                            T.modelL = length(inX{model});  %%%%%%%%%%%%%%
                             T.theta = nan(1,7);
                             T.theta(1:length(theta)) = theta;
                             T.time = time;
-                            %T.X = reshape(Xr,1,[]);
                             % Evaluation of the overall model: against observed time series  
                             T.R        = calc_cosang(Xr(testI,:)*Btrain,Yr(testI,:)); 
                             T.R2       = calc_R2(Xr(testI,:)*Btrain,Yr(testI,:));
@@ -954,7 +957,9 @@ switch(what)
             {'Tasks','InstructC','Retro_HR','Retro_RESP','HR','RV'}
             };
         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
+%         inK     = {{}};
 %         roi = {'pontine','dentate','olive','csf','cerebellum_gray'};
+
         roi = {'simulate_snr35-12'};
         method = {'tikhonov_pcm'};
         
@@ -989,6 +994,86 @@ switch(what)
         
         D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
         save(fullfile(baseDir,'results','test_GLM_physio_task_model_cerebellum.mat'),'-struct','D');
+        roi = {'cerebellum_gray'};
+        method = {'OLS'};
+        
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
+        save(fullfile(baseDir,'results','test_GLM_physio_allmodels_tikhonov_S98.mat'),'-struct','D');
+        varargout={D};
+        
+    case 'test_GLM_Physio_full_model_task_simulate'
+        sn = [1];
+        model = {{'Null'},...
+            {'Tasks','InstructC'},...
+            {'Retro_HR'},...
+            {'Retro_RESP'},...
+            {'HR'},...
+            {'RV'},...
+            {'Tasks','InstructC','Retro_HR'},...
+            {'Tasks','InstructC','Retro_RESP'},...
+            {'Tasks','InstructC','HR'},...
+            {'Tasks','InstructC','RV'},...
+            {'Retro_HR','Retro_RESP'},...
+            {'Retro_HR','HR'},...
+            {'Retro_HR','RV'},...
+            {'Retro_RESP','HR'},...
+            {'Retro_RESP','RV'},...
+            {'HR','RV'},...
+            {'Tasks','InstructC','Retro_HR','Retro_RESP'},...
+            {'Tasks','InstructC','Retro_HR','HR'},...
+            {'Tasks','InstructC','Retro_HR','RV'},...
+            {'Tasks','InstructC','Retro_RESP','HR'},...
+            {'Tasks','InstructC','Retro_RESP','RV'},...
+            {'Tasks','InstructC','HR','RV'},...   %%%%%%
+            {'Retro_HR','Retro_RESP','HR'},...
+            {'Retro_HR','Retro_RESP','RV'},...
+            {'Retro_HR','HR','RV'},...
+            {'Retro_RESP','HR','RV'},...
+            {'Tasks','InstructC','Retro_HR','Retro_RESP','HR'},...
+            {'Tasks','InstructC','Retro_HR','Retro_RESP','RV'},...
+            {'Tasks','InstructC','Retro_HR','HR','RV'},...
+            {'Tasks','InstructC','Retro_RESP','HR','RV'},...
+            {'Retro_HR','Retro_RESP','HR','RV'},...
+            {'Tasks','InstructC','Retro_HR','Retro_RESP','HR','RV'}
+            };
+%         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
+        inK = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
+%         roiName = {'regress0.0a', 'regress0.5a', 'regress1.0a', 'regress1.5a'};
+        roiName = {'regress2.0x2.0d'};
+        k = 1;
+%         k = (61:1:100);
+%         k = [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 29 30 31 32 33 34 35 36 37 38 39 40 42 43 44 45 46 47 48 49 50 51 52];
+%         for i = 1:40
+%             roi{i} = sprintf('simulate_%s_%04d',roiName{1},k(i));
+%         end
+        roi = {'simulate_regress2.0x2.0d_0001'};
+        method = {'OLS','GLS','tikhonov_pcm'};
+        
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
+        save(fullfile(baseDir,'results','simulate_GLM_physio_task_allmodels_50sims_regress2.0x2.0d_S98.mat'),'-struct','D');
+        varargout={D};
+        
+    case 'test_GLM_Physio_full_model_task_simulate_test'
+        sn = [1];
+        model = {
+%             {'Tasks','InstructC','Retro_HR','Retro_RESP'},...
+            {'Tasks','InstructC','HR','RV'},...   %%%%%%
+            };
+%         inK   = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}};
+        inK = {{},{}};
+%         roiName = {'regress0.0a', 'regress0.5a', 'regress1.0a', 'regress1.5a'};
+        roiName = {'regress2.0x2.0d'};
+        k = 1;
+%         k = (61:1:100);
+%         k = [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 29 30 31 32 33 34 35 36 37 38 39 40 42 43 44 45 46 47 48 49 50 51 52];
+%         for i = 1:40
+%             roi{i} = sprintf('simulate_%s_%04d',roiName{1},k(i));
+%         end
+        roi = {'simulate_regress2.0x2.0d_0001'};
+        method = {'tikhonov_pcm'};
+        
+        D=bsp_glm('test_GLM','sn',sn,'roi',roi,'inK',inK,'inX',model,'reg',method,'runs',[1:16]);
+        save(fullfile(baseDir,'results','simulate_GLM_physio_task_allmodels_50sims_regress2.0x2.0d_S98_test.mat'),'-struct','D');
         varargout={D};
     
     case 'plot_GLM_Physio_full_model_task'
@@ -999,12 +1084,12 @@ switch(what)
         D=load('test_GLM_physio_task_model_simulate.mat');
          
         num_subj = length(sn);
-        color={[0.8 0.8 0.8],[0.9 1 1],[0.7 0.8 0.9],[0.5 0.8 1],[0 0.7 1],[0 0 1],[0 0 0.5],[0.1 0.1 0.4],[0.6 0.9 0.6],[0 1 0.5],[0 0.5 0],[0 0.4 0],[1 1 0.9],[1 1 0],[1 0 0],[0.5 0.5 0.5]};
+        color={[0.7 0 0],[0 0 0.7],[1 0.4 0.4],[0.4 0.4 1],[1 0.7 0.7],[0.7 0.7 1]};
         style={':',':','-','-','-'}; 
         for s=1:num_subj 
             subplot(num_subj,1,(s-1)*1+1);
             barplot(D.roi,D.(what),'split',[D.methodN D.model],'subset',D.sn==sn(s),'leg',{'OLS-Task','OLS-All','GLS-Task','GLS-All','Tikhonov-Task','Tikhonov-All'},'facecolor',color); 
-            title('RBc for different ROIs');
+            title('R-Bc for different ROIs');
             ylabel(sprintf('%s',subj_name{sn(s)}));
         end; 
         
@@ -1789,6 +1874,15 @@ switch (what)
             indx = SPM.Sess(rn).col;
             ii=INFO.inst(indx)==1;
             X{rn} = sum(SPM.xX.X(SPM.Sess(rn).row,indx(ii)),2);
+        end
+    case 'Null'         % Null model - row/column permuted Tasks+InstructC
+        numTRs = 325;
+        for rn = 1:nRuns
+            A = load(fullfile(baseDir,'simulations','design.mat'));
+            Atemp = A.X(1:numTRs,:);
+            Atemp = Atemp(randperm(size(Atemp,1)),:); % randomly permute rows
+            Atemp = Atemp(:,randperm(size(Atemp,2))); % randomly permute columns
+            X{rn} = Atemp;
         end
     case 'Hpass'        % High pass filter
         for rn = 1:nRuns
