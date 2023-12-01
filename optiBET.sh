@@ -123,7 +123,7 @@ if [[ "$s1" == "bet" ]]; then
     bet ${iopt} ${i}_step1 -B -f 0.1
 else
     echo step1 AFNI 3dSkullStrip subject ${i} for initial extraction
-$afnidir/3dSkullStrip -input ${iopt} -prefix ${i}_step1.nii.gz &>/dev/null #suppress screen output b/c a lot
+    3dSkullStrip -input ${iopt} -prefix ${i}_step1.nii.gz &>/dev/null #suppress screen output b/c a lot
 fi
 
 #### 2. linear transform to MNI space (“step 2”) ####################
@@ -145,7 +145,7 @@ fnirt --in=${i} --aff=${i}_step2.mat --cout=${i}_step3 --config=T1_2_MNI152_2mm
 # which can (and should) be checked by the user.
 
 echo step4 quality control of fnirt using applywarp to put subject ${i} in MNI space
-applywarp --ref=${FSLDIR}/data/standard/MNI152_T1_2mm --in=${i} --warp=${i}_step3 --out=${i}_step4
+applywarp --ref=${FSLDIR}/data/standard/MNI152_T1_2mm --in=${iopt} --warp=${i}_step3 --out=${i}_step4
 
 #### 5. Invert nonlinear warp (“step 4a”) ############################
 ## Invert the nonlinear warp in order to be able to back-project the MNI brain into subject space
