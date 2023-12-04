@@ -1,9 +1,11 @@
 function varargout=bsp_imana(what,varargin)
-% Function for minimal preprocessing of the Pontine7T data
+% Script for minimal preprocessing of the Pontine7T data
+% 
+numDummys = 3;                                                              % per run
+numTRs    = 328;                                                            % per run (includes dummies)
+%========================================================================================================================
 
-
-
-% Define the data basedirectory 
+% Add dependencies to path
 if isdir('/Volumes/diedrichsen_data$/data')
     workdir='/Volumes/diedrichsen_data$/data';
 elseif isdir('/srv/diedrichsen/data')
@@ -11,24 +13,30 @@ elseif isdir('/srv/diedrichsen/data')
 else
     fprintf('Workdir not found. Mount or connect to server and try again.');
 end
+
 baseDir=(sprintf('%s/Cerebellum/Pontine7T',workdir));
 
-imagingDir      ='imaging_data';
-imagingDirRaw   ='imaging_data_raw';
-anatomicalDir   ='anatomicals';
-suitDir         ='suit';
-regDir          ='RegionOfInterest';
-fmapDir         ='fieldmaps';
-
-% Load Participant information (make sure you have Dataframe/util in your
-% path
-pinfo = dload(fullfile(baseDir,'participants.tsv')); 
-subj_name = pinfo.participant_id
-
+imagingDir      ='/imaging_data';
+imagingDirRaw   ='/imaging_data_raw';
+anatomicalDir   ='/anatomicals';
+suitDir         ='/suit';
+regDir          ='/RegionOfInterest';
+fmapDir         ='/fieldmaps';
+%========================================================================================================================
+% PRE-PROCESSING 
+subj_name = {'S99','S98','S97','S96', 'S95'};
+good_subjs = [98, 97, 96, 95];
+loc_AC={[79;127;127];[80;129;120];[77;125;129];[90;129;138]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+%loc_AC={[105;169;169]}; % Numbers in the titlebar of mricron
+%loc_AC={[77;116;134];[77;116;134];[82;121;134]}; % Numbers in the titlebar of mricron
+subj_pilot = {'S99','S06','S02'};
+loc_AC_pilot = {[79;127;127];[78;128;118];[74;115;116]};
+subj_name = {'S98','S97','S96','S95','S01','S03','S04','S07'};
+loc_AC={[80;129;120];[77;125;129];[90;129;138];[78;131;127];[77;125;122];[81;128;123];[78;126;118];[78;127;112]}; % Coordinates of anterior commissure in mm.  Use SPM Display.
+csf_thresh={0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2};
 %========================================================================================================================
 % GLM INFO
-numDummys = 3;                                                              % per run
-numTRs    = 328;                                                            % per run (includes dummies)
+funcRunNum  = [1,16];  % first and last behavioural run numbers
 run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16'};
 runB        = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];  % Behavioural labelling of runs
 sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session number
@@ -38,10 +46,13 @@ switch(what)
     case 'ANAT:reslice_LPI'           % Reslice anatomical image within LPI coordinate systems  
         % example: bsp_imana('ANAT:reslice_LPI',1)
         sn  = varargin{1}; % subjNum 
-        for s=sn,
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            
             % (1) Reslice anatomical image to set it within LPI co-ordinate frames
-            source  = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical_raw.nii');
-            dest    = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii');
+            source  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical_raw.nii');
+            dest    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii');
             spmj_reslice_LPI(source,'name', dest);
             
             % (2) In the resliced image, set translation to zero
@@ -49,7 +60,7 @@ switch(what)
             dat             = spm_read_vols(V);
             V.mat(1:3,4)    = [0 0 0];
             spm_write_vol(V,dat);
-            disp 'Manually retrieve the location of the anterior commissure (x,y,z) before continuing'
+            display 'Manually retrieve the location of the anterior commissure (x,y,z) before continuing'
         end
     case 'ANAT:center_AC'             % Re-centre AC
         % Before running provide coordinates in the preprocessing section
@@ -60,23 +71,28 @@ switch(what)
         %       as subjects in subj_name.
         % example: bsp_imana('ANAT:center_AC',1)
         sn=varargin{1}; % subjNum
-        for s=sn
-            img    = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii');
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii');
             V               = spm_vol(img);
             dat             = spm_read_vols(V);
             oldOrig         = V.mat(1:3,4);
-            V.mat(1:3,4)    = oldOrig-loc_AC{s};
+            V.mat(1:3,4)    = oldOrig-loc_AC{sn(s)};
             spm_write_vol(V,dat);
-            fprintf('Done for %s \n',subj_name{s})
+            fprintf('Done for %s \n',subj_name{sn(s)})
         end
         
     case 'ANAT:segmentation'          % Segmentation + Normalisation
         % example: bsp_imana('ANAT:segmentation',1)
         sn=varargin{1}; % subjNum
+        
+        subjs=length(sn);
+        
         SPMhome=fileparts(which('spm.m'));
         J=[];
-        for s=sn
-            J.channel.vols = {fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii,1')};
+        for s=1:subjs,
+            J.channel.vols = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'anatomical.nii,1')};
             J.channel.biasreg = 0.001;
             J.channel.biasfwhm = 60;
             J.channel.write = [0 1];
@@ -113,66 +129,71 @@ switch(what)
             J.warp.write = [1 1];
             matlabbatch{1}.spm.spatial.preproc=J;
             spm_jobman('run',matlabbatch);
-            fprintf('Check segmentation results for %s\n', subj_name{s})
+            fprintf('Check segmentation results for %s\n', subj_name{sn(s)})
         end;
         
-    case 'ANAT:bet'             % Brain extraction for anatomical.nii: NOT NEEDED 
+    case 'ANAT:bet'             % Brain extraction for anatomical.nii
         % Run bash script /srv/diedrichsen/shell/optiBET.sh
         % Edit command variable to set path to optiBET.sh script
         % example: bsp_imana('ANAT:bet',1)
         sn=varargin{1}; % subjNum
-        for s=sn
-            img    = fullfile(baseDir,anatomicalDir,subj_name{s},'manatomical.nii');
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            img    = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
             command = sprintf('bash /srv/diedrichsen/shell/optiBET.sh -i %s', img)
             system(command)
             
-            in = fullfile(baseDir,anatomicalDir,subj_name{s},'manatomical_optiBET_brain.nii.gz');
-            out = fullfile(baseDir,anatomicalDir,subj_name{s},'manatomical_brain.nii.gz');
+            in = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_optiBET_brain.nii.gz');
+            out = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical_brain.nii.gz');
             copy_command = sprintf('cp %s %s', in, out)
             system(copy_command)
             
-            fprintf('optiBET completed for %s \n',subj_name{s})
+            fprintf('optiBET completed for %s \n',subj_name{sn(s)})
             fprintf('Check the output of optiBET using FSLeyes or some other visualization software.')
+           
         end
     
-    case 'ANAT:biascorrect_tse'               % Bias correct TSE: NOT NEEDED 
+    case 'ANAT:biascorrect_tse'               % Bias correct TSE 
         % example: bsp_imana('ANAT:biascorrect_tse',1)
         sn=varargin{1}; %subjNum
-        for s=sn
-            in_tse = fullfile(baseDir,anatomicalDir,subj_name{s},'tse.nii');
-            out_tse = fullfile(baseDir,anatomicalDir,subj_name{s},'tse'); 
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse.nii');
+            out_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse'); 
             command_bias = sprintf('fsl_anat --nononlinreg --strongbias --nocrop --noreg --nosubcortseg --noseg --clobber -t T2 -i %s -o %s', in_tse, out_tse)
             system(command_bias)
             
-            fprintf('tse bias correction completed for %s \n',subj_name{s})
+            fprintf('tse bias correction completed for %s \n',subj_name{sn(s)})
             fprintf('Check the results in FSLeyes or some other visualization software.')
         end        
             
-    case 'ANAT:coregister_tse'                % Coregister TSE to anatomical: NOT NEEDED 
+    case 'ANAT:coregister_tse'                % Coregister TSE to anatomical
         % example: bsp_imana('ANAT:coregister_tse',1)
         sn=varargin{1}; % subjNum
-        for s=sn
-            in_tse = fullfile(baseDir,anatomicalDir,subj_name{s},'tse.anat','T2_biascorr.nii.gz');
-            in_ref = fullfile(baseDir,anatomicalDir,subj_name{s},'manatomical.nii');
-            out_mat = fullfile(baseDir,anatomicalDir,subj_name{s},'tse_to_anatomical_mi.mat');
-            out_tse  = fullfile(baseDir,anatomicalDir,subj_name{s},'tse_to_anatomical_mi');
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            in_tse = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse.anat','T2_biascorr.nii.gz');
+            in_ref = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'manatomical.nii');
+            out_mat = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi.mat');
+            out_tse  = fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'tse_to_anatomical_mi');
             command_mask = sprintf('flirt -in %s -ref %s -usesqform -searchrx -45 45 -searchry -45 45 -searchrz -45 45 -dof 6 -cost mutualinfo -omat %s -out %s', in_tse, in_ref, out_mat, out_tse)
             system(command_mask)
             
-            fprintf('tse coregistration completed for %s \n',subj_name{s})
+            fprintf('tse coregistration completed for %s \n',subj_name{sn(s)})
             fprintf('Check the results in FSLeyes or some other visualization software.')
         end        
         
-    case 'FUNC:remDum'        % JD: THIS IS OVERLY COMPLICATED
-        % I WOULD HIGHLY RECOMMEND TO LEAVE THE THE DUMMTY SCANS IN THE
-        % FILES, AND SIMPLY SELECT THE IMAGES THAT YOU WANT AT A LATER
-        % STAGE
-        % Remove the extra dummy scans from all functional runs.
+    case 'FUNC:remDum'                % Remove the extra dummy scans from all functional runs.
         % funtional runs have to be named as run_01-r.nii, run_02-r.nii ...
         % example: bsp_imana('FUNC:remDum',1)
         sn=varargin{1}; % subjNum
-        for s=sn
-            cd(fullfile(baseDir,imagingDirRaw,[subj_name{s},'-n']));
+        
+        subjs=length(sn);
+        for s=1:subjs,
+            cd(fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)},'-n']));
             funScans = dir('*-r.nii');
             for i=1:length(funScans)  
                 outfilename = sprintf('run_%2.2d.nii',i);
@@ -183,10 +204,10 @@ switch(what)
                 list = list(numDummys+1:end);  % Remove dummies
                 V = {list(:).name};
                 spm_file_merge(V,outfilename);
-                movefile(outfilename,fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n']))
+                movefile(outfilename,fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n']))
                 cd ..
                 rmdir('temp','s');
-                fprintf('Run %d done for %s \n',i,subj_name{s});
+                fprintf('Run %d done for %s \n',i,subj_name{sn(s)});
             end;
         end
     case 'FUNC:realign'               % Realign functional images (both sessions)
@@ -195,17 +216,23 @@ switch(what)
         
         sn=varargin{1}; %subjNum
         runs=varargin{2}; % runNum
-        for s=sn
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
             
-            cd(fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n']));           
+            cd(fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n']));
+            spm_jobman % run this step first
+            
             data={};
             for i = 1:length(runs),
                 for j=1:numTRs-numDummys;
+                    
                     data{i}{j,1}=sprintf('run_%2.2d.nii,%d',runs(i),j);
                 end;
             end;
             spmj_realign(data);
-            fprintf('runs realigned for %s\n',subj_name{s});
+            fprintf('runs realigned for %s\n',subj_name{sn(s)});
         end 
 
     case 'FUNC:move_data'             % Move realigned data
@@ -213,24 +240,27 @@ switch(what)
         % example: bsp_imana('FUNC:move_data',1,[1:16])
         sn=varargin{1}; % subjNum
         runs=varargin{2}; % runNum
-        for s=sn
-            dircheck(fullfile(baseDir,imagingDir,subj_name{s}))
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            dircheck(fullfile(baseDir,imagingDir,subj_name{sn(s)}))
             for r=1:length(runs);
                 % move realigned data for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rrun_%2.2d.nii',runs(r)));
-                dest = fullfile(baseDir,imagingDir,subj_name{s},sprintf('run_%2.2d.nii',runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('rrun_%2.2d.nii',runs(r)));
+                dest = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii',runs(r)));
                 copyfile(source,dest);
                 
                 % move realignment parameter files for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rp_run_%2.2d.txt',runs(r)));
-                dest = fullfile(baseDir,imagingDir,subj_name{s},sprintf('rp_run_%2.2d.txt',runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('rp_run_%2.2d.txt',runs(r)));
+                dest = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('rp_run_%2.2d.txt',runs(r)));
                 copyfile(source,dest);
             end;            
             
-            fprintf('realigned epi''s moved for %s \n',subj_name{s})
+            fprintf('realigned epi''s moved for %s \n',subj_name{sn(s)})
         end
    
-    case 'FUNC:create_mean_epis'   % Calculate mean EPIs for runs: NOT NEEDED [?]
+    case 'FUNC:create_mean_epis'   % Calculate mean EPIs for runs
         % Calculate mean EPIs for run(s) acquired closest to fieldmaps
         % example bsp_imana('FUNC:create_mean_epis',1,[8 16])
         sn=varargin{1}; % subjNum
@@ -238,15 +268,15 @@ switch(what)
         
         subjs = length(sn);
         
-        for s=sn
+        for s=1:subjs,
             for r=1:length(runs);
-                in_epi = fullfile(baseDir,imagingDir,subj_name{s},sprintf('run_%2.2d.nii',runs(r)));
-                out_meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d.nii.gz',runs(r)));
+                in_epi = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii',runs(r)));
+                out_meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii.gz',runs(r)));
                 command_meanepi = sprintf('fslmaths %s -Tmean %s', in_epi, out_meanepi)
                 system(command_meanepi)
                 fprintf('mean epi completed for run %d \n',runs(r))
                 
-                out = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d.nii',runs(r)));
+                out = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runs(r)));
                 command_gunzip = sprintf('gunzip -c %s > %s', out_meanepi, out)
                 system(command_gunzip)
                 fprintf('gunzip completed for run %d \n',runs(r))
@@ -262,12 +292,17 @@ switch(what)
         % example: bsp_imana('FMAP:average_magnitudes',1,1)
         sn=varargin{1}; % subjNum
         sessn=varargin{2}; %sessNum
-        for s=sn
-            cd(fullfile(baseDir,fmapDir,subj_name{s},sprintf('fmap_sess_%d',sessn)));            
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            
+            cd(fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn)));
+            
             J.input = {sprintf('magnitude1_sess_%d.nii,1',sessn)
                        sprintf('magnitude2_sess_%d.nii,1',sessn)};
-            J.output = fullfile(baseDir,fmapDir,subj_name{s},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d.nii',sessn));
-            J.outdir = {fullfile(baseDir,fmapDir,subj_name{s})};
+            J.output = fullfile(baseDir,fmapDir,subj_name{sn(s)},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d.nii',sessn));
+            J.outdir = {fullfile(baseDir,fmapDir,subj_name{sn(s)})};
             J.expression = '(i1+i2)/2';
             J.var = struct('name', {}, 'value', {});
             J.options.dmtx = 0;
@@ -276,7 +311,7 @@ switch(what)
             J.options.dtype = 4;
             matlabbatch{1}.spm.util.imcalc=J;
             spm_jobman('run',matlabbatch);
-            fprintf('magnitude fieldmaps averaged for %s \n',subj_name{s})
+            fprintf('magnitude fieldmaps averaged for %s \n',subj_name{sn(s)})
         end    
         
     case 'FUNC:run_feat_coregistration'    %Run run_feat_coregistrations.sh shell script
@@ -284,16 +319,16 @@ switch(what)
          sn=varargin{1}; %subjNum
          sessn=varargin{2}; %sessNum
          
-         
-         for s=sn
+         subjs=length(sn);
+         for s=1:subjs,
              
-            subjID = strip(subj_name{s},'left','S') 
+            subjID = strip(subj_name{sn(s)},'left','S') 
             command_feat = sprintf('bash /srv/diedrichsen/shell/run_feat_coregistration.sh %s %2.2d', subjID, sessn)
             system(command_feat)
             
          end
          
-         fprintf('feat coregistration completed for %s \n',subj_name{s})
+         fprintf('feat coregistration completed for %s \n',subj_name{sn(s)})
      
     case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
         % Run gunzip on the output file from epi_reg step
@@ -301,14 +336,14 @@ switch(what)
         sn=varargin{1}; % subjNum
         runnum=varargin{2}; %runNum
         
-        
-        for s=sn
-            in     = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d_func2highres.nii.gz',runnum));
-            out    = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d_func2highres.nii',runnum));
+        subjs=length(sn);
+        for s=1:subjs,
+            in     = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2highres.nii.gz',runnum));
+            out    = fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2highres.nii',runnum));
             % gunzip -c file.gz > /THERE/file
             command = sprintf('gunzip -c %s > %s', in, out)
             system(command)
-            fprintf('gunzip completed for %s \n',subj_name{s})
+            fprintf('gunzip completed for %s \n',subj_name{sn(s)})
         end
         
     case 'FUNC:coreg_meanepi'       % Coregister meanrun_01 to meanrun_01_func2struct
@@ -317,13 +352,15 @@ switch(what)
         sn=varargin{1}; % subjNum
         runnum=varargin{2} %runNum
         
+        subjs=length(sn);
+        
         J = [];
-        for s=sn
+        for s=1:subjs,
             
-            cd(fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n']));
+            cd(fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n']));
             
-            J.ref = {fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d_func2highres.nii',runnum))};
-            J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d.nii',runnum))};
+            J.ref = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d_func2highres.nii',runnum))};
+            J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runnum))};
             J.other = {''};
             J.eoptions.cos_fun = 'nmi';
             J.eoptions.sep = [4 2];
@@ -331,8 +368,8 @@ switch(what)
             J.eoptions.fwhm = [7 7];
             matlabbatch{1}.spm.spatial.coreg.estimate=J;
             spm_jobman('run',matlabbatch);
-            fprintf('mean epi coregistered for %s \n',subj_name{s})
-            command = sprintf('cp %s %s',fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d.nii',runnum)),fullfile(baseDir,imagingDir,subj_name{s},sprintf('rmeanrun_%2.2d.nii',runnum)))
+            fprintf('mean epi coregistered for %s \n',subj_name{sn(s)})
+            command = sprintf('cp %s %s',fullfile(baseDir,imagingDirRaw,[subj_name{sn(s)} '-n'],sprintf('meanrun_%2.2d.nii',runnum)),fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('rmeanrun_%2.2d.nii',runnum)))
             system(command)
         end    
         
@@ -344,22 +381,27 @@ switch(what)
         runnum=varargin{2}; % runNum used for coregistration
         runs=varargin{3}; % runNum to coregister
         
-        for s=sn
+        subjs=length(sn);
+        
+        for s=1:subjs,
             
-            cd(fullfile(baseDir,imagingDir,subj_name{s}));
+            cd(fullfile(baseDir,imagingDir,subj_name{sn(s)}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rmeanrun_%2.2d.nii',runnum)));
+            % For ants-registered data: TSE 
+            % P{1} = fullfile(fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii'));
+            % for tradition way: rmeanepi 
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('rmeanrun_%2.2d.nii',runnum)));
             
             % Select images to be realigned
             Q={};
             for r=1:numel(runs)
-              Q{end+1}    = fullfile(baseDir,imagingDir,subj_name{s},sprintf('run_%2.2d.nii',runs(r)));
+              Q{end+1}    = fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii',runs(r)));
             end;
             
             % Run spmj_makesamealign_nifti
             spmj_makesamealign_nifti(char(P),char(Q));
-            fprintf('functional images realigned for %s \n',subj_name{s})
+            fprintf('functional images realigned for %s \n',subj_name{sn(s)})
         end
    
     
@@ -451,34 +493,37 @@ switch(what)
         glm=1; % glmNum
         type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
         mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
-        for s=sn
+        
+        subjs=length(sn);
+        
+        for s=1:subjs,
             switch type
                 case 'betas'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{s});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{s});
+                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
+                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
                     images='beta_0';
                     source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
                     cd(glmSubjDir);
                 case 'contrast'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{s});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{s});
+                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
+                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
                     images='con';
                     source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
                     cd(glmSubjDir);
                 case 'ResMS'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{s});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{s});
+                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{sn(s)});
+                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
                     images='ResMS';
                     source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
                     cd(glmSubjDir);
                 case 'cerebellarGrey'
-                    source=dir(fullfile(baseDir,suitDir,'anatomicals',subj_name{s},'c1anatomical.nii')); % image to be resliced
-                    cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{s}));
+                    source=dir(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'c1anatomical.nii')); % image to be resliced
+                    cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)}));
             end
-            job.subj.affineTr = {fullfile(baseDir,suitDir,'anatomicals',subj_name{s},'Affine_c_anatomical_seg1.mat')};
-            job.subj.flowfield= {fullfile(baseDir,suitDir,'anatomicals',subj_name{s},'u_a_c_anatomical_seg1.nii')};
+            job.subj.affineTr = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'Affine_c_anatomical_seg1.mat')};
+            job.subj.flowfield= {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},'u_a_c_anatomical_seg1.nii')};
             job.subj.resample = {source.name};
-            job.subj.mask     = {fullfile(baseDir,suitDir,'anatomicals',subj_name{s},sprintf('%s.nii',mask))};
+            job.subj.mask     = {fullfile(baseDir,suitDir,'anatomicals',subj_name{sn(s)},sprintf('%s.nii',mask))};
             job.vox           = [1 1 1];
             % Replace Nans with zeros to avoid big holes in the the data 
             for i=1:length(source)
@@ -491,13 +536,12 @@ switch(what)
             
             source=fullfile(glmSubjDir,'*wd*');
             dircheck(fullfile(outDir));
-            destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{s});
+            destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn(s)});
             movefile(source,destination);
 
             fprintf('%s have been resliced into suit space \n',type)
         end
     case 'SUIT:map_to_flat' 
-        % Maps wdcon data to flatmap 
         sn = 2; 
         glm = 1; 
         vararginoptions(varargin,{'sn','glm','type','mask'});
@@ -517,6 +561,7 @@ switch(what)
             n(n=='_')=' '; 
             title(n); 
         end; 
+        
 
     case 'SURF:reconall'       % Freesurfer reconall routine
         % Calls recon-all, which performs, all of the
@@ -661,7 +706,9 @@ switch(what)
         % example: bsp_imana('ROI:make_gmwm_mask',1)
         sn=varargin{1}; % subjNum
         
-        for s=sn
+        subjs=length(sn);
+        
+        for s=1:subjs,
             J.input = {fullfile(baseDir,anatomicalDir,subj_name{s},'c1anatomical.nii')
                        fullfile(baseDir,anatomicalDir,subj_name{s},'c2anatomical.nii')};
             J.output = fullfile(baseDir,anatomicalDir,subj_name{s},'gm_wm_exclusion_mask.nii');
@@ -675,18 +722,18 @@ switch(what)
             matlabbatch{1}.spm.util.imcalc=J;
             spm_jobman('run',matlabbatch);
             
-            fprintf('GM-WM exlusion mask created for %s \n',subj_name{s})
+            fprintf('GM-WM exlusion mask created for %s \n',subj_name{sn(s)})
         end 
         
     case 'ROI:reslice_gmwm_mask'       %Resample gm-wm exclusion mask into epi resolution
         % usage 'bsp_imana('ROI:reslice_gmwm_mask',1)'
         sn=varargin{1};
         J = [];
+        subjs=length(sn);
         
-        
-        for s=sn
-            J.ref = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii')};
-            J.source = {fullfile(baseDir,anatomicalDir,subj_name{s},'gm_wm_exclusion_mask.nii')};
+        for s=1:subjs,
+            J.ref = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn(s)},'mask.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn(s)},'gm_wm_exclusion_mask.nii')};
             J.roptions.interp = 0;
             J.roptions.wrap = [0 0 0];
             J.roptions.mask = 0;
@@ -694,7 +741,7 @@ switch(what)
         
             matlabbatch{1}.spm.spatial.coreg.write = J;
             spm_jobman('run',matlabbatch);
-            fprintf('gm-wm exclusion mask resliced for %s \n',subj_name{s})
+            fprintf('gm-wm exclusion mask resliced for %s \n',subj_name{sn(s)})
         end  
     
         
@@ -703,10 +750,10 @@ switch(what)
         sn=varargin{1}; % subjNum
         images = {'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','transverseL','transverseR','ventricle4'};
         
+        subjs=length(sn);
         
-        
-        for s=sn
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+        for s=1:subjs,
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{sn(s)});
             for im=1:length(images)
                 J.input = {fullfile(regSubjDir,sprintf('mask_%s.nii',images{im}))
                            fullfile(baseDir,anatomicalDir,subj_name{s},'rgm_wm_exclusion_mask.nii')};
@@ -721,7 +768,7 @@ switch(what)
                 matlabbatch{1}.spm.util.imcalc=J;
                 spm_jobman('run',matlabbatch);
             end
-            fprintf('csf ROIs masked for %s \n',subj_name{s})
+            fprintf('csf ROIs masked for %s \n',subj_name{sn(s)})
         end    
         
     case 'ROI:cerebellar_gray' 
@@ -873,6 +920,187 @@ switch(what)
         end
 
         
+     %%%%% Unused cases %%%%%%
+     
+    case 'ANAT:coregTSE'                 % Adjust TSE to anatomical image REQUIRES USER INPUT
+        % (2) Manually seed the functional/anatomical registration
+        % - Do "coregtool" on the matlab command window
+        % - Select anatomical image and tse image to overlay
+        % - Manually adjust tse image and save result as rtse image
+        % example: bsp_imana('ANAT:coregTSE',1,'auto')
+        sn=varargin{1};% subjNum
+        step=varargin{2}; % first 'manual' then 'auto'
+        
+        cd(fullfile(baseDir,anatomicalDir,subj_name{sn}));
+        
+        switch step,
+            case 'manual'
+                coregtool;
+                keyboard();
+            case 'auto'
+                % do nothing
+        end
+        
+        % (1) Automatically co-register functional and anatomical images for study 1
+        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+        J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse.nii')};
+        J.other = {''};
+        J.eoptions.cost_fun = 'nmi';
+        J.eoptions.sep = [4 2];
+        J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+        J.eoptions.fwhm = [7 7];
+        matlabbatch{1}.spm.spatial.coreg.estimate=J;
+        spm_jobman('run',matlabbatch);
+        
+        % NOTE:
+        % Overwrites tse, unless you update in step one, which saves it
+        % as rtse.
+        % Each time you click "update" in coregtool, it saves current
+        % alignment by appending the prefix 'r' to the current file
+        % So if you continually update rtse, you'll end up with a file
+        % called r...rrrtsei.
+
+    case 'ANAT:resliceTSE'       % Reslice coregistered TSE to anatomical
+        % usage 'bsp_imana('ANAT:resliceTSE',1)'
+        sn=varargin{1};
+
+        for s = sn 
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
+                fullfile(suitSubjDir,'c_anatomical_seg1.nii'),...
+                fullfile(suitSubjDir,'c_anatomical_pcereb_corr.nii')}; 
+            outname = fullfile(regSubjDir,'cerebellum_gray_mask.nii'); 
+            spm_imcalc(char(P),outname,'i1 & (i2>0.1) & (i3>0.3)',{0,0,1,4}); 
+        end
+    case 'ROI:define'                 % Defines ROIs for brain structures
+        % Before runing this, create masks for different structures
+        % Example usage: bsp_imana('ROI:define')
+        sn=good_subjs; 
+        regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
+        
+        vararginoptions(varargin,{'sn','regions'}); 
+        for s=sn
+            
+            % this will be changed
+            subj_name = sprintf('S%02d', s);
+%             regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name);
+            for r = 1:length(regions)
+                file = fullfile(regSubjDir,sprintf('%s_mask.nii',regions{r}));
+                R{r}.type = 'roi_image';
+                R{r}.file= file;
+                R{r}.name = regions{r};
+                R{r}.value = 1;
+            end
+            R=region_calcregions(R);                
+            save(fullfile(regSubjDir,'regions.mat'),'R');
+        end
+    case 'ROI:get_beta'
+        % Example usage: bsp_imana('ROI:get_beta', 'glm', 1, 'region_name', 'regions')
+        
+        sn = good_subjs;
+        glm =  1;
+        region_name = 'regions';
+        
+        vararginoptions(varargin, {'sn', 'glm', 'region_name'});
+        
+        % setting directories
+        glmDir      = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
+        imageDir    = fullfile(baseDir, imagingDir);
+        regDataDir  = fullfile(baseDir, regDir, 'data');
+        betaDir     = fullfile(baseDir, regDir, sprintf('glm%d', glm), 'beta_roi');
+        dircheck(betaDir);
+        
+        for s = sn
+            % get subject name (this will be changed)
+            subj_name = sprintf('S%d', s);
+            
+            % get the region file
+            load(fullfile(regDataDir, subj_name, sprintf('%s.mat', region_name)));
+            
+            % load SPM_info and SPM
+            T = load(fullfile(glmDir, subj_name, 'SPM_info.mat'));
+            load(fullfile(glmDir, subj_name, 'SPM.mat'));
+            
+            % change the directory in SPM to the currrent GLM directory
+            newGLMDir   = fullfile(glmDir,subj_name);
+            newRawDir   = fullfile(imageDir,subj_name);
+            
+            SPM         = spmj_move_rawdata(SPM,newRawDir);
+            SPM.swd     = fullfile(newGLMDir);
+            
+            for r = 1:length(R) 
+                fprintf('- Doing %s %s\n', subj_name, R{r}.name);
+                % extract betas
+                V    = SPM.xY.VY;
+                data = region_getdata(V,R{r}, 'interp', 0, 'ignore_nan', 1);
+                keyboard;
+            end % r (regions)
+            
+            
+                
+                
+            
+        end % s (subject)
+        
+           
+        J = [];
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+            J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},'tse_coreg.nii')};
+            J.roptions.interp = 0;
+            J.roptions.wrap = [0 0 0];
+            J.roptions.mask = 0;
+            J.roptions.prefix = 'r';
+        
+            matlabbatch{1}.spm.spatial.coreg.write = J;
+            spm_jobman('run',matlabbatch);
+            fprintf('TSE resliced for %s \n',subj_name{sn(s)})
+        end  
+
+    case 'ANAT:reslice_pcereb'       % Reslice coregistered TSE to anatomical
+        % usage 'bsp_imana('ANAT:resliceTSE',1)'
+        sn=varargin{1};
+        J = [];
+        subjs=length(sn);
+        
+        for s=1:subjs,
+            J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'anatomical.nii')};
+            J.source = {fullfile(baseDir,suitDir,anatomicalDir,subj_name{sn},'c_anatomical_pcereb.nii')};
+            J.roptions.interp = 0;
+            J.roptions.wrap = [0 0 0];
+            J.roptions.mask = 0;
+            J.roptions.prefix = 'r';
+        
+            matlabbatch{1}.spm.spatial.coreg.write = J;
+            spm_jobman('run',matlabbatch);
+            fprintf('Cerebellar mask resliced for %s \n',subj_name{sn(s)})
+        end  
+        
+    case 'FUNC:coregEPI'      % Adjust meanepi to anatomical image REQUIRES USER INPUT
+        % (2) Manually seed the functional/anatomical registration
+        % - Do "coregtool" on the matlab command window
+        % - Select anatomical image and meanepi image to overlay
+        % - Manually adjust meanepi image and save result as rmeanepi image
+        % example: bsp_imana('FUNC:coregEPI',1)
+        sn=varargin{1};% subjNum
+        
+        % (1) Automatically co-register functional and anatomical images for study 1
+        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'rtse.nii')};
+        J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{sn} '-n'],'rmeanrun_01.nii')};
+        J.other = {''};
+        J.eoptions.cost_fun = 'ncc';
+        J.eoptions.sep = [4 2];
+        J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+        J.eoptions.fwhm = [7 7];
+        matlabbatch{1}.spm.spatial.coreg.estimate=J;
+        spm_jobman('run',matlabbatch);
+        
+    case 'FUNC:correct deform'        % Correct Magnetic field deformations using antsRegEpi.sh
+       
 
 end
         
