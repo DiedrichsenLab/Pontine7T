@@ -1,37 +1,35 @@
 function varargout=bsp_glm(what,varargin)
 % GLM analysis for the pontine7T project, starting from preprocessed data
 % (see bsp_imana).
-% Define the data basedirectory 
-if isdir('/Volumes/diedrichsen_data$/data')
-    workdir='/Volumes/diedrichsen_data$/data';
-elseif isdir('/srv/diedrichsen/data')
-    workdir='/srv/diedrichsen/data';
-else
-    fprintf('Workdir not found. Mount or connect to server and try again.');
-end
-baseDir=(sprintf('%s/Cerebellum/Pontine7T',workdir));
 
-imagingDir      ='imaging_data';
-imagingDirRaw   ='imaging_data_raw';
-anatomicalDir   ='anatomicals';
-suitDir         ='suit';
-regDir          ='RegionOfInterest';
-fmapDir         ='fieldmaps';
 
-% Load Participant information (make sure you have Dataframe/util in your
-% path
-pinfo = dload(fullfile(baseDir,'participants.tsv')); 
-subj_name = pinfo.participant_id;
-good_subj = find(pinfo.good)'; % Indices of all good subjects
-
-%========================================================================================================================
-% GLM INFO
 numDummys = 3;                                                              % per run
 numTRs    = 328;                                                            % per run (includes dummies)
-run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16'};
+%========================================================================================================================
+% PATH DEFINITIONS
+global baseDir;
+global subj_name;
+
+baseDir         ='/srv/diedrichsen/data/Cerebellum/Pontine7T';
+if ~exist(baseDir,'dir')
+    baseDir         ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T';
+end
+imagingDir      ='/imaging_data';
+imagingDirRaw   ='/imaging_data_raw';
+anatomicalDir   ='/anatomicals';
+suitDir         ='/suit';
+regDir          ='/RegionOfInterest';
+simDir          ='/simulations';
+%========================================================================================================================
+% PRE-PROCESSING
+subj_name = {'S98','S97','S96','S95','S01','S03','S04','S07'};
+%========================================================================================================================
+% GLM INFO
+funcRunNum  = [1,16];  % first and last behavioural run numbers
+run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21'};
 runB        = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];  % Behavioural labelling of runs
 sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session number
-%========================================================================================================================
+
 %========================================================================================================================
 switch(what)
     case 'GLM:do'
@@ -462,8 +460,8 @@ switch(what)
         spm_rwls_resstats(SPM,[],movparam_name);
         keyboard;
         
-    case 'ROI:getRawTs'                % Get raw timeseries and save them
-        % bsp_glm('ROI:getRawTs',1,1);
+    case 'TS:getRawTs'                % Get raw timeseries and save them
+        % bsp_glm('TS:getRawTs',1,1);
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
         
