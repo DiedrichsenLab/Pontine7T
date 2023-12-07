@@ -1,8 +1,5 @@
 function varargout=bsp_imana(what,varargin)
 % Function for minimal preprocessing of the Pontine7T data
-
-
-
 % Define the data basedirectory 
 if isdir('/Volumes/diedrichsen_data$/data')
     workdir='/Volumes/diedrichsen_data$/data';
@@ -23,7 +20,8 @@ fmapDir         ='fieldmaps';
 % Load Participant information (make sure you have Dataframe/util in your
 % path
 pinfo = dload(fullfile(baseDir,'participants.tsv')); 
-subj_name = pinfo.participant_id
+subj_name = pinfo.participant_id;
+good_subj = find(pinfo.good)'; % Indices of all good subjects
 
 %========================================================================================================================
 % GLM INFO
@@ -562,8 +560,8 @@ switch(what)
     
     case 'ROI:group_define'         % Defines the group regions from the group-space images
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
-        
-        vararginoptions(varargin,{'regions'}); 
+        outfilename = 'regions.mat'; 
+        vararginoptions(varargin,{'regions','outfilename'}); 
         regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
         for r = 1:length(regions)
             file = fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r}));
@@ -573,8 +571,8 @@ switch(what)
             R{r}.value = 1;
         end
         R=region_calcregions(R);                
-        save(fullfile(regGroupDir,'regions.mat'),'R');
-    case 'ROI:group_exclude'         % Finds overlapping voxels in group space 
+        save(fullfile(regGroupDir,outfilename),'R');
+    case 'ROI:group_exclude'        % OPTIONAL: Checks for overlapping voxels in group space 
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
         
         vararginoptions(varargin,{'regions'}); 
@@ -588,7 +586,7 @@ switch(what)
         indx=find(M>1);
         [i,j,k]=ind2sub(V(1).dim,indx)
         keyboard; 
-    case 'ROI:group_cifti'         % Example of saving region of interest data as a cifti - here labels 
+    case 'ROI:group_cifti'          % Generate cifti file for ROI labels 
         regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
         load(fullfile(regGroupDir,'regions.mat'));
         % Make labels 
@@ -596,11 +594,11 @@ switch(what)
             data{r}=ones(size(R{r}.data,1),1)*r; 
         end; 
         dname = {'roi_label'}; 
-        V=spm_vol('SUIT.nii'); % space defining image
+        V=spm_vol(fullfile(baseDir,'RegionOfInterest','data','group','SUIT.nii')); % space defining image
         C=region_make_cifti(R,V,'data',data,'dtype','scalars');
         cifti_write(C,'regions.dscalar.nii'); 
-    case 'ROI:make_mask'
-        sn = [1:8];
+    case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
+        sn = good_subj;
         vararginoptions(varargin,{'sn'}); 
         for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
@@ -610,16 +608,18 @@ switch(what)
             Vi(2)=spm_vol(pcorr); 
             spm_imcalc(Vi,outfile,'i1>0 & i2>0'); 
         end
-    case 'ROI:deformation'              % Deform ROIs into individual space and retain mapping. 
-        sn = [1:8]; 
+    case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
+        sn = good_subj; 
         saveasimg = 0; 
-        region_file = 'regions.mat';
-        def_dir = 'suit/anatomicals';
-        def_img = 'c_anatomical_seg1'; 
+        region_file = 'regions.mat';   % File with group ROI definitionss 
+        def_dir = 'suit/anatomicals';  % This is where the deformation can be found 
+        def_img = 'c_anatomical_seg1';  
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
+        % Load the group regions 
         groupDir = fullfile(baseDir,'RegionOfInterest','data','group');
         groupR = load(fullfile(groupDir,region_file)); 
+        % For all subjects, deform those regions and save as regions 
         for s = sn
             mask = fullfile(baseDir,'RegionOfInterest','data',subj_name{s},'pcereb_mask.nii');
             Vmask = spm_vol(mask); 
@@ -628,36 +628,15 @@ switch(what)
             R=region_deformation(groupR.R,{Def,mat},'mask',mask);
             outdir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
             save(fullfile(outdir,[region_file]),'R'); 
+            % For testing purposes, we can also save these ROIs as images 
+            % in the original ROI space 
             if (saveasimg)
                 for r=1:length(R)
                     region_saveasimg(R{r},Vmask,'name',fullfile(outdir,[R{r}.name '_mask.nii'])); 
                 end
             end
-        end
-    case 'ROI:inv_reslice'              % OLD: Inverse reslices the ROI images to individual space. Do not use. 
-        sn=varargin{1}; 
-        images = {'csf','pontine','olive','dentate','rednucleus'};
-%         images = {'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','csftransverseL','csftransverseR','csfventricle4'};
-        groupDir = fullfile(baseDir,'RegionOfInterest','group');
-        
-        for s=sn 
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
-            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            for im=1:length(images)
-                job.Affine = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
-                job.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
-                job.resample = {fullfile(groupDir,sprintf('%s_mask.nii',images{im}))}; 
-                job.ref     = {glm_mask};
-                suit_reslice_dartel_inv(job);
-                source=fullfile(suitSubjDir,sprintf('iw_%s_mask_u_a_c_anatomical_seg1.nii',images{im}));
-                dest  = fullfile(regSubjDir,sprintf('%s_mask.nii',images{im}));
-                movefile(source,dest);
-
-            end
-        end
-        
-    case 'ROI:make_gmwm_mask'        % Create GM-WM exclusion mask
+        end        
+    case 'ROI:make_gmwm_mask'        % Create GM-WM exclusion mask for defining CSF 
         % example: bsp_imana('ROI:make_gmwm_mask',1)
         sn=varargin{1}; % subjNum
         
@@ -735,27 +714,6 @@ switch(what)
             outname = fullfile(regSubjDir,'cerebellum_gray_mask.nii'); 
             spm_imcalc(char(P),outname,'i1 & (i2>0.1) & (i3>0.3)',{0,0,1,4}); 
         end
-        
-    case 'ROI:define'                 % Defines ROIs for brain structures
-        % Before runing this, create masks for different structures
-        sn=8; 
-        regions={'cerebellum_gray','csf','dentate','pontine','olive','rednucleus'};
-%         regions={'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','csftransverseL','csftransverseR','csfventricle4'};
-        
-        vararginoptions(varargin,{'sn','regions'}); 
-        for s=sn
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            for r = 1:length(regions)
-                file = fullfile(regSubjDir,sprintf('%s_mask.nii',regions{r}));
-                R{r}.type = 'roi_image';
-                R{r}.file= file;
-                R{r}.name = regions{r};
-                R{r}.value = 1;
-            end
-            R=region_calcregions(R);                
-            save(fullfile(regSubjDir,'regions.mat'),'R');
-        end
-        
         
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
