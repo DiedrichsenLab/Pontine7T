@@ -113,58 +113,8 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('Check segmentation results for %s\n', subj_name{s})
         end;
-        
-    case 'ANAT:bet'             % Brain extraction for anatomical.nii: NOT NEEDED 
-        % Run bash script /srv/diedrichsen/shell/optiBET.sh
-        % Edit command variable to set path to optiBET.sh script
-        % example: bsp_imana('ANAT:bet',1)
-        sn=varargin{1}; % subjNum
-        for s=sn
-            img    = fullfile(baseDir,anatomicalDir,subj_name{s},'manatomical.nii');
-            command = sprintf('bash /srv/diedrichsen/shell/optiBET.sh -i %s', img)
-            system(command)
-            
-            in = fullfile(baseDir,anatomicalDir,subj_name{s},'manatomical_optiBET_brain.nii.gz');
-            out = fullfile(baseDir,anatomicalDir,subj_name{s},'manatomical_brain.nii.gz');
-            copy_command = sprintf('cp %s %s', in, out)
-            system(copy_command)
-            
-            fprintf('optiBET completed for %s \n',subj_name{s})
-            fprintf('Check the output of optiBET using FSLeyes or some other visualization software.')
-        end
-    
-    case 'ANAT:biascorrect_tse'               % Bias correct TSE: NOT NEEDED 
-        % example: bsp_imana('ANAT:biascorrect_tse',1)
-        sn=varargin{1}; %subjNum
-        for s=sn
-            in_tse = fullfile(baseDir,anatomicalDir,subj_name{s},'tse.nii');
-            out_tse = fullfile(baseDir,anatomicalDir,subj_name{s},'tse'); 
-            command_bias = sprintf('fsl_anat --nononlinreg --strongbias --nocrop --noreg --nosubcortseg --noseg --clobber -t T2 -i %s -o %s', in_tse, out_tse)
-            system(command_bias)
-            
-            fprintf('tse bias correction completed for %s \n',subj_name{s})
-            fprintf('Check the results in FSLeyes or some other visualization software.')
-        end        
-            
-    case 'ANAT:coregister_tse'                % Coregister TSE to anatomical: NOT NEEDED 
-        % example: bsp_imana('ANAT:coregister_tse',1)
-        sn=varargin{1}; % subjNum
-        for s=sn
-            in_tse = fullfile(baseDir,anatomicalDir,subj_name{s},'tse.anat','T2_biascorr.nii.gz');
-            in_ref = fullfile(baseDir,anatomicalDir,subj_name{s},'manatomical.nii');
-            out_mat = fullfile(baseDir,anatomicalDir,subj_name{s},'tse_to_anatomical_mi.mat');
-            out_tse  = fullfile(baseDir,anatomicalDir,subj_name{s},'tse_to_anatomical_mi');
-            command_mask = sprintf('flirt -in %s -ref %s -usesqform -searchrx -45 45 -searchry -45 45 -searchrz -45 45 -dof 6 -cost mutualinfo -omat %s -out %s', in_tse, in_ref, out_mat, out_tse)
-            system(command_mask)
-            
-            fprintf('tse coregistration completed for %s \n',subj_name{s})
-            fprintf('Check the results in FSLeyes or some other visualization software.')
-        end        
-        
-    case 'FUNC:remDum'        % JD: THIS IS OVERLY COMPLICATED
-        % I WOULD HIGHLY RECOMMEND TO LEAVE THE THE DUMMTY SCANS IN THE
-        % FILES, AND SIMPLY SELECT THE IMAGES THAT YOU WANT AT A LATER
-        % STAGE
+                
+    case 'FUNC:remDum'        % JD: THIS IS OVERLY COMPLICATED AND BAD PRACTICE - NOT TO BE REPLICATED
         % Remove the extra dummy scans from all functional runs.
         % funtional runs have to be named as run_01-r.nii, run_02-r.nii ...
         % example: bsp_imana('FUNC:remDum',1)
@@ -187,7 +137,8 @@ switch(what)
                 fprintf('Run %d done for %s \n',i,subj_name{s});
             end;
         end
-    case 'FUNC:realign'               % Realign functional images (both sessions)
+    case 'FUNC:realign'               % Does motion realign functional images (both sessions)
+        % And reslices the data 
         % SPM realigns all volumes to the first volume of first run
         % example: bsp_imana('FUNC:realign',1,[1:16])
         
@@ -199,7 +150,7 @@ switch(what)
             data={};
             for i = 1:length(runs),
                 for j=1:numTRs-numDummys;
-                    data{i}{j,1}=sprintf('run_%2.2d.nii,%d',runs(i),j);
+                    data{i}{j,1}=sprintf('run_%2.2d.nii,%d',runs(i),j); % IF YOU USE j+numDummys here
                 end;
             end;
             spmj_realign(data);
@@ -442,79 +393,6 @@ switch(what)
             source=fullfile(sourceDir,'*wd*');
              movefile(source,outDir);
         end
-    case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
-        % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
-        % make sure that you reslice into 2mm^3 resolution
-        sn=2; % subjNum
-        glm=1; % glmNum
-        type='contrast'; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
-        mask='c_anatomical_pcereb_corr'; % 'cereb_prob_corr_grey' or 'cereb_prob_corr' or 'dentate_mask'
-        for s=sn
-            switch type
-                case 'betas'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{s});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{s});
-                    images='beta_0';
-                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
-                    cd(glmSubjDir);
-                case 'contrast'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{s});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{s});
-                    images='con';
-                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
-                    cd(glmSubjDir);
-                case 'ResMS'
-                    glmSubjDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm),subj_name{s});
-                    outDir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{s});
-                    images='ResMS';
-                    source=dir(fullfile(glmSubjDir,sprintf('*%s*',images))); % images to be resliced
-                    cd(glmSubjDir);
-                case 'cerebellarGrey'
-                    source=dir(fullfile(baseDir,suitDir,'anatomicals',subj_name{s},'c1anatomical.nii')); % image to be resliced
-                    cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{s}));
-            end
-            job.subj.affineTr = {fullfile(baseDir,suitDir,'anatomicals',subj_name{s},'Affine_c_anatomical_seg1.mat')};
-            job.subj.flowfield= {fullfile(baseDir,suitDir,'anatomicals',subj_name{s},'u_a_c_anatomical_seg1.nii')};
-            job.subj.resample = {source.name};
-            job.subj.mask     = {fullfile(baseDir,suitDir,'anatomicals',subj_name{s},sprintf('%s.nii',mask))};
-            job.vox           = [1 1 1];
-            % Replace Nans with zeros to avoid big holes in the the data 
-            for i=1:length(source)
-                V=spm_vol(source(i).name); 
-                X=spm_read_vols(V); 
-                X(isnan(X))=0; 
-                spm_write_vol(V,X); 
-            end; 
-            suit_reslice_dartel(job);
-            
-            source=fullfile(glmSubjDir,'*wd*');
-            dircheck(fullfile(outDir));
-            destination=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{s});
-            movefile(source,destination);
-
-            fprintf('%s have been resliced into suit space \n',type)
-        end
-    case 'SUIT:map_to_flat' 
-        % Maps wdcon data to flatmap 
-        sn = 2; 
-        glm = 1; 
-        vararginoptions(varargin,{'sn','glm','type','mask'});
-        source_dir=fullfile(baseDir,suitDir,sprintf('glm%d',glm),subj_name{sn});
-        source=dir(fullfile(source_dir,'wdcon*')); % images to be resliced
-        for i=1:length(source)
-            name{i} = fullfile(source_dir,source(i).name); 
-        end; 
-        MAP = suit_map2surf(name); 
-        % G = surf_makeFuncGifti
-        set(gcf,'PaperPosition',[2 2 15 7]);
-        wysiwyg; 
-        for i=1:10 
-            subplot(2,5,i); 
-            suit_plotflatmap(MAP(:,i),'cscale',[-1.5 1.5]); 
-            n = source(i).name(7:end-4); 
-            n(n=='_')=' '; 
-            title(n); 
-        end; 
 
     case 'SURF:reconall'       % Freesurfer reconall routine
         % Calls recon-all, which performs, all of the
@@ -570,8 +448,13 @@ switch(what)
             R{r}.name = regions{r};
             R{r}.value = 1;
         end
-        R=region_calcregions(R);                
+        R=region_calcregions(R);     % Calculate the ROI coordinates             
         save(fullfile(regGroupDir,outfilename),'R');
+    case 'ROI:group_define_csf'         % Defines the group regions from the group-space images
+        regions={'csf_','csf_'};
+        outfilename = 'regions_csf.mat'; 
+        bsp_imana('ROI:group_define','regions',regions,'outfilename',outfilename); 
+   
     case 'ROI:group_exclude'        % OPTIONAL: Checks for overlapping voxels in group space 
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
         
@@ -635,7 +518,39 @@ switch(what)
                     region_saveasimg(R{r},Vmask,'name',fullfile(outdir,[R{r}.name '_mask.nii'])); 
                 end
             end
-        end        
+        end
+        
+    case 'ROI:getRawTs'                % Get raw timeseries and save them
+        % bsp_glm('ROI:getRawTs',1,1);
+        sn=varargin{1}; % subjNum
+        glm=varargin{2}; % glmNum
+        
+        glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        
+        for s=sn,
+            glmDirSubj=fullfile(glmDir, subj_name{s});
+            load(fullfile(glmDirSubj,'SPM.mat'));
+            
+            % load data
+            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions.mat')));
+            
+            % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
+            
+            % Get the raw data files
+            V=SPM.xY.VY;
+            VresMS = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
+            
+            % Get time series data
+            for r = 1:length(R)
+                Y = region_getdata(V,R{r});  % Data is N x P
+                resMS = region_getdata(VresMS,R{r});
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
+                save(filename,'Y','resMS','-v7.3');
+                fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
+            end
+        end
+        
+        
     case 'ROI:make_gmwm_mask'        % Create GM-WM exclusion mask for defining CSF 
         % example: bsp_imana('ROI:make_gmwm_mask',1)
         sn=varargin{1}; % subjNum
@@ -714,6 +629,7 @@ switch(what)
             outname = fullfile(regSubjDir,'cerebellum_gray_mask.nii'); 
             spm_imcalc(char(P),outname,'i1 & (i2>0.1) & (i3>0.3)',{0,0,1,4}); 
         end
+        
         
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
