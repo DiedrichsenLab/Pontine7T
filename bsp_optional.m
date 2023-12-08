@@ -36,6 +36,11 @@ switch(what)
     case 'ANAT:bet'                   % Brain extraction for anatomical.nii 
         % Run bash script /srv/diedrichsen/shell/optiBET.sh
         % Edit command variable to set path to optiBET.sh script
+        % In order to use coregistration, an optimal brain extraction needs to be performed. optiBET usually gives best results. 
+        % Command needs bias-corrected anatomical image as input (manatomical.nii). Bias-correction can be performed either with SPM or FSL (FAST)
+        % Command produces:
+        %   manatomical_optiBET_brain.nii.gz (brain-extracted file)
+        %   manatomical_optiBET_brain_mask.nii.gz
         % example: bsp_imana('ANAT:bet',1)
         sn=varargin{1}; % subjNum
         for s=sn
@@ -54,6 +59,11 @@ switch(what)
     
     case 'ANAT:biascorrect_tse'       % Bias correct TSE
         % example: bsp_imana('ANAT:biascorrect_tse',1)
+        % In order to coregister the TSE image to the anatomical optimally, the TSE image needs to be bias-corrected. This particular TSE image has a strong bias field, which is why we opt for the fsl bias correction within fsl_anat that can set to be strong.
+        % Command produces:
+        %   tse.anat/T2_biascorr.nii.gz (bias-corrected TSE image)
+        %   tse.anat/T2_biascorr_brain.nii.gz (brain-extracted bias-corrected TSE image)
+        %   additional files in tse.anat folder that can be deleted
         sn=varargin{1}; %subjNum
         for s=sn
             in_tse = fullfile(baseDir,anatomicalDir,subj_name{s},'tse.nii');
@@ -67,6 +77,11 @@ switch(what)
             
     case 'ANAT:coregister_tse'                % Coregister TSE to anatomical
         % example: bsp_imana('ANAT:coregister_tse',1)
+        % Coregister TSE to anatomical using mutual information (used for later comparison of coregistration of functional data to anatomical data with and without the use of fieldmaps)
+        % Command produces:
+        %   tse_to_anatomical_mi.mat (transformation matrix)
+        %   tse_to_anatomical_mi.nii.gz (coregistered TSE image)
+
         sn=varargin{1}; % subjNum
         for s=sn
             in_tse = fullfile(baseDir,anatomicalDir,subj_name{s},'tse.anat','T2_biascorr.nii.gz');
@@ -80,6 +95,132 @@ switch(what)
             fprintf('Check the results in FSLeyes or some other visualization software.')
         end        
 
+    case 'FUNC:create_mean_epis'   % Calculate mean EPIs for runs: NOT NEEDED [?]
+        % Calculate mean EPIs for run(s) acquired closest to fieldmaps
+        % example bsp_imana('FUNC:create_mean_epis',1,[8 16])
+        % Creates a mean epi image of the run closest to the fieldmap acquisition. This mean EPI image is later used to coregister fieldmaps to functional data.
+        % Command produces:
+        %   meanrun_8.nii.gz (mean EPI image of run 8)
+        %   meanrun_16.nii.gz (mean EPI image of run 16)
+        sn=varargin{1}; % subjNum
+        runs=varargin{2}; % runNum
+        
+        subjs = length(sn);
+        
+        for s=sn
+            for r=1:length(runs);
+                in_epi = fullfile(baseDir,imagingDir,subj_name{s},sprintf('run_%2.2d.nii',runs(r)));
+                out_meanepi = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d.nii.gz',runs(r)));
+                command_meanepi = sprintf('fslmaths %s -Tmean %s', in_epi, out_meanepi)
+                system(command_meanepi)
+                fprintf('mean epi completed for run %d \n',runs(r))
+                
+                out = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d.nii',runs(r)));
+                command_gunzip = sprintf('gunzip -c %s > %s', out_meanepi, out)
+                system(command_gunzip)
+                fprintf('gunzip completed for run %d \n',runs(r))
+                
+                command_rm = sprintf('rm %s',out_meanepi)
+                system(command_rm)
+                fprintf('gzipped file removed for run %d \n',runs(r))
+            end
+        end          
+        
+    case 'FMAP:average_magnitudes'        % Average magnitude images for each session
+        % Averages the two magnitude images for each session
+        % example: bsp_imana('FMAP:average_magnitudes',1,1)
+        % Command produces:
+        %   magnitudeavg_sess_1.nii (averaged magnitude image for session 1)
+        %   magnitudeavg_sess_2.nii (averaged magnitude image for session 2)
+
+        sn=varargin{1}; % subjNum
+        sessn=varargin{2}; %sessNum
+        for s=sn
+            cd(fullfile(baseDir,fmapDir,subj_name{s},sprintf('fmap_sess_%d',sessn)));            
+            J.input = {sprintf('magnitude1_sess_%d.nii,1',sessn)
+                       sprintf('magnitude2_sess_%d.nii,1',sessn)};
+            J.output = fullfile(baseDir,fmapDir,subj_name{s},sprintf('fmap_sess_%d',sessn),sprintf('magnitudeavg_sess_%d.nii',sessn));
+            J.outdir = {fullfile(baseDir,fmapDir,subj_name{s})};
+            J.expression = '(i1+i2)/2';
+            J.var = struct('name', {}, 'value', {});
+            J.options.dmtx = 0;
+            J.options.mask = 0;
+            J.options.interp = 1;
+            J.options.dtype = 4;
+            matlabbatch{1}.spm.util.imcalc=J;
+            spm_jobman('run',matlabbatch);
+            fprintf('magnitude fieldmaps averaged for %s \n',subj_name{s})
+        end    
+        
+    case 'FUNC:run_feat_coregistration'    %Run run_feat_coregistrations.sh shell script
+         % example: bsp_imana('FUNC:run_feat_coregistration',1,1)
+        % Command produces:
+        %   run_01_func2struct.mat (transformation matrix)
+        %   run_01_func2struct.nii.gz (coregistered functional image for visual inspection of transformation)
+        
+            
+         sn=varargin{1}; %subjNum
+         sessn=varargin{2}; %sessNum
+         
+         
+         for s=sn
+             
+            subjID = strip(subj_name{s},'left','S') 
+            command_feat = sprintf('bash /srv/diedrichsen/shell/run_feat_coregistration.sh %s %2.2d', subjID, sessn)
+            system(command_feat)
+            
+         end
+         
+         fprintf('feat coregistration completed for %s \n',subj_name{s})
+     
+    case 'FUNC:gunzip'        % Unzip .nii.gz file to .nii
+        % Run gunzip on the output file from epi_reg step
+        % example: bsp_imana('FUNC:gunzip',1,8)
+        % Command produces:
+        %   meanrun_01_func2struct.nii (unzipped file)
+
+        sn=varargin{1}; % subjNum
+        runnum=varargin{2}; %runNum
+        
+        
+        for s=sn
+            in     = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d_func2highres.nii.gz',runnum));
+            out    = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d_func2highres.nii',runnum));
+            % gunzip -c file.gz > /THERE/file
+            command = sprintf('gunzip -c %s > %s', in, out)
+            system(command)
+            fprintf('gunzip completed for %s \n',subj_name{s})
+        end
+        
+    case 'FUNC:coreg_meanepi'       % Coregister meanrun_01 to meanrun_01_func2struct
+        % Need meanrun_01 in epi resolution coregistered to anatomical
+        % example: bsp_imana('FUNC:coreg_meanepi',1,8)
+        % Command produces:
+        %   meanrun_01_func2struct.mat (transformation matrix)
+        %   meanrun_01_func2struct.nii.gz (coregistered mean EPI image for visual inspection of transformation)
+        
+        sn=varargin{1}; % subjNum
+        runnum=varargin{2} %runNum
+        
+        J = [];
+        for s=sn
+            
+            cd(fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n']));
+            
+            J.ref = {fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d_func2highres.nii',runnum))};
+            J.source = {fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d.nii',runnum))};
+            J.other = {''};
+            J.eoptions.cos_fun = 'nmi';
+            J.eoptions.sep = [4 2];
+            J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+            J.eoptions.fwhm = [7 7];
+            matlabbatch{1}.spm.spatial.coreg.estimate=J;
+            spm_jobman('run',matlabbatch);
+            fprintf('mean epi coregistered for %s \n',subj_name{s})
+            command = sprintf('cp %s %s',fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('meanrun_%2.2d.nii',runnum)),fullfile(baseDir,imagingDir,subj_name{s},sprintf('rmeanrun_%2.2d.nii',runnum)))
+            system(command)
+        end    
+        
         
     case 'SUIT:reslice'               % Reslice the contrast images from first-level GLM
         % example: bsm_imana('SUIT:reslice',1,4,'betas','cereb_prob_corr_grey')
@@ -154,7 +295,7 @@ switch(what)
             n(n=='_')=' '; 
             title(n); 
         end; 
-     
+    
 end
         
  
