@@ -440,7 +440,7 @@ switch(what)
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
         outfilename = 'regions.mat'; 
         vararginoptions(varargin,{'regions','outfilename'}); 
-        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
         for r = 1:length(regions)
             file = fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r}));
             R{r}.type = 'roi_image';
@@ -459,7 +459,7 @@ switch(what)
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
         
         vararginoptions(varargin,{'regions'}); 
-        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
         for r = 1:length(regions)
             V(r)=spm_vol(fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r})));
             X(:,:,:,r)=spm_read_vols(V(r));
@@ -470,7 +470,7 @@ switch(what)
         [i,j,k]=ind2sub(V(1).dim,indx)
         keyboard; 
     case 'ROI:group_cifti'          % Generate cifti file for ROI labels 
-        regGroupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        regGroupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
         load(fullfile(regGroupDir,'regions.mat'));
         % Make labels 
         for r=1:length(R)
@@ -486,7 +486,7 @@ switch(what)
         for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
             pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},'c_anatomical_pcereb_corr.nii'); 
-            outfile = fullfile(baseDir,'RegionOfInterest','data',subj_name{s},'pcereb_mask.nii'); 
+            outfile = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii'); 
             Vi(1)=spm_vol(glm_mask); 
             Vi(2)=spm_vol(pcorr); 
             spm_imcalc(Vi,outfile,'i1>0 & i2>0'); 
@@ -500,16 +500,16 @@ switch(what)
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
         % Load the group regions 
-        groupDir = fullfile(baseDir,'RegionOfInterest','data','group');
+        groupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
         groupR = load(fullfile(groupDir,region_file)); 
         % For all subjects, deform those regions and save as regions 
         for s = sn
-            mask = fullfile(baseDir,'RegionOfInterest','data',subj_name{s},'pcereb_mask.nii');
+            mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii');
             Vmask = spm_vol(mask); 
             Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
             mat = fullfile(baseDir,def_dir,subj_name{s},['Affine_' def_img '.mat']);
             R=region_deformation(groupR.R,{Def,mat},'mask',mask);
-            outdir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            outdir = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s});
             save(fullfile(outdir,[region_file]),'R'); 
             % For testing purposes, we can also save these ROIs as images 
             % in the original ROI space 
@@ -532,7 +532,7 @@ switch(what)
             load(fullfile(glmDirSubj,'SPM.mat'));
             
             % load data
-            load(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('regions.mat')));
+            load(fullfile(baseDir,regDir,'regdef',subj_name{s},sprintf('regions.mat')));
             
             % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
             
@@ -547,6 +547,34 @@ switch(what)
                 filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
                 save(filename,'Y','resMS','-v7.3');
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
+            end
+        end
+    case 'ROI:getBetas'       % Get Betas from a specific GLM save as as cifti files 
+        % bsp_glm('ROI:getRawTs',1,1);
+        sn=varargin{1}; % subjNum
+        glm=varargin{2}; % glmNum
+        
+        glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        
+        for s=sn,
+            glmDirSubj=fullfile(glmDir, subj_name{s});
+            D=dload(fullfile(glmDirSubj,'SPM_info.tsv'));     
+            % load 
+            load(fullfile(baseDir,regDir,'regdef',subj_name{s},'regions.mat'));
+            
+            
+            for i=1:length(D.run)
+                Vbeta(i) = spm_vol(fullfile(glmDirSubj,sprintf('beta_%04d.nii',i)));
+            end;
+            Vbeta(i+1) = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
+            
+            % Get betas 
+            for r = 1:length(R)
+                Y = region_getdata(Vbeta,R{r});  % Data is N x P
+                Y = Y(1:end-1,:)./sqrt(Y(end,:));        % Prewhiten beta estimates 
+                C = region_make_cifti(R(r),Vbeta(1),'data',{Y},'struct',{'OTHER'},'dtype','scalars');
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_beta_glm%d_%s.mat',subj_name{s},glm,R{r}.name)));
+                cifti_write(C,filename); 
             end
         end
         

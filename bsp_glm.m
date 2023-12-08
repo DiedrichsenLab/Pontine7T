@@ -145,8 +145,6 @@ switch(what)
                             S.inst      = 0;
                             S.taskOrder = ST;
                             S.time      = onset;
-                            S.taskName_after  = {'none'}; % taskName before and after are only defined for instructions
-                            S.taskName_before = {'none'};
                             S.sess      = sess(r);
                             S.run       = runB(r);
                             
@@ -181,7 +179,8 @@ switch(what)
             
             spm_rwls_run_fmri_spec(J);
             
-            save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T');
+            dsave(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T');  % Phase out the use of MAT files - prefer tsv files for Python-compatibility
+            dsave(fullfile(J.dir{1},'SPM_info.tsv'),T);
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
         
@@ -255,7 +254,6 @@ switch(what)
                     S.task      = it;
                     S.taskName  = {Cc.taskNames{it}};
                     S.inst      = 0;
-                    S.instOrder = 0;
                     S.time      = onset;
                     T  = addstruct(T, S);
                     
@@ -285,7 +283,8 @@ switch(what)
             
             spm_rwls_run_fmri_spec(J);
             
-            save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T');
+            save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T'); % Phase out the use of MAT files - prefer tsv files for Python-compatibility
+            dsave(fullfile(J.dir{1},'SPM_info.tsv'),T);
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
         
@@ -461,9 +460,7 @@ switch(what)
         end;
         spm_rwls_resstats(SPM,[],movparam_name);
         keyboard;
-        
   
-    
     case 'test_GLM' 
         % Get crossval R2 and R from GLM for different designs
         % As an evaluation, it uses only the differences between the
