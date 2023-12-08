@@ -565,6 +565,7 @@ switch(what)
             
             for i=1:length(D.run)
                 Vbeta(i) = spm_vol(fullfile(glmDirSubj,sprintf('beta_%04d.nii',i)));
+                vname{i} = sprintf('%03d_run-%02d-cond%s',i,D.run(i),D.taskName{i});
             end;
             Vbeta(i+1) = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
             
@@ -572,8 +573,8 @@ switch(what)
             for r = 1:length(R)
                 Y = region_getdata(Vbeta,R{r});  % Data is N x P
                 Y = Y(1:end-1,:)./sqrt(Y(end,:));        % Prewhiten beta estimates 
-                C = region_make_cifti(R(r),Vbeta(1),'data',{Y},'struct',{'OTHER'},'dtype','scalars');
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_beta_glm%d_%s.mat',subj_name{s},glm,R{r}.name)));
+                C = region_make_cifti(R(r),Vbeta(1),'data',{Y'},'struct',{'OTHER'},'dtype','scalars','dnames',vname);
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_beta_glm%d_%s.dscalar.nii',subj_name{s},glm,R{r}.name)));
                 cifti_write(C,filename); 
             end
         end
