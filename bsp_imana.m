@@ -473,7 +473,23 @@ switch(what)
             end
         end
         
-        
+    case 'ROI:data_subj_to_group'
+        sn=varargin{1}; % subjNums 
+        dname=varargin{2}; % Name of data file 
+        reg_name = 'regions.mat';  % Name of regions
+        vol = spm_vol(fullfile(baseDir,regDir,'regdef','group','dentate_mask.nii')); % Space defining image
+        for s=sn,
+            load(fullfile(baseDir,regDir,'regdef',subj_name{s},reg_name));
+            % Load and transform the CIFTI files 
+            for r = 2:length(R)
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_%s_%s.dscalar.nii',subj_name{s},dname,R{r}.name)));
+                C = cifti_read(filename);
+                Cnew = region_deform_cifti(R{r},C,'vol',vol); 
+                filename=(fullfile(baseDir,regDir,'data','group',sprintf('%s_%s_%s.dscalar.nii',dname,R{r}.name,subj_name{s})));
+                cifti_write(Cnew,filename); 
+            end
+        end
+
     case 'ROI:make_gmwm_mask'        % Create GM-WM exclusion mask for defining CSF 
         % example: bsp_imana('ROI:make_gmwm_mask',1)
         sn=varargin{1}; % subjNum
@@ -569,6 +585,7 @@ switch(what)
             cd ..
         end
     case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
+
         sn=8; 
         run = [1:16]; 
         stop = true; 
@@ -670,6 +687,8 @@ switch(what)
         end
 
         
+    otherwise
+        error('Unknown option: %s',what);
 
 end
         
