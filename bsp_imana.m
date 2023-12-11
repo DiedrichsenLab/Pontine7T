@@ -451,6 +451,7 @@ switch(what)
         glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
         
         for s=sn,
+            fprintf('SN: %d\n',s);
             glmDirSubj=fullfile(glmDir, subj_name{s});
             D=dload(fullfile(glmDirSubj,'SPM_info.tsv'));     
             % load 
@@ -479,9 +480,10 @@ switch(what)
         reg_name = 'regions.mat';  % Name of regions
         vol = spm_vol(fullfile(baseDir,regDir,'regdef','group','dentate_mask.nii')); % Space defining image
         for s=sn,
+            fprintf('SN: %d\n',s);
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},reg_name));
             % Load and transform the CIFTI files 
-            for r = 2:length(R)
+            for r = 1:length(R)
                 filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_%s_%s.dscalar.nii',subj_name{s},dname,R{r}.name)));
                 C = cifti_read(filename);
                 Cnew = region_deform_cifti(R{r},C,'vol',vol); 
