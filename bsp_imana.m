@@ -231,7 +231,7 @@ switch(what)
         job.subjND.white      = {'c_anatomical_seg2.nii'};
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
         suit_normalize_dartel(job);
-     case 'SUIT:save_dartel_def'    
+    case 'SUIT:save_dartel_def'    
         % Saves the dartel flow field as a deformation file. 
         for sn = [1:length(subj_name)]
             cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
@@ -293,9 +293,7 @@ switch(what)
         % FreeSurfer cortical reconstruction process
         % Example usage: bsp_imana('SURF:reconall')
         
-        subj_id = [98, 97, 96, 95, 1, 3, 4, 7];
-        sn   = subj_id; % subject list
-        
+        sn   = good_subj; % subject list
         vararginoptions(varargin, {'sn'});
         
         % check if freesurfer directory already exists
@@ -304,15 +302,13 @@ switch(what)
         
         for s = sn
             % get the subject id folder name
-            subj_name = sprintf('S%02d', s);
-            freesurfer_reconall(fullfile(baseDir, freesurferDir), subj_name, ...
+            freesurfer_reconall(fullfile(baseDir, freesurferDir), subj_name{s}, ...
                                     fullfile(baseDir, anatomicalDir, subj_name, 'anatomical.nii'));
         end % s (sn)
     case 'SURF:fs2wb'          % Resampling subject from freesurfer fsaverage to fs_LR
         % Example usage: bsp_imana('SURF:fs2wb', 'sn', 95, 'res', 32)
         
-        subj_id = [98, 97, 96, 95, 1, 3, 4, 7];
-        sn   = subj_id; % list of subjects
+        sn   = good_subj; % subject list
         res  = 32;          % resolution of the atlas. options are: 32, 164
         hemi = [1, 2];      % list of hemispheres
         
@@ -325,9 +321,8 @@ switch(what)
         
         for s = sn 
             % get the subject id folder name
-            subj_nam = sprintf('S%02d', s);
             outDir   = fullfile(baseDir, 'surfaceWB', 'data'); dircheck(outDir);
-            surf_resliceFS2WB(subj_nam, fullfile(baseDir, freesurferDir), outDir, 'hemisphere', hemi, 'resolution', sprintf('%dk', res))
+            surf_resliceFS2WB(subj_name{s}, fullfile(baseDir, freesurferDir), outDir, 'hemisphere', hemi, 'resolution', sprintf('%dk', res))
         end % s (sn)    
     
     case 'ROI:group_define'         % Defines the group regions from the group-space images
