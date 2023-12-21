@@ -306,7 +306,7 @@ switch(what)
                                     fullfile(baseDir, anatomicalDir, subj_name, 'anatomical.nii'));
         end % s (sn)
     case 'SURF:fs2wb'          % Resampling subject from freesurfer fsaverage to fs_LR
-        % Example usage: bsp_imana('SURF:fs2wb', 'sn', 95, 'res', 32)
+        % Example usage: bsp_imana('SURF:fs2wb', 'sn', 2 , 'res', 32)
         
         sn   = good_subj; % subject list
         res  = 32;          % resolution of the atlas. options are: 32, 164
