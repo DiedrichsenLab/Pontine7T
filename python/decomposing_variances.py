@@ -17,9 +17,10 @@ data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInteres
 
 # Fix it with participant ids from Participant.tsv  
 def get_data(structure='dentate'):
+    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_no_s99.tsv', sep='\t')
     A = []
-    for i in range(3,5):
-        file_path = f'{data_dir}/beta_glm2_{structure}_S0{i}.dscalar.nii'
+    for i in T.participant_id:
+        file_path = f'{data_dir}/beta_glm2_{structure}_{i}.dscalar.nii'
         cifti = nibabel.load(file_path)
         A.append(cifti.get_fdata())
     to_tensor = numpy.array(A)
@@ -72,14 +73,10 @@ if __name__=='__main__':
 
     tensor_4d = flat2ndarray(flat_data, cond_vec, part_vec)
 
-   # print("last datapoint; subject 2, condition 10, repetition 16, voxel 2384:", tensor_4d[1][9][15][2384])
-    #print("first datapoint; subject 1, condition 1, repetition 1, voxel 1:", tensor_4d[0][0][0][0])
-
     tensor_no_nans = numpy.nan_to_num(tensor_4d)
 
 
     variances = decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='global')
-    print("variances:", variances)
+    print("global variances:", variances)
 
     print("done")
-
