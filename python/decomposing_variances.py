@@ -6,8 +6,8 @@ import site
 import itertools 
 
 # Try to deal with the path in you .zprofile
-# path_to_func_fusion = '/Users/incehusain/Documents/GitHub/Functional_Fusion'
-# site.addsitedir(path_to_func_fusion)
+path_to_func_fusion = '/Users/incehusain/Documents/GitHub/Functional_Fusion'
+site.addsitedir(path_to_func_fusion)
 
 from Functional_Fusion.dataset import decompose_pattern_into_group_indiv_noise
 
@@ -70,28 +70,16 @@ if __name__=='__main__':
 
     part_vec = numpy.repeat(numpy.arange(1,17), 10)
 
-    result = flat2ndarray(flat_data, cond_vec, part_vec)
-    print("result subject x condition x repetition x voxel:", result)
+    tensor_4d = flat2ndarray(flat_data, cond_vec, part_vec)
 
-    print("last datapoint; subject 2, condition 10, repetition 16, voxel 2384:", result[1][9][15][2384])
-    print("first datapoint; subject 1, condition 1, repetition 1, voxel 1:", result[0][0][0][0])
+   # print("last datapoint; subject 2, condition 10, repetition 16, voxel 2384:", tensor_4d[1][9][15][2384])
+    #print("first datapoint; subject 1, condition 1, repetition 1, voxel 1:", tensor_4d[0][0][0][0])
 
-    # Insert nan_to_num to deal with nans
-    
+    tensor_no_nans = numpy.nan_to_num(tensor_4d)
 
 
-    variances = decompose_pattern_into_group_indiv_noise(result, criterion='voxel_wise')
+    variances = decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='global')
     print("variances:", variances)
+
     print("done")
 
-    #there's an issue with the variance values: negative vg..
-    #per condition and global won't compute (give nans as results)
-    #the result data has nans in it: numpy.sum(numpy.isnan(result)) gives 1760/ 763200
-
-    #variances output: [[ 0.02958448  0.64412128  0.32629424]
-    #[ 0.02958448  0.64412128  0.32629424]
-    #[-0.35018488  1.06883218  0.2813527 ]
-    #...
-    #[-0.204988    0.96801703  0.23697097]
-    #[-0.05747924  0.74717134  0.31030791]
-    #[ 0.18197334  0.55447471  0.26355195]]
