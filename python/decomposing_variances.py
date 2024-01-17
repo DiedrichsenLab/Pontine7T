@@ -81,3 +81,11 @@ print("done")
 #there's an issue with the variance values: negative vg..
 #per condition and global won't compute (give nans as results)
 #the result data has nans in it: numpy.sum(numpy.isnan(result)) gives 1760/ 763200
+
+#variances output: [[ 0.02958448  0.64412128  0.32629424]
+ #[ 0.02958448  0.64412128  0.32629424]
+ #[-0.35018488  1.06883218  0.2813527 ]
+ #...
+ #[-0.204988    0.96801703  0.23697097]
+ #[-0.05747924  0.74717134  0.31030791]
+ #[ 0.18197334  0.55447471  0.26355195]]
