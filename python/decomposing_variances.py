@@ -77,3 +77,7 @@ print("first datapoint; subject 1, condition 1, repetition 1, voxel 1:", result[
 variances = decompose_pattern_into_group_indiv_noise(result, criterion='voxel_wise')
 print("variances:", variances)
 print("done")
+
+#there's an issue with the variance values: negative vg..
+#vs and ve won't compute (give nans as results)
+#the result data has nans in it: numpy.sum(numpy.isnan(result)) gives 1760/ 763200
