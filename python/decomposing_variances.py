@@ -7,7 +7,8 @@ data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInteres
  
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 
-def get_data(structure='pontine'):
+#
+def get_data(structure='dentate'):
     T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_no_s99.tsv', sep='\t')
     A = []
     for i in T.participant_id:
@@ -44,7 +45,7 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
     for c,condI in enumerate(unique_conditions):
         for p,partI in enumerate(unique_partitions):
             trial_inds = numpy.where(numpy.logical_and(cond_vec == condI, part_vec == partI))
-            data[:, c, p, :] = numpy.nanmean(flat_data[:, trial_inds, :], axis=1).squeeze()
+            data[:, c, p, :] = flat_data[:, trial_inds, :].squeeze()
             
     return data
 
@@ -59,8 +60,12 @@ if __name__=='__main__':
 
     tensor_no_nans = numpy.nan_to_num(tensor_4d)
 
+    tensor_avg_cond = tensor_no_nans.mean(axis=1, keepdims=1)
 
-    variances = decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='global')
+    tensor_subtract = tensor_no_nans - tensor_avg_cond
+
+    variances = decompose_pattern_into_group_indiv_noise(tensor_subtract, criterion='global')
     print("global variances:", variances)
+    
 
     print("done")
