@@ -2,6 +2,8 @@ import nibabel
 import numpy 
 import pandas 
 from Functional_Fusion.dataset import decompose_pattern_into_group_indiv_noise
+from Functional_Fusion.dataset import DataSetPontine
+from pathlib import Path
 
 data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest/data/group'
  
@@ -64,3 +66,13 @@ if __name__=='__main__':
     print("global variances:", variances)
 
     print("done")
+
+
+    base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
+    if not Path(base_dir).exists():
+        base_dir = '/srv/diedrichsen/data/FunctionalFusion'
+
+    data_dir = base_dir + '/Pontine'
+    p7_dataset = DataSetPontine(data_dir)
+    T = p7_dataset.get_participants()
+    info = p7_dataset.get_info(type='CondRun')
