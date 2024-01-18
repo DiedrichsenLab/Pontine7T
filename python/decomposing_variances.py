@@ -1,22 +1,13 @@
 import nibabel
 import numpy 
 import pandas 
-import sys
-import site 
-import itertools 
-
-# Try to deal with the path in you .zprofile
-path_to_func_fusion = '/Users/incehusain/Documents/GitHub/Functional_Fusion'
-site.addsitedir(path_to_func_fusion)
-
 from Functional_Fusion.dataset import decompose_pattern_into_group_indiv_noise
 
-#appending 2 files: 160 conditions, 2385 voxels each; and converting to tensor of form S x N x P
-
 data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest/data/group'
+ 
+ #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 
-# Fix it with participant ids from Participant.tsv  
-def get_data(structure='dentate'):
+def get_data(structure='pontine'):
     T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_no_s99.tsv', sep='\t')
     A = []
     for i in T.participant_id:
@@ -24,13 +15,6 @@ def get_data(structure='dentate'):
         cifti = nibabel.load(file_path)
         A.append(cifti.get_fdata())
     to_tensor = numpy.array(A)
-    print("tensor:", A)
-    print("shape of tensor:", to_tensor.shape)
-    print("number of dimensions:", numpy.ndim(A))
-    print('number of voxels:', len(A[0][0]))
-    print('number of conditions:', len(A[0]))
-    print('subject 2, condition 2, voxel 3:', A[1][1][2])
-    print('subject 1, condition 1, voxel 1:', A[0][0][0])
     return to_tensor
 
 def flat2ndarray(flat_data, cond_vec, part_vec):
