@@ -8,7 +8,7 @@ data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInteres
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 
 #
-def get_structure_data(structure='dentate'):
+def get_structure_data(structure='cerebellum_gray'):
     T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_no_s99.tsv', sep='\t')
     A = []
     for i in T.participant_id:
@@ -40,12 +40,12 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
     n_conditions = unique_conditions.size
     n_partitions = unique_partitions.size
    
-    data = numpy.zeros((n_subjects, n_conditions, n_partitions, n_voxels))
+    data = numpy.zeros((n_subjects, n_partitions, n_conditions, n_voxels))
 
-    for c,condI in enumerate(unique_conditions):
-        for p,partI in enumerate(unique_partitions):
+    for p,partI in enumerate(unique_partitions):
+        for c,condI in enumerate(unique_conditions):
             trial_inds = numpy.where(numpy.logical_and(cond_vec == condI, part_vec == partI))
-            data[:, c, p, :] = flat_data[:, trial_inds, :].squeeze()
+            data[:, p, c, :] = flat_data[:, trial_inds, :].squeeze()
             
     return data
 
@@ -64,7 +64,7 @@ if __name__=='__main__':
 
     tensor_subtract = tensor_no_nans - tensor_avg_cond
 
-    variances = decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='global')
+    variances = decompose_pattern_into_group_indiv_noise(tensor_subtract, criterion='global')
     print("global variances:", variances)
 
     #locating voxels with missing data
@@ -76,6 +76,6 @@ if __name__=='__main__':
             missing = i
             missing_data.append(missing)
 
-    print(missing_data)
+   # print(missing_data)
 
     print("done")
