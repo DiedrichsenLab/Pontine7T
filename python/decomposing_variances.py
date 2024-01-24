@@ -1,6 +1,8 @@
 import nibabel
 import numpy 
 import pandas 
+import seaborn as sns
+import matplotlib.pyplot as plt
 from Functional_Fusion.dataset import decompose_pattern_into_group_indiv_noise
 
 data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest/data/group'
@@ -8,7 +10,7 @@ data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInteres
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 
 #
-def get_structure_data(structure='cerebellum_gray'):
+def get_structure_data(structure='dentate'):
     T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_no_s99.tsv', sep='\t')
     A = []
     for i in T.participant_id:
@@ -64,8 +66,12 @@ if __name__=='__main__':
 
     tensor_subtract = tensor_no_nans - tensor_avg_cond
 
-    variances = decompose_pattern_into_group_indiv_noise(tensor_subtract, criterion='global')
+    variances = decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='global')
     print("global variances:", variances)
+    selected_column = variances[0] 
+    sns.lineplot(x=range(1, 4), y=selected_column)
+
+    plt.show()
 
     #locating voxels with missing data
 
