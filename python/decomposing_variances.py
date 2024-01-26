@@ -10,7 +10,7 @@ data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInteres
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 
 #
-def get_structure_data(structure='dentate'):
+def get_structure_data(structure='rednucleus'):
     T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_no_s99.tsv', sep='\t')
     A = []
     for i in T.participant_id:
@@ -63,15 +63,43 @@ if __name__=='__main__':
     tensor_no_nans = numpy.nan_to_num(tensor_4d)
 
     tensor_avg_cond = tensor_no_nans.mean(axis=1, keepdims=1)
+    
+    condition_labels = numpy.array(["Instr", "Vis_Search", "Act_Obs", "Flex_Ext", "Finger_Seq", "Theory_of_Mind", "N_back", "Sem_Pred", "Rest", "Rom_Movie"])
+    data_to_plot = tensor_avg_cond[5,0,:]
 
-    tensor_subtract = tensor_no_nans - tensor_avg_cond
+    df = pandas.DataFrame(data_to_plot.T, columns=condition_labels)
+    sns.stripplot(data=df, palette="viridis", s=5)
 
-    variances = decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='global')
-    print("global variances:", variances)
-    selected_column = variances[0] 
-    sns.lineplot(x=range(1, 4), y=selected_column)
+    plt.xlabel("Condition")
+    plt.ylabel("Mean voxel data across 16 runs (betas)")
+    plt.title("Subject 3 - red nucleus")
 
     plt.show()
+
+    #tensor_std_cond = numpy.std(tensor_no_nans, axis=1, keepdims=1)
+
+    #tensor_subtract = tensor_no_nans - tensor_avg_cond
+
+    #first_8_runs = tensor_no_nans[:, :8, :, :]
+   # last_8_runs = tensor_no_nans[:, -8:, :, :]
+    
+    #mean_first_8_r = numpy.mean(first_8_runs, axis = 1)
+    #mean_last_8_r = numpy.mean(last_8_runs, axis = 1)
+
+    #tensor_avg_8_runs = numpy.stack([mean_first_8_r, mean_last_8_r], axis=1)
+
+    tensor_no_inst = numpy.delete(tensor_no_nans, 0, axis=2)
+
+    variances= decompose_pattern_into_group_indiv_noise(tensor_avg_cond, criterion='global')
+    #variances_r= decompose_pattern_into_group_indiv_noise(tensor_no_inst, criterion='global')
+    #var_diff = variances - variances_r
+
+    print("global variances:", variances)
+    
+   # selected_column = variances[0] 
+    #sns.barplot(x=range(1, 4), y=selected_column)
+
+    #plt.show()
 
     #locating voxels with missing data
 
