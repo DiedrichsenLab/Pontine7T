@@ -62,55 +62,7 @@ if __name__=='__main__':
 
     tensor_no_nans = numpy.nan_to_num(tensor_4d)
 
-    #TO PLOT MEANS ACROSS RUNS FOR EACH CONDITION (390 data points per condition)
-
-    tensor_avg_cond = tensor_no_nans.mean(axis=1, keepdims=True)
-
-    tensor_subtract = tensor_no_nans - tensor_avg_cond
-    
-    #condition_labels = numpy.array(["Instr", "Vis_Search", "Act_Obs", "Flex_Ext", "Finger_Seq", "Theory_of_Mind", "N_back", "Sem_Pred", "Rest", "Rom_Movie"])
-    run_labels = numpy.array(["Run 1", "Run 2", "Run 3", "Run 4", "Run 5", "Run 6", "Run 7", "Run 8", "Run 9", "Run 10", "Run 11", "Run 12", "Run 13", "Run 14", "Run 15", "Run 16"])
-    data_to_plot = tensor_subtract[0,:,0,0]
-
-    #df = pandas.DataFrame(data_to_plot.T, columns=run_labels)
-    df = pandas.DataFrame({'Run': run_labels, 'Data': data_to_plot})
-    #sns.stripplot(data=df, palette="viridis", s=5)
-    
-    sns.lineplot(x='Run', y='Data', data=df, s=5)
-    plt.xlabel("Run")
-    plt.ylabel("Mean voxel data across 16 runs (betas)")
-    plt.title("Red nucleus: Subject 98, Instruction, voxel [0]")
-
-    plt.show()
-
-    
-    #TO PLOT MEANS OF ALL VOXELS IN EACH CONDITION (8 data points per condition)
-
-    #tensor_avg_cond = tensor_no_nans.mean(axis=2, keepdims=True)
-
-    #remove keepdims=True in order to plot
-
-    #condition_labels = numpy.array(["Instr", "Vis_Search", "Act_Obs", "Flex_Ext", "Finger_Seq", "Theory_of_Mind", "N_back", "Sem_Pred", "Rest", "Rom_Movie"])
-    #subject_labels = numpy.array(['S_98', 'S_97', 'S_96', 'S_95', 'S_1', 'S_3', 'S_4', 'S_7'])
-    
-    #mean_data_per_subject = numpy.mean(tensor_avg_cond, axis=2)
-    #data_to_plot = tensor_avg_cond[2,0,:]
-
-    #df = pandas.DataFrame(mean_data_per_subject) 
-    #df.columns = condition_labels
-
-    #df['Subject'] = numpy.repeat(subject_labels, df.shape[0] // len(subject_labels))[:df.shape[0]]
-
-    
-    #sns.stripplot(x='variable', y='value', hue='Subject', data=df.melt(id_vars='Subject'), palette='viridis', size=5)
-
-    #plt.xlabel("Condition")
-    #plt.ylabel("Mean of all voxels across condition (betas)")
-    #plt.title("Mean of all voxels across condition for 8 subjects - cerebellum")
-
-    #plt.show()
-
-    #tensor_std_cond = numpy.std(tensor_no_nans, axis=1, keepdims=1)
+    tensor_std_cond = numpy.std(tensor_no_nans, axis=1, keepdims=1)
 
     #tensor_subtract = tensor_no_nans - tensor_avg_cond
 
