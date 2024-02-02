@@ -10,7 +10,7 @@ data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInteres
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 
 #
-def get_structure_data(structure='rednucleus'):
+def get_structure_data(structure='fhgkhkgk'):
     T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_no_s99.tsv', sep='\t')
     A = []
     for i in T.participant_id:
@@ -64,8 +64,6 @@ if __name__=='__main__':
 
     tensor_std_cond = numpy.std(tensor_no_nans, axis=1, keepdims=1)
 
-    tensor_subtract = tensor_no_nans - tensor_avg_cond
-
     #first_8_runs = tensor_no_nans[:, :8, :, :]
    # last_8_runs = tensor_no_nans[:, -8:, :, :]
     
@@ -76,7 +74,7 @@ if __name__=='__main__':
 
     #tensor_no_inst = numpy.delete(tensor_no_nans, 0, axis=2)
 
-    variances= decompose_pattern_into_group_indiv_noise(tensor_avg_cond, criterion='global')
+    variances= decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='global')
     #variances_r= decompose_pattern_into_group_indiv_noise(tensor_no_inst, criterion='global')
     #var_diff = variances - variances_r
 
