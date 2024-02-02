@@ -67,7 +67,7 @@ if __name__=='__main__':
     #first_8_runs = tensor_no_nans[:, :8, :, :]
    # last_8_runs = tensor_no_nans[:, -8:, :, :]
     
-    #mean_first_8_r = numpy.mean(first_8_runs, axis = 1)
+    #mean_first_8_r = numpy.mean(first_8_runs, axis = 1) 
     #mean_last_8_r = numpy.mean(last_8_runs, axis = 1)
 
     #tensor_avg_8_runs = numpy.stack([mean_first_8_r, mean_last_8_r], axis=1)
