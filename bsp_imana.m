@@ -17,6 +17,13 @@ suitDir         ='suit';
 regDir          ='RegionOfInterest';
 fmapDir         ='fieldmaps';
 
+loc_AC = [
+    0, 0, 0;   
+    0, 0, 0;   % IH: put this here to run centering code 
+    0, 0, 0   
+];
+
+
 % Load Participant information (make sure you have Dataframe/util in your
 % path
 pinfo = dload(fullfile(baseDir,'participants.tsv')); 
@@ -63,7 +70,7 @@ switch(what)
             V               = spm_vol(img);
             dat             = spm_read_vols(V);
             oldOrig         = V.mat(1:3,4);
-            V.mat(1:3,4)    = oldOrig-loc_AC{s};
+            V.mat(1:3,4)    = oldOrig-loc_AC(s); %IH: changed {s} to (s) in order to get this to run 
             spm_write_vol(V,dat);
             fprintf('Done for %s \n',subj_name{s})
         end
@@ -124,8 +131,8 @@ switch(what)
             funScans = dir('*-r.nii');
             for i=1:length(funScans)  
                 outfilename = sprintf('run_%2.2d.nii',i);
-                mkdir temp;
-                spm_file_split(funScans(i).name,'temp');
+                %mkdir temp;
+               % spm_file_split(funScans(i).name,'temp');
                 cd temp;
                 list = dir('run*.nii');
                 list = list(numDummys+1:end);  % Remove dummies
@@ -192,7 +199,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rmeanrun_%2.2d.nii',runnum)));
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rmeanrun_08.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -233,7 +240,7 @@ switch(what)
         suit_normalize_dartel(job);
     case 'SUIT:save_dartel_def'    
         % Saves the dartel flow field as a deformation file. 
-        for sn = [1:length(subj_name)]
+        for sn = [2:3] %IH: original was for sn = [1:length(subj_name)]
             cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
             anat_name = 'anatomical';
             suit_save_darteldef(anat_name);
@@ -266,8 +273,8 @@ switch(what)
                     sourceDir = suitSubjDir; 
                     source = fullfile(sourceDir,'anatomical.nii'); 
                     job.subj.resample = {source};
-%                     outDir = suitSubjDir; 
-                    outDir = baseDir;
+                    outDir = suitSubjDir; 
+                    %outDir = baseDir;
                     job.vox           = [1 1 1];
                 case 'TSE'
                     sourceDir = fullfile(baseDir,'anatomicals',subj_name{s}); 
@@ -295,7 +302,7 @@ switch(what)
         
         sn   = good_subj; % subject list
         vararginoptions(varargin, {'sn'});
-        
+           
         % check if freesurfer directory already exists
         freesurferDir   ='/surfaceFreesurfer';
         dircheck(fullfile(baseDir, freesurferDir));
@@ -339,10 +346,23 @@ switch(what)
         end
         R=region_calcregions(R);     % Calculate the ROI coordinates             
         save(fullfile(regGroupDir,outfilename),'R');
-    case 'ROI:group_define_csf'         % Defines the group regions from the group-space images
+
+    case 'ROI:group_define_csf' 
+        regCsfDir = fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'csf_separate_masks');
         regions={'csf_','csf_'};
         outfilename = 'regions_csf.mat'; 
-        bsp_imana('ROI:group_define','regions',regions,'outfilename',outfilename); 
+        vararginoptions(varargin,{'regions', 'outfilename'});
+        for r = 1:length(regions)
+            file = fullfile(regCsfDir, sprintf('%s_mask.nii', regions{r}));
+            R{r}.type = 'csf_image';
+            R{r}.file = file;
+            R{r}.name = regions{r};
+            R{r}.value = 1;
+        end 
+        R=region_calcregions(R);
+        save(fullfile(regCsfDir, outfilename), 'R')  %IH: edited this to make it run; not sure if the output is correct (contains no data)
+        
+      %  bsp_imana('ROI:group_define','regions',regions,'outfilename',outfilename); 
    
     case 'ROI:group_exclude'        % OPTIONAL: Checks for overlapping voxels in group space 
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
@@ -366,9 +386,9 @@ switch(what)
             data{r}=ones(size(R{r}.data,1),1)*r; 
         end; 
         dname = {'roi_label'}; 
-        V=spm_vol(fullfile(baseDir,'RegionOfInterest','data','group','SUIT.nii')); % space defining image
+        V=spm_vol(fullfile(baseDir,'RegionOfInterest','regdef','group','SUIT.nii')); % space defining image
         C=region_make_cifti(R,V,'data',data,'dtype','scalars');
-        cifti_write(C,'regions.dscalar.nii'); 
+        cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
     case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
         sn = good_subj;
         vararginoptions(varargin,{'sn'}); 
@@ -383,7 +403,7 @@ switch(what)
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
         sn = good_subj; 
         saveasimg = 0; 
-        region_file = 'regions.mat';   % File with group ROI definitionss 
+        region_file = 'regions.mat';   % File with group ROI definitions 
         def_dir = 'suit/anatomicals';  % This is where the deformation can be found 
         def_img = 'c_anatomical_seg1';  
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
@@ -397,7 +417,7 @@ switch(what)
             Vmask = spm_vol(mask); 
             Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
             mat = fullfile(baseDir,def_dir,subj_name{s},['Affine_' def_img '.mat']);
-            R=region_deformation(groupR.R,{Def,mat},'mask',mask);
+            R=region_deformation(groupR.R,{Def,mat},'mask', mask);
             outdir = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s});
             save(fullfile(outdir,[region_file]),'R'); 
             % For testing purposes, we can also save these ROIs as images 
@@ -421,7 +441,7 @@ switch(what)
             load(fullfile(glmDirSubj,'SPM.mat'));
             
             % load data
-            load(fullfile(baseDir,regDir,'regdef',subj_name{s},sprintf('regions.mat')));
+            R = load(fullfile(baseDir,regDir,'regdef',subj_name{s},sprintf('regions.mat')), 'R');
             
             % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
             
@@ -431,7 +451,7 @@ switch(what)
             
             % Get time series data
             for r = 1:length(R)
-                Y = region_getdata(V,R{r});  % Data is N x P
+                Y = region_getdata(V,R(r));  % Data is N x P
                 resMS = region_getdata(VresMS,R{r});
                 filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
                 save(filename,'Y','resMS','-v7.3');
@@ -531,14 +551,16 @@ switch(what)
     case 'ROI:mask_rois'        % Mask CSF rois with subject-specific GM-WM exclusion mask
         % example: bsp_imana('ROI:mask_rois',1)
         sn=varargin{1}; % subjNum
-        images = {'csfgalenic','csfmedulla','csfmidbrain','csfpons','csfpostdrain','transverseL','transverseR','ventricle4'};
+        images = {'csf_galenic','csf_medulla','csf_midbrain','csf_pons','csf_postdrain','csf_transverseL','csf_transverseR','csf_ventricle4'};
         
         
         
         for s=sn
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
+            regCsfDir = fullfile(baseDir,'RegionOfInterest', 'regdef', 'group', 'csf_separate_masks');
+            regSubjDir = fullfile(baseDir, 'RegionOfInterest', 'data', subj_name{s});
+
             for im=1:length(images)
-                J.input = {fullfile(regSubjDir,sprintf('mask_%s.nii',images{im}))
+                J.input = {fullfile(regCsfDir,sprintf('%s_mask.nii',images{im}))
                            fullfile(baseDir,anatomicalDir,subj_name{s},'rgm_wm_exclusion_mask.nii')};
                 J.output = fullfile(regSubjDir,sprintf('mask_%s.nii',images{im}));
                 J.outdir = {fullfile(regSubjDir)};
@@ -554,7 +576,7 @@ switch(what)
             fprintf('csf ROIs masked for %s \n',subj_name{s})
         end    
         
-    case 'ROI:cerebellar_gray' 
+    case 'ROI:cerebellar_gray'  %IH: I might remove this (it's mask is worse than that created in ROI: deformation) 
         sn=varargin{1};
         for s = sn 
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
