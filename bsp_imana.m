@@ -446,12 +446,12 @@ switch(what)
             % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Get the raw data files
-            V=SPM.xY.VY;
+            V=SPM.xY.VY; %originally: SPM.xY.VY; IH
             VresMS = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
             
             % Get time series data
             for r = 1:length(R)
-                Y = region_getdata(V,R(r));  % Data is N x P
+                Y = region_getdata(V,R.R{1,r});  % Data is N x P; IH: initially was R(r). What needs to be read is regions{1,1}.R{1,4}.name
                 resMS = region_getdata(VresMS,R{r});
                 filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
                 save(filename,'Y','resMS','-v7.3');
@@ -468,7 +468,7 @@ switch(what)
         for s=sn,
             fprintf('SN: %d\n',s);
             glmDirSubj=fullfile(glmDir, subj_name{s});
-            D=dload(fullfile(glmDirSubj,'SPM_info.tsv'));     
+            D=load(fullfile(glmDirSubj,'SPM_info.mat'));     %IH: changes SPM_info.tsv to .mat
             % load 
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},'regions.mat'));
             
@@ -491,7 +491,7 @@ switch(what)
         
     case 'ROI:data_subj_to_group'
         sn=varargin{1}; % subjNums 
-        dname=varargin{2}; % Name of data file 
+        dname=varargin{2}; % Name of data file ('beta_glm1', 'beta_glm2')
         reg_name = 'regions.mat';  % Name of regions
         vol = spm_vol(fullfile(baseDir,regDir,'regdef','group','dentate_mask.nii')); % Space defining image
         for s=sn,
