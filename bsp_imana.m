@@ -172,7 +172,7 @@ switch(what)
             
             data = {};
                 % initialize data cell array which will contain file names for runs/TR images
-                %func_ses_subj_dir = fullfile(imagingDir ,subj_name{s})
+               % func_ses_subj_dir = fullfile(imagingDir ,subj_name{s})
 
                                 
                 for r_cell = run(1:min(numel(run),8))
