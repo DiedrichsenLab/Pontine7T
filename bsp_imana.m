@@ -16,6 +16,7 @@ anatomicalDir   ='anatomicals';
 suitDir         ='suit';
 regDir          ='RegionOfInterest';
 fmapDir         ='fieldmaps';
+bidsDir         ='BIDS';
 
 loc_AC = [
     0, 0, 0;   
@@ -43,9 +44,9 @@ switch(what)
     case 'ANAT:reslice_LPI'           % Reslice anatomical image within LPI coordinate systems  
         % example: bsp_imana('ANAT:reslice_LPI',1)
         sn  = varargin{1}; % subjNum 
-        for s=sn,
+        for s=sn
             % (1) Reslice anatomical image to set it within LPI co-ordinate frames
-            source  = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical_raw.nii');
+            source  = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical_raw.nii'); %originally: baseDir, anatomicalDir, subj_name{s}, 'anatomial.nii'
             dest    = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii');
             spmj_reslice_LPI(source,'name', dest);
             
@@ -54,25 +55,40 @@ switch(what)
             dat             = spm_read_vols(V);
             V.mat(1:3,4)    = [0 0 0];
             spm_write_vol(V,dat);
-            disp 'Manually retrieve the location of the anterior commissure (x,y,z) before continuing'
+            disp 'Manually retrieve the location of the anterior commissure (x,y,z) from anatomical.nii before continuing'
         end
+
     case 'ANAT:center_AC'             % Re-centre AC
-        % Before running provide coordinates in the preprocessing section
-        % 1. Use SPM Display to locate anterior commissure
-        % 2. Enter coordinates to the loc_AC varible in
-        %       PRE-PROCESSING section at top of this file
-        % 3. AC coordinate sets should be listed in the same order
-        %       as subjects in subj_name.
-        % example: bsp_imana('ANAT:center_AC',1)
-        sn=varargin{1}; % subjNum
+        % Description:
+        % Recenters the anatomical data to the Anterior Commissure
+        % coordiantes. Doing that, the [0,0,0] coordiante of subject's
+        % anatomical image will be the Anterior Commissure.
+
+        % You should manually find the voxel coordinates of AC 
+        % for each from their anatomical scans and add it to the
+        % participants.tsv file under the loc_ACx loc_ACy loc_ACz columns.
+
+        % This function runs for all subjects and sessions.
+
+        % handling input args:
+        sn = varargin{1};
         for s=sn
-            img    = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii');
-            V               = spm_vol(img);
-            dat             = spm_read_vols(V);
-            oldOrig         = V.mat(1:3,4);
-            V.mat(1:3,4)    = oldOrig-loc_AC(s); %IH: changed {s} to (s) in order to get this to run 
+        % path to the raw anatomical:
+            anat_file = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii');
+        
+            % Get header info for the image:
+            V = spm_vol(anat_file);
+            % Read the volume:
+            dat = spm_read_vols(V);
+        
+            % changing the transform matrix translations to put AC near [0,0,0]
+            % coordinates:
+            R = V.mat(1:3,1:3);
+            t = -1 * R * [pinfo.locACx(s),pinfo.locACy(s),pinfo.locACz(s)]';
+            V.mat(1:3,4) = t;
+
+            % writing the image with the changed header:
             spm_write_vol(V,dat);
-            fprintf('Done for %s \n',subj_name{s})
         end
         
     case 'ANAT:segmentation'          % Segmentation + Normalisation
@@ -144,25 +160,32 @@ switch(what)
                 fprintf('Run %d done for %s \n',i,subj_name{s});
             end;
         end
-    case 'FUNC:realign'               % Does motion realign functional images (both sessions)
-        % And reslices the data 
-        % SPM realigns all volumes to the first volume of first run
-        % example: bsp_imana('FUNC:realign',1,[1:16])
-        
-        sn=varargin{1}; %subjNum
-        runs=varargin{2}; % runNum
-        for s=sn
+
+    case 'FUNC:realign'      
+
+        % realign functional images
+        % SPM realigns all volumes to the mean volume of first run
+
+       sn=varargin{1}; % subjNum
+       for s = sn
+            spm_jobman('initcfg')
             
-            cd(fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n']));           
-            data={};
-            for i = 1:length(runs),
-                for j=1:numTRs-numDummys;
-                    data{i}{j,1}=sprintf('run_%2.2d.nii,%d',runs(i),j); % IF YOU USE j+numDummys here
-                end;
-            end;
+            data = {};
+                % initialize data cell array which will contain file names for runs/TR images
+                %func_ses_subj_dir = fullfile(imagingDir ,subj_name{s})
+
+                                
+                for r_cell = run(1:min(numel(run),8))
+                    current_run = str2double(r_cell{1});
+                    % Obtain the number of TRs for the current run
+                    for j = 1:numTRs - numDummys
+                        data{current_run}{j,1} = fullfile(sprintf('sub-%d_task-task_run-%02d_bold.nii', s-2, current_run));
+                    end % j (TRs/images)
+                end % r (runs)            
             spmj_realign(data);
-            fprintf('runs realigned for %s\n',subj_name{s});
-        end 
+            fprintf('- runs realigned for %s  ',subj_name{s});
+
+        end % s (sn)
 
     case 'FUNC:move_data'             % Move realigned data
         % Moves image data from imaging_data_raw into imaging_data.
@@ -218,7 +241,7 @@ switch(what)
         % example: 'bsp_imana('SUIT:isolate',1)'
         sn=varargin{1};
         %         spm fmri
-        for s=sn,
+        for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});dircheck(suitSubjDir);
             source=fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii');
             dest=fullfile(suitSubjDir,'anatomical.nii');
@@ -233,15 +256,16 @@ switch(what)
         sn=varargin{1}; %subjNum
         % example: 'bsp_imana('SUIT:normalise_dartel',1)'
         
-        cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
+        cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn},'mp2rage - T1w'));
         job.subjND.gray       = {'c_anatomical_seg1.nii'};
         job.subjND.white      = {'c_anatomical_seg2.nii'};
         job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
-        suit_normalize_dartel(job);
+        suit_normalize_dartel(job) 
+
     case 'SUIT:save_dartel_def'    
         % Saves the dartel flow field as a deformation file. 
-        for sn = [2:3] %IH: original was for sn = [1:length(subj_name)]
-            cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
+        for sn = 10 %IH: original was for sn = [1:length(subj_name)]
+            cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}, 'mp2rage - T1w'));
             anat_name = 'anatomical';
             suit_save_darteldef(anat_name);
         end; 
@@ -264,10 +288,10 @@ switch(what)
         image=varargin{2}; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
         
         for s=sn
-            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s}, 'mp2rage - T1w');             
             job.subj.affineTr = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
             job.subj.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
-            job.subj.mask     = {fullfile(suitSubjDir ,'c_anatomical_pcereb_corr.nii')};
+            job.subj.mask     = {fullfile(suitSubjDir ,'c_anatomical_pcereb.nii')};
             switch image
                 case 'anatomical'
                     sourceDir = suitSubjDir; 
@@ -283,7 +307,7 @@ switch(what)
                     outDir = suitSubjDir; 
                     job.vox           = [1 1 1];
                 case 'csf'
-                    sourceDir = fullfile(baseDir,'anatomicals',subj_name{s}); 
+                    sourceDir = fullfile(baseDir,'anatomicals', subj_name{s}, 'mp2rage - T1w'); 
                     source = fullfile(sourceDir,'c3anatomical.nii');
                     job.subj.resample = {source};
                     job.subj.mask     =  {}; 
@@ -389,6 +413,7 @@ switch(what)
         V=spm_vol(fullfile(baseDir,'RegionOfInterest','regdef','group','SUIT.nii')); % space defining image
         C=region_make_cifti(R,V,'data',data,'dtype','scalars');
         cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
+    
     case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
         sn = good_subj;
         vararginoptions(varargin,{'sn'}); 
@@ -400,6 +425,7 @@ switch(what)
             Vi(2)=spm_vol(pcorr); 
             spm_imcalc(Vi,outfile,'i1>0 & i2>0'); 
         end
+   
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
         sn = good_subj; 
         saveasimg = 0; 
