@@ -172,14 +172,14 @@ switch(what)
             
             data = {};
                 % initialize data cell array which will contain file names for runs/TR images
-               % func_ses_subj_dir = fullfile(imagingDir ,subj_name{s})
+               % func_ses_subj_dir = fullfile(imagingDirRaw ,subj_name{s})
 
                                 
                 for r_cell = run(1:min(numel(run),8))
                     current_run = str2double(r_cell{1});
                     % Obtain the number of TRs for the current run
-                    for j = 1:numTRs - numDummys
-                        data{current_run}{j,1} = fullfile(sprintf('sub-%d_task-task_run-%02d_bold.nii', s-2, current_run));
+                    for j = 1:numTRs
+                        data{current_run}{j,1} = fullfile(sprintf('sub-%d_task-task_run-%02d_bold.nii,%d', s-2, current_run, j));
                     end % j (TRs/images)
                 end % r (runs)            
             spmj_realign(data);
@@ -196,12 +196,12 @@ switch(what)
             dircheck(fullfile(baseDir,imagingDir,subj_name{s}))
             for r=1:length(runs);
                 % move realigned data for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rrun_%2.2d.nii',runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rsub-%d_task-task_run-%02d_bold.nii',s-2, runs(r)));
                 dest = fullfile(baseDir,imagingDir,subj_name{s},sprintf('run_%2.2d.nii',runs(r)));
                 copyfile(source,dest);
                 
                 % move realignment parameter files for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rp_run_%2.2d.txt',runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rp_sub-%d_task-task_run-%02d_bold.txt',s-2, runs(r)));
                 dest = fullfile(baseDir,imagingDir,subj_name{s},sprintf('rp_run_%2.2d.txt',runs(r)));
                 copyfile(source,dest);
             end;            
@@ -214,15 +214,15 @@ switch(what)
         % to rmeanepi of run 1 of session 1
         % example: bsp_imana('FUNC:make_samealign',1,8,[1:8])
         sn=varargin{1}; % subjNum
-        runnum=varargin{2}; % runNum used for coregistration
-        runs=varargin{3}; % runNum to coregister
+        %runnum=varargin{2}; % runNum used for coregistration
+        runs=varargin{2}; % runNum to coregister
         
         for s=sn
             
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rmeanrun_08.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('meansub-8_task-task_run-01_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -233,6 +233,29 @@ switch(what)
             % Run spmj_makesamealign_nifti
             spmj_makesamealign_nifti(char(P),char(Q));
             fprintf('functional images realigned for %s \n',subj_name{s})
+        end
+
+    case 'FUNC:coreg'                                                      
+        % coregister rbumean image to anatomical image for each session
+        
+        % handling input args:
+        sn=varargin{1}; % subjNum
+     
+        % loop on sessions:
+        for r_cell = run(1:min(numel(run),1))
+            mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},sprintf('meansub-8_task-task_run-01_bold.nii')));
+            J.source = {mean_file_name};
+            J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'mp2rage - T1w', 'anatomical.nii')}; 
+            J.other = {''};
+            J.eoptions.cost_fun = 'nmi';
+            J.eoptions.sep = [4 2];
+            J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+            J.eoptions.fwhm = [7 7];
+            matlabbatch{1}.spm.spatial.coreg.estimate=J;
+            spm_jobman('run',matlabbatch);
+            
+            % (3) Check alignment manually by using fsleyes similar to step
+            % one.
         end
    
     
