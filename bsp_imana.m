@@ -222,7 +222,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('meansub-8_task-task_run-01_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rmeansub-8_task-task_run-01_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -243,7 +243,7 @@ switch(what)
      
         % loop on sessions:
         for r_cell = run(1:min(numel(run),1))
-            mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},sprintf('meansub-8_task-task_run-01_bold.nii')));
+            mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},sprintf('rmeansub-8_task-task_run-01_bold.nii')));
             J.source = {mean_file_name};
             J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'mp2rage - T1w', 'anatomical.nii')}; 
             J.other = {''};

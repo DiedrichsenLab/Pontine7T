@@ -89,7 +89,7 @@ switch(what)
             for r=1:numel(runs) % loop through runs
                 P=getrow(A,A.run_num==runB(r));
                 for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn},sprintf('run_%2.2d.nii,%d',runs(r),i+numDummys))];
+                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn},sprintf('run_%2.2d.nii,%d',runs(r),i))];
                 end;
                 J.sess(r).scans= N; % number of scans in run
                 
@@ -214,7 +214,7 @@ switch(what)
             J.timing.fmri_t = 8;
             J.timing.fmri_t0 = 1;
 
-              for r=1:4
+              for r=1:numel(runs)
                  
                 P=getrow(A,A.run_num==runB(r));
                 for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
@@ -253,63 +253,11 @@ switch(what)
                     J.sess(r).cond(it+1).tmod     = 0;
                     J.sess(r).cond(it+1).orth     = 0;
                     J.sess(r).cond(it+1).pmod     = struct('name', {}, 'param', {}, 'poly', {});
-
-                end % it (tasks)   
-
-                J.sess(r).multi = {''};
-                J.sess(r).regress = struct('name', {}, 'val', {});
-                J.sess(r).multi_reg = {''};
-                J.sess(r).hpf = inf;   
-
-              end
-
-
-            for r=5:8
-                 P=getrow(A,A.run_num==runB(r));
-                for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i+numDummys))];
-                end;
-                J.sess(r).scans= N; % number of scans in run
-
-                 for it = 1:5
-                    % The order of tasks are different for each run, to
-                    % have a common order for the tasks, I will be reading
-                    % from the Cc file for all the runs and subjects
-                    %the following line identifies the index of each
-                    %task in Cc.taskNames in P.task_name. (Ex: Cc.taskNames
-                    %has visual search as the first task; in P.task_name,
-                    %visual search is the third task. Thus, ST = 3)
-                    %This loop creates a regressor for each task 
-                   
-                    ST = find(strcmp(lower(P.task_name),lower(Cc.taskNames{it})));
                     
-                    % get the task onset (instruction onset + announceTime)
-                    onset = P.real_start_time(ST) - J.timing.RT*numDummys +announceTime;
-                    
-                    % filling in the fields for SPM_info.mat
-                    S.task      = it;
-                    S.taskName  = {Cc.taskNames{it}};
-                    S.inst      = 0;
-                    S.time      = onset;
-                    S.rightHand = 0; %1 for right hand, 0 for left hand 
-                    T  = addstruct(T, S);
-                    
-                    % filling in the fields for SPM.mat
-                    J.sess(r).cond(it+1).name     = Cc.taskNames{it};
-                    J.sess(r).cond(it+1).onset    = onset;
-                    J.sess(r).cond(it+1).duration = 30;             % each task lasts for 30 sec
-                    J.sess(r).cond(it+1).tmod     = 0;
-                    J.sess(r).cond(it+1).orth     = 0;
-                    J.sess(r).cond(it+1).pmod     = struct('name', {}, 'param', {}, 'poly', {});
 
-                  end % it (tasks)   
+                end % it (tasks)        
 
-                J.sess(r).multi = {''};
-                J.sess(r).regress = struct('name', {}, 'val', {});
-                J.sess(r).multi_reg = {''};
-                J.sess(r).hpf = inf;   
-
-             end
+            for r=1:numel(runs)
            
             for r=1:numel(runs) % loop through runs
                 P=getrow(A,A.run_num==runB(r));
