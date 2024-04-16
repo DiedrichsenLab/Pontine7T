@@ -214,102 +214,6 @@ switch(what)
             J.timing.fmri_t = 8;
             J.timing.fmri_t0 = 1;
 
-              for r=1:4
-                 
-                P=getrow(A,A.run_num==runB(r));
-                for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i+numDummys))];
-                end;
-                
-                J.sess(r).scans= N; % number of scans in run
-                
-                 for it = 1:5
-                    % The order of tasks are different for each run, to
-                    % have a common order for the tasks, I will be reading
-                    % from the Cc file for all the runs and subjects
-                    %the following line identifies the index of each
-                    %task in Cc.taskNames in P.task_name. (Ex: Cc.taskNames
-                    %has visual search as the first task; in P.task_name,
-                    %visual search is the third task. Thus, ST = 3)
-                    %This loop creates a regressor for each task 
-                   
-                    ST = find(strcmp(lower(P.task_name),lower(Cc.taskNames{it})));
-                    
-                    % get the task onset (instruction onset + announceTime)
-                    onset = P.real_start_time(ST) - J.timing.RT*numDummys +announceTime;
-                    
-                    % filling in the fields for SPM_info.mat
-                    S.task      = it;
-                    S.taskName  = {Cc.taskNames{it}};
-                    S.inst      = 0;
-                    S.time      = onset;
-                    S.rightHand = 1; %1 for right hand, 0 for left hand 
-                    T  = addstruct(T, S);
-                    
-                    % filling in the fields for SPM.mat
-                    J.sess(r).cond(it+1).name     = Cc.taskNames{it};
-                    J.sess(r).cond(it+1).onset    = onset;
-                    J.sess(r).cond(it+1).duration = 30;             % each task lasts for 30 sec
-                    J.sess(r).cond(it+1).tmod     = 0;
-                    J.sess(r).cond(it+1).orth     = 0;
-                    J.sess(r).cond(it+1).pmod     = struct('name', {}, 'param', {}, 'poly', {});
-
-                end % it (tasks)   
-
-                J.sess(r).multi = {''};
-                J.sess(r).regress = struct('name', {}, 'val', {});
-                J.sess(r).multi_reg = {''};
-                J.sess(r).hpf = inf;   
-
-              end
-
-
-            for r=5:8
-                 P=getrow(A,A.run_num==runB(r));
-                for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i+numDummys))];
-                end;
-                J.sess(r).scans= N; % number of scans in run
-
-                 for it = 1:5
-                    % The order of tasks are different for each run, to
-                    % have a common order for the tasks, I will be reading
-                    % from the Cc file for all the runs and subjects
-                    %the following line identifies the index of each
-                    %task in Cc.taskNames in P.task_name. (Ex: Cc.taskNames
-                    %has visual search as the first task; in P.task_name,
-                    %visual search is the third task. Thus, ST = 3)
-                    %This loop creates a regressor for each task 
-                   
-                    ST = find(strcmp(lower(P.task_name),lower(Cc.taskNames{it})));
-                    
-                    % get the task onset (instruction onset + announceTime)
-                    onset = P.real_start_time(ST) - J.timing.RT*numDummys +announceTime;
-                    
-                    % filling in the fields for SPM_info.mat
-                    S.task      = it;
-                    S.taskName  = {Cc.taskNames{it}};
-                    S.inst      = 0;
-                    S.time      = onset;
-                    S.rightHand = 0; %1 for right hand, 0 for left hand 
-                    T  = addstruct(T, S);
-                    
-                    % filling in the fields for SPM.mat
-                    J.sess(r).cond(it+1).name     = Cc.taskNames{it};
-                    J.sess(r).cond(it+1).onset    = onset;
-                    J.sess(r).cond(it+1).duration = 30;             % each task lasts for 30 sec
-                    J.sess(r).cond(it+1).tmod     = 0;
-                    J.sess(r).cond(it+1).orth     = 0;
-                    J.sess(r).cond(it+1).pmod     = struct('name', {}, 'param', {}, 'poly', {});
-
-                  end % it (tasks)   
-
-                J.sess(r).multi = {''};
-                J.sess(r).regress = struct('name', {}, 'val', {});
-                J.sess(r).multi_reg = {''};
-                J.sess(r).hpf = inf;   
-
-             end
            
             for r=1:numel(runs) % loop through runs
                 P=getrow(A,A.run_num==runB(r));
@@ -359,7 +263,7 @@ switch(what)
                     
                     % filling in the fields for SPM_info.mat
                     S.task      = it;
-                    S.taskName  = {Cc.taskNames{it}};
+                    S.taskName  = Cc.taskNames{it};
                     S.inst      = 0;
                     S.time      = onset;
                     T  = addstruct(T, S);
@@ -391,8 +295,8 @@ switch(what)
             
             spm_rwls_run_fmri_spec(J);
             
-            save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T'); % Phase out the use of MAT files - prefer tsv files for Python-compatibility
-           % dsave(fullfile(J.dir{1},'SPM_info.tsv'),T); %this line doesn't work 
+            % save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T'); % Phase out the use of MAT files - prefer tsv files for Python-compatibility
+            dsave(fullfile(J.dir{1},'SPM_info.tsv'),T); 
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
         
@@ -404,9 +308,10 @@ switch(what)
         subjs=length(sn);
         
         for s=1:subjs,
+           % glmDir = [subj_name{sn(s)}]
             glmDir =[baseDir,sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];
             load(fullfile(glmDir,'SPM.mat'));
-            SPM.swd=glmDir;
+             SPM.swd=glmDir;        
             spm_rwls_spm(SPM);
         end
 
@@ -414,10 +319,10 @@ switch(what)
         %%% Calculating contrast images.
         % 'SPM_light' is created in this step (xVi is removed as it slows
         % down code for FAST GLM).
-        % Example1: bsp_imana('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
+        % Example1: bsp_glm('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
         
-        sn             = 3;             %% list of subjects
-        glm            = 1;             %% The glm number
+        sn             = 10;             %% list of subjects
+        glm            = 2;             %% The glm number
         
         vararginoptions(varargin, {'sn', 'glm'})
         
@@ -427,34 +332,40 @@ switch(what)
         for s = sn
             fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
             load(fullfile(glmDir, subj_name{s}, 'SPM.mat'))
-            
-            SPM  = rmfield(SPM,'xCon');
+            num_runs = 8;
+
+           % SPM  = rmfield(SPM,'xCon'); %this removes an xCon field 
             cd(fullfile(glmDir, subj_name{s}))
-            T = load('SPM_info.mat');
+            T = readtable('SPM_info.tsv', 'FileType', 'text', 'Delimiter', '\t');
+
+           % T = readtable('SPM_info.tsv', 'Delimiter','\t');
             
             % t contrast for tasks
             ucondition = unique(T.task);
             num_tasks = length(ucondition); 
+            %SPM.xCon(1:num_tasks-1) = struct(); 
             idx = 1;
-            for tt = 1:num_tasks % 0 is "instruct" regressor
+            for tt = 1:num_tasks-1 % 0 is "instruct" regressor
                 con  = zeros(1,size(SPM.xX.X,2));
-                indx = find(T.task == tt & T.inst==0); 
-                con(:,indx) = 1/16;
-                con(:,T.task ~= tt & T.inst==0) = -1./(16*(num_tasks-1));                
+                indx = find(T.task == tt & T.inst==0); %finds all the instances of a single task
+                con(:,indx) = 1/num_runs;  %this is a constant we set associated with a contrast weight.. 
+                con(:,T.task ~= tt & T.inst==0) = -1./(num_runs*(num_tasks-1));                
                 name = T.taskName{indx(1)}; 
-                SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
+                SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs); %creates contrast vector 
                 idx=idx+1;
             end 
             % Add Instruction regressor - against mean of tasks 
             con  = zeros(1,size(SPM.xX.X,2));
             indx = find(T.inst>0); 
             con(:,indx) = 1/length(indx);
-            con(:,T.task >0 & T.inst==0) = -1./(16*num_tasks);                
+            con(:,T.task >0 & T.inst==0) = -1./(num_runs*num_tasks);                
             name = 'Instruct'; 
-            SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
+            SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs); 
             
-            SPM = spm_contrasts(SPM,1:length(SPM.xCon));
-            save('SPM.mat', 'SPM','-v7.3');
+            
+            SPM = spm_contrasts(SPM,1:length(SPM.xCon));  %makes contrast images: initially this - SPM = spm_contrasts(SPM,1:length(SPM.xCon))
+             
+                % save('SPM.mat', 'SPM','-v7.3');
             
             % rename contrast images and spmT images
             conName = {'con','spmT'};
