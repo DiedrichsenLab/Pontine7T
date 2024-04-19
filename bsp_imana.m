@@ -136,7 +136,24 @@ switch(what)
             spm_jobman('run',matlabbatch);
             fprintf('Check segmentation results for %s\n', subj_name{s})
         end;
-                
+
+    case 'ANAT:T2T1coreg'                                                      
+        % coregister the whole brain T2 to the T1 image 
+        
+        % handling input args:
+        sn=varargin{1}; % subjNum
+        image = '_whole_T2w.nii'; 
+        % loop on sessions:
+        J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},[subj_name{sn} image])};
+        J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},[subj_name{sn} '_T1w.nii'])}; 
+        J.other = {''};
+        J.eoptions.cost_fun = 'nmi';
+        J.eoptions.sep = [4 2];
+        J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+        J.eoptions.fwhm = [7 7];
+        matlabbatch{1}.spm.spatial.coreg.estimate=J; 
+        spm_jobman('run',matlabbatch);
+
     case 'FUNC:remDum'        % JD: THIS IS OVERLY COMPLICATED AND BAD PRACTICE - NOT TO BE REPLICATED
         % Remove the extra dummy scans from all functional runs.
         % funtional runs have to be named as run_01-r.nii, run_02-r.nii ...
