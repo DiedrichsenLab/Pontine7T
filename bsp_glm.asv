@@ -189,7 +189,7 @@ switch(what)
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
         % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
         sn=varargin{1};
-        runs=varargin{2}; % [1:16]
+        runs=varargin{2}; % 
         
         announceTime=5;  % Instruction duration
         glm=2;
@@ -338,20 +338,29 @@ switch(what)
             cd(fullfile(glmDir, subj_name{s}))
             T = readtable('SPM_info.tsv', 'FileType', 'text', 'Delimiter', '\t');
 
-           % T = readtable('SPM_info.tsv', 'Delimiter','\t');
-            
             % t contrast for tasks
             ucondition = unique(T.task);
             num_tasks = length(ucondition); 
             %SPM.xCon(1:num_tasks-1) = struct(); 
+            
             idx = 1;
+            tt = 1;
+            
             for tt = 1:num_tasks-1 % 0 is "instruct" regressor
                 con  = zeros(1,size(SPM.xX.X,2));
-                indx = find(T.task == tt & T.inst==0); %finds all the instances of a single task
-                con(:,indx) = 1/num_runs;  %this is a constant we set associated with a contrast weight.. 
-                con(:,T.task ~= tt & T.inst==0) = -1./(num_runs*(num_tasks-1));                
-                name = T.taskName{indx(1)}; 
-                SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs); %creates contrast vector 
+                indx = find(T.task == tt & T.inst==0);
+                %indx_right = find(T.task == tt & T.inst==0 & T.hand ==1); %finds all the instances of a single task
+                %indx_left = find(T.task == tt & T.inst==0 & T.hand ==2);
+                con(:,indx) = 1/num_runs;  %this is the weight we give to each task. 
+                con(:,T.task ~= tt & T.inst==0) = -1./(num_runs*(num_tasks-1)); % this is the mean of all other tasks (not tt)  
+                %con(:,indx_right) = 1/num_runs;  %this is the weight we give to each task. 
+                %con(:,indx_left) = -1./(num_runs); % this is the mean of all other tasks (not tt)
+                name = T.taskName{indx(1)};
+                %name = T.taskName{indx_right(1)}; 
+                %name = sprintf('%s_right_vs_left', T.taskName{indx_right(1)});  % Naming the contrast
+                SPM.xCon = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
+                SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
+                %creates contrast vector 
                 idx=idx+1;
             end 
             % Add Instruction regressor - against mean of tasks 
@@ -363,8 +372,8 @@ switch(what)
             SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs); 
             
             
-            SPM = spm_contrasts(SPM,1:length(SPM.xCon(task)));  %makes contrast images: initially this - SPM = spm_contrasts(SPM,1:length(SPM.xCon))
-            end 
+            SPM = spm_contrasts(SPM,1:length(SPM.xCon));  %makes contrast images: initially this - SPM = spm_contrasts(SPM,1:length(SPM.xCon))
+             
                 % save('SPM.mat', 'SPM','-v7.3');
             
             % rename contrast images and spmT images
@@ -372,7 +381,8 @@ switch(what)
             for i = 1:length(SPM.xCon)
                 for n = 1:numel(conName)
                     oldName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%2.4d.nii',conName{n},i));
-                    newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s.nii',conName{n},SPM.xCon(i).name));
+                    %newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s_RH.nii',conName{n},SPM.xCon(i).name));
+                    newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s_right_vs_left.nii', conName{n}, SPM.xCon(i).name));
                     movefile(oldName{i}, newName{i});
                 end % conditions (n, conName: con and spmT)
             end % i (contrasts)

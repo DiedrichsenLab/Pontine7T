@@ -314,7 +314,7 @@ switch(what)
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s}, 'mp2rage - T1w');             
             job.subj.affineTr = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
             job.subj.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
-            job.subj.mask     = {fullfile(suitSubjDir ,'c_anatomical_pcereb.nii')};
+            job.subj.mask     = {fullfile(suitSubjDir ,'c_anatomical_pcereb_corr.nii')};
             switch image
                 case 'anatomical'
                     sourceDir = suitSubjDir; 
@@ -336,10 +336,15 @@ switch(what)
                     job.subj.mask     =  {}; 
                     outDir = suitSubjDir; 
                     job.vox           = [1 1 1];
+                case 'functional'
+                    sourceDir = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s});
+                    source = fullfile(sourceDir, 'con_semantic_prediction.nii');
+                    job.subj.resample = {source};
+                    outDir = fullfile(baseDir,suitDir,'glm2',subj_name{s}); 
             end
             suit_reslice_dartel(job);   
             source=fullfile(sourceDir,'*wd*');
-             movefile(source,outDir);
+            movefile(source,outDir);
         end
 
     case 'SURF:reconall'       % Freesurfer reconall routine
@@ -441,8 +446,8 @@ switch(what)
         sn = good_subj;
         vararginoptions(varargin,{'sn'}); 
         for s=sn 
-            glm_mask = fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii');
-            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},'c_anatomical_pcereb_corr.nii'); 
+            glm_mask = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s},'mask.nii');
+            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},'mp2rage - T1w', 'c_anatomical_pcereb_corr.nii'); 
             outfile = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii'); 
             Vi(1)=spm_vol(glm_mask); 
             Vi(2)=spm_vol(pcorr); 
@@ -450,10 +455,10 @@ switch(what)
         end
    
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
-        sn = good_subj; 
-        saveasimg = 0; 
+        sn = 10; 
+        saveasimg = 1;
         region_file = 'regions.mat';   % File with group ROI definitions 
-        def_dir = 'suit/anatomicals';  % This is where the deformation can be found 
+        def_dir = 'suit/anatomicals/S08/mp2rage - T1w';  % This is where the deformation can be found 
         def_img = 'c_anatomical_seg1';  
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
@@ -464,8 +469,9 @@ switch(what)
         for s = sn
             mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii');
             Vmask = spm_vol(mask); 
-            Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
-            mat = fullfile(baseDir,def_dir,subj_name{s},['Affine_' def_img '.mat']);
+            Def = fullfile(baseDir,def_dir,['u_a_' def_img '.nii']);  %            Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
+
+            mat = fullfile(baseDir,def_dir,['Affine_' def_img '.mat']);
             R=region_deformation(groupR.R,{Def,mat},'mask', mask);
             outdir = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s});
             save(fullfile(outdir,[region_file]),'R'); 
@@ -501,7 +507,7 @@ switch(what)
             % Get time series data
             for r = 1:length(R)
                 Y = region_getdata(V,R.R{1,r});  % Data is N x P; IH: initially was R(r). What needs to be read is regions{1,1}.R{1,4}.name
-                resMS = region_getdata(VresMS,R{r});
+                resMS = region_getdata(VresMS,R{r}); %NOTE. 
                 filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
                 save(filename,'Y','resMS','-v7.3');
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
