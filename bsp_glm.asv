@@ -345,7 +345,18 @@ switch(what)
             
             idx = 1;
             tt = 1;
-            
+            con  = zeros(1,size(SPM.xX.X,2));
+                indx = find(T.task == tt & T.inst==0);
+               
+                con(:,indx) = 1/num_runs;  %this is the weight we give to each task. 
+                con(:,T.task ~= tt & T.inst==0) = -1./(num_runs*(num_tasks-1)); % this is the mean of all other tasks (not tt)  
+                %con(:,indx_right) = 1/num_runs;  %this is the weight we give to each task. 
+                %con(:,indx_left) = -1./(num_runs); % this is the mean of all other tasks (not tt)
+                name = T.taskName{indx(1)};
+                %name = T.taskName{indx_right(1)}; 
+                %name = sprintf('%s_right_vs_left', T.taskName{indx_right(1)});  % Naming the contrast
+                SPM.xCon = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
+
             for tt = 1:num_tasks-1 % 0 is "instruct" regressor
                 con  = zeros(1,size(SPM.xX.X,2));
                 indx = find(T.task == tt & T.inst==0);
@@ -358,7 +369,7 @@ switch(what)
                 name = T.taskName{indx(1)};
                 %name = T.taskName{indx_right(1)}; 
                 %name = sprintf('%s_right_vs_left', T.taskName{indx_right(1)});  % Naming the contrast
-                SPM.xCon = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
+                %SPM.xCon = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
                 SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
                 %creates contrast vector 
                 idx=idx+1;
