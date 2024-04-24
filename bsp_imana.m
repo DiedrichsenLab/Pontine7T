@@ -74,7 +74,7 @@ switch(what)
         sn = varargin{1};
         for s=sn
         % path to the raw anatomical:
-            anat_file = fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii');
+            anat_file = fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii,1']);
         
             % Get header info for the image:
             V = spm_vol(anat_file);
@@ -91,16 +91,28 @@ switch(what)
             spm_write_vol(V,dat);
         end
         
-    case 'ANAT:segmentation'          % Segmentation + Normalisation
+    case 'ANAT:segmentation'          % Segmentation + Normalisation %IH: Need to check orientations of images so that they match; for now, did this through the SPM window..
         % example: bsp_imana('ANAT:segmentation',1)
         sn=varargin{1}; % subjNum
         SPMhome=fileparts(which('spm.m'));
         J=[];
         for s=sn
-            J.channel.vols = {fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii,1')};
-            J.channel.biasreg = 0.001;
-            J.channel.biasfwhm = 60;
-            J.channel.write = [0 1];
+
+            %T1w scan 
+            J.channel(1).vols = {fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii,1'])};
+            J.channel(1).biasreg = 0.001;
+            J.channel(1).biasfwhm = 60;
+            J.channel(1).write = [0 1];
+
+            %T2w scan
+
+          %  J.channel(2).vols = {fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_whole_T2w.nii,1'])};
+          %  J.channel(2).biasreg = 0.001;
+          %  J.channel(2).biasfwhm = 60;
+          %  J.channel(2).write = [0 1];
+            
+            %tissues
+
             J.tissue(1).tpm = {fullfile(SPMhome,'tpm/TPM.nii,1')};
             J.tissue(1).ngaus = 1;
             J.tissue(1).native = [1 0];
@@ -154,30 +166,6 @@ switch(what)
         matlabbatch{1}.spm.spatial.coreg.estimate=J; 
         spm_jobman('run',matlabbatch);
 
-    case 'FUNC:remDum'        % JD: THIS IS OVERLY COMPLICATED AND BAD PRACTICE - NOT TO BE REPLICATED
-        % Remove the extra dummy scans from all functional runs.
-        % funtional runs have to be named as run_01-r.nii, run_02-r.nii ...
-        % example: bsp_imana('FUNC:remDum',1)
-        sn=varargin{1}; % subjNum
-        for s=sn
-            cd(fullfile(baseDir,imagingDirRaw,[subj_name{s},'-n']));
-            funScans = dir('*-r.nii');
-            for i=1:length(funScans)  
-                outfilename = sprintf('run_%2.2d.nii',i);
-                %mkdir temp;
-               % spm_file_split(funScans(i).name,'temp');
-                cd temp;
-                list = dir('run*.nii');
-                list = list(numDummys+1:end);  % Remove dummies
-                V = {list(:).name};
-                spm_file_merge(V,outfilename);
-                movefile(outfilename,fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n']))
-                cd ..
-                rmdir('temp','s');
-                fprintf('Run %d done for %s \n',i,subj_name{s});
-            end;
-        end
-
     case 'FUNC:realign'      
 
         % realign functional images
@@ -189,14 +177,14 @@ switch(what)
             
             data = {};
                 % initialize data cell array which will contain file names for runs/TR images
-               % func_ses_subj_dir = fullfile(imagingDirRaw ,subj_name{s})
+                %func_ses_subj_dir = fullfile(imagingDirRaw ,subj_name{s});
 
                                 
                 for r_cell = run(1:min(numel(run),8))
                     current_run = str2double(r_cell{1});
                     % Obtain the number of TRs for the current run
                     for j = 1:numTRs
-                        data{current_run}{j,1} = fullfile(sprintf('sub-%d_task-task_run-%02d_bold.nii,%d', s-2, current_run, j));
+                        data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('sub-%d_task-task_run-%02d_bold.nii,%d', s-2, current_run, j));
                     end % j (TRs/images)
                 end % r (runs)            
             spmj_realign(data);
@@ -283,11 +271,11 @@ switch(what)
         %         spm fmri
         for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});dircheck(suitSubjDir);
-            source=fullfile(baseDir,anatomicalDir,subj_name{s},'anatomical.nii');
-            dest=fullfile(suitSubjDir,'anatomical.nii');
+            source=fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii']);
+            dest=fullfile(suitSubjDir,[subj_name{sn} '_T1w.nii']);
             copyfile(source,dest);
             cd(fullfile(suitSubjDir));
-            suit_isolate_seg({fullfile(suitSubjDir,'anatomical.nii')},'keeptempfiles',1);
+            suit_isolate_seg({fullfile(suitSubjDir,[subj_name{sn} '_T1w.nii'])},'keeptempfiles',1);
         end
         
     case 'SUIT:normalise_dartel'    % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
@@ -296,17 +284,17 @@ switch(what)
         sn=varargin{1}; %subjNum
         % example: 'bsp_imana('SUIT:normalise_dartel',1)'
         
-        cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn},'mp2rage - T1w'));
-        job.subjND.gray       = {'c_anatomical_seg1.nii'};
-        job.subjND.white      = {'c_anatomical_seg2.nii'};
-        job.subjND.isolation  = {'c_anatomical_pcereb_corr.nii'};
+        cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
+        job.subjND.gray       = {'c_S10_T1w_seg1.nii'};
+        job.subjND.white      = {'c_S10_T1w_seg2.nii'};
+        job.subjND.isolation  = {'c_S10_T1w_pcereb_corr.nii'};
         suit_normalize_dartel(job) 
 
     case 'SUIT:save_dartel_def'    
         % Saves the dartel flow field as a deformation file. 
-        for sn = 10 %IH: original was for sn = [1:length(subj_name)]
-            cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}, 'mp2rage - T1w'));
-            anat_name = 'anatomical';
+        for sn = 12 %IH: original was for sn = [1:length(subj_name)]
+            cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
+            anat_name = 'S10_T1w';
             suit_save_darteldef(anat_name);
         end; 
     case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
@@ -328,14 +316,14 @@ switch(what)
         image=varargin{2}; % 'betas' or 'contrast' or 'ResMS' or 'cerebellarGrey'
         
         for s=sn
-            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s}, 'mp2rage - T1w');             
-            job.subj.affineTr = {fullfile(suitSubjDir ,'Affine_c_anatomical_seg1.mat')};
-            job.subj.flowfield= {fullfile(suitSubjDir ,'u_a_c_anatomical_seg1.nii')};
-            job.subj.mask     = {fullfile(suitSubjDir ,'c_anatomical_pcereb_corr.nii')};
+            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
+            job.subj.affineTr = {fullfile(suitSubjDir ,'Affine_c_S10_T1w_seg1.mat')};
+            job.subj.flowfield= {fullfile(suitSubjDir ,'u_a_c_S10_T1w_seg1.nii')};
+            job.subj.mask     = {fullfile(suitSubjDir ,'c_S10_T1w_pcereb_corr.nii')};
             switch image
                 case 'anatomical'
                     sourceDir = suitSubjDir; 
-                    source = fullfile(sourceDir,'anatomical.nii'); 
+                    source = fullfile(sourceDir,[subj_name{sn} '_T1w.nii']); 
                     job.subj.resample = {source};
                     outDir = suitSubjDir; 
                     %outDir = baseDir;
