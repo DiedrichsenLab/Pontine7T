@@ -180,7 +180,7 @@ switch(what)
                 %func_ses_subj_dir = fullfile(imagingDirRaw ,subj_name{s});
 
                                 
-                for r_cell = run(1:min(numel(run),8))
+                for r_cell = run(1:min(numel(run)))
                     current_run = str2double(r_cell{1});
                     % Obtain the number of TRs for the current run
                     for j = 1:numTRs
@@ -217,7 +217,7 @@ switch(what)
     case 'FUNC:make_samealign'      % Align functional images to rmeanepi of run 1, session 1
         % Aligns all functional images from both sessions
         % to rmeanepi of run 1 of session 1
-        % example: bsp_imana('FUNC:make_samealign',1,8,[1:8])
+        % example: bsp_imana('FUNC:make_samealign',1,[1:8])
         sn=varargin{1}; % subjNum
         %runnum=varargin{2}; % runNum used for coregistration
         runs=varargin{2}; % runNum to coregister
@@ -227,16 +227,23 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rmeansub-8_task-task_run-01_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rrmean_run_08.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
             for r=1:numel(runs)
               Q{end+1}    = fullfile(baseDir,imagingDir,subj_name{s},sprintf('run_%2.2d.nii',runs(r)));
             end;
+
+             % Coregistration options
+            coreg_options = spm_get_defaults('coreg');
+            coreg_options.sep = [4 2]; % Separation between sampling points (mm)
+            coreg_options.params = [0 0 0 0 0 0]; % Translation and rotation
+            coreg_options.cost_fun = 'nmi'; % Normalized Mutual Information
+        
+            % Run spmj_makesamealign_nifti with specified coregistration options
+            spmj_makesamealign_nifti(char(P), char(Q), coreg_options);
             
-            % Run spmj_makesamealign_nifti
-            spmj_makesamealign_nifti(char(P),char(Q));
             fprintf('functional images realigned for %s \n',subj_name{s})
         end
 
@@ -245,23 +252,27 @@ switch(what)
         
         % handling input args:
         sn=varargin{1}; % subjNum
+
+        for s=sn
      
         % loop on sessions:
-        for r_cell = run(1:min(numel(run),1))
-            mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},sprintf('rmeansub-8_task-task_run-01_bold.nii')));
-            J.source = {mean_file_name};
-            J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},'mp2rage - T1w', 'anatomical.nii')}; 
-            J.other = {''};
-            J.eoptions.cost_fun = 'nmi';
-            J.eoptions.sep = [4 2];
-            J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
-            J.eoptions.fwhm = [7 7];
-            matlabbatch{1}.spm.spatial.coreg.estimate=J;
-            spm_jobman('run',matlabbatch);
+            for r_cell = run(1:min(numel(run),1))
+            
+                mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{s},[subj_name{sn} '_whole_sbref.nii']));
+                J.source = {mean_file_name};
+                J.ref = {fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii'])}; 
+                J.other = {''};
+                J.eoptions.cost_fun = 'nmi';
+                J.eoptions.sep = [4 2];
+                J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+                J.eoptions.fwhm = [7 7];
+                matlabbatch{1}.spm.spatial.coreg.estimate=J;
+                spm_jobman('run',matlabbatch);
             
             % (3) Check alignment manually by using fsleyes similar to step
             % one.
-        end
+            end
+        end 
    
     
     case 'SUIT:isolate'             % Segment cerebellum into grey and white matter
@@ -512,10 +523,10 @@ switch(what)
             % Get time series data
             for r = 1:length(R)
                 Y = region_getdata(V,R.R{1,r});  % Data is N x P; IH: initially was R(r). What needs to be read is regions{1,1}.R{1,4}.name
-                resMS = region_getdata(VresMS,R{r}); %NOTE. 
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
+                resMS = region_getdata(VresMS,R.R{1,r}); %NOTE. 
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R.R{1,r}.name)));
                 save(filename,'Y','resMS','-v7.3');
-                fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
+                fprintf('Raw ts saved for %s for %s \n',subj_name{s},R.R{1,r}.name);
             end
         end
     case 'ROI:getBetas'       % Get Betas from a specific GLM save as as cifti files 
@@ -528,7 +539,8 @@ switch(what)
         for s=sn,
             fprintf('SN: %d\n',s);
             glmDirSubj=fullfile(glmDir, subj_name{s});
-            D=load(fullfile(glmDirSubj,'SPM_info.mat'));     %IH: changes SPM_info.tsv to .mat
+            D = readtable('SPM_info.tsv', 'FileType', 'text', 'Delimiter', '\t');
+            %D=load(fullfile(glmDirSubj,'SPM_info.mat'));     %IH: changes SPM_info.tsv to .mat
             % load 
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},'regions.mat'));
             

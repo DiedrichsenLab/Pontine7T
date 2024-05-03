@@ -46,9 +46,10 @@ switch(what)
         sn=varargin{1}; % subjNum
         tissues = [1:3];
         
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rrmean_bold.nii'));
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rrmean_run_08.nii'));
         for i=1:length(tissues)
-            P{i+1}=fullfile(baseDir,anatomicalDir,subj_name{sn},'mp2rage - T1w',sprintf('c%danatomical.nii',tissues(i)));
+            P{i+1} = fullfile(baseDir, anatomicalDir, subj_name{sn}, sprintf('%s_T1w_c%d.nii', subj_name{sn}, tissues(i)));
+
         end
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'brain_mask.nii'));
         spm_imcalc(char(P),out,'i1>800 & (i2+i3+i4)>0.7');
@@ -211,7 +212,7 @@ switch(what)
             J.dir = {glmSubjDir};
             J.timing.units = 'secs';
             J.timing.RT = 1.0;
-            J.timing.fmri_t = 8;
+            J.timing.fmri_t = 16;
             J.timing.fmri_t0 = 1;
 
            
