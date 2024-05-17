@@ -27,7 +27,7 @@ loc_AC = [
 
 % Load Participant information (make sure you have Dataframe/util in your
 % path
-pinfo = dload(fullfile(baseDir,'participants.tsv')); 
+pinfo = dload(fullfile(baseDir,'participants1.tsv')); 
 subj_name = pinfo.participant_id;
 good_subj = find(pinfo.good)'; % Indices of all good subjects
 
@@ -282,11 +282,23 @@ switch(what)
         %         spm fmri
         for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});dircheck(suitSubjDir);
-            source=fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii']);
+            % Copy over the T1map image 
+            T1name = fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1map.nii']); 
             dest=fullfile(suitSubjDir,[subj_name{sn} '_T1w.nii']);
-            copyfile(source,dest);
+            copyfile(T1name,dest);
+            % If available, reslice the T2w image into the T1 voxel
+            % resolution 
+            if (pinfo.T2_whole(s) >0)
+                source_vol=spm_vol(fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_whole_T2w.nii']));
+                target_vol=spm_vol(T1name); 
+                outname = fullfile(suitSubjDir,[subj_name{sn} '_reslice_T2w.nii']); 
+                spmj_reslice_vol(source_vol,target_vol.dim,target_vol.mat,outname);
+                input_files = {T1name,outname}; 
+            else
+                input_files = {T1name};
+            end
             cd(fullfile(suitSubjDir));
-            suit_isolate_seg({fullfile(suitSubjDir,[subj_name{sn} '_T1w.nii'])},'keeptempfiles',1);
+            suit_isolate_seg(input_files,'keeptempfiles',1);
         end
         
     case 'SUIT:normalise_dartel'    % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
