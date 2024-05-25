@@ -46,7 +46,7 @@ switch(what)
         sn=varargin{1}; % subjNum
         tissues = [1:3];
         
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rrmean_run_08.nii'));
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S10_mean_bold.nii'));
         for i=1:length(tissues)
             P{i+1} = fullfile(baseDir, anatomicalDir, subj_name{sn}, sprintf('%s_T1w_c%d.nii', subj_name{sn}, tissues(i)));
 
@@ -203,7 +203,7 @@ switch(what)
         
         for s=1:subjs,
             T=[];
-            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-08_scans.tsv')); % get scanning timing and order
+            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-10_scans.tsv')); % get scanning timing and order
             %A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
             glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
@@ -333,7 +333,7 @@ switch(what)
         for s = sn
             fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
             load(fullfile(glmDir, subj_name{s}, 'SPM.mat'))
-            num_runs = 8;
+            num_runs = 16;
 
            % SPM  = rmfield(SPM,'xCon'); %this removes an xCon field 
             cd(fullfile(glmDir, subj_name{s}))
@@ -396,7 +396,7 @@ switch(what)
                 for n = 1:numel(conName)
                     oldName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%2.4d.nii',conName{n},i));
                     %newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s_RH.nii',conName{n},SPM.xCon(i).name));
-                    newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s_right_vs_left.nii', conName{n}, SPM.xCon(i).name));
+                    newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s_16_runs.nii', conName{n}, SPM.xCon(i).name));
                     movefile(oldName{i}, newName{i});
                 end % conditions (n, conName: con and spmT)
             end % i (contrasts)

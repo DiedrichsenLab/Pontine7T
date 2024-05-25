@@ -154,7 +154,7 @@ switch(what)
         
         % handling input args:
         sn=varargin{1}; % subjNum
-        image = '_whole_T2w.nii'; 
+        image = '_TSE_T2w.nii'; 
         % loop on sessions:
         J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},[subj_name{sn} image])};
         J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},[subj_name{sn} '_T1w.nii'])}; 
@@ -184,7 +184,7 @@ switch(what)
                     current_run = str2double(r_cell{1});
                     % Obtain the number of TRs for the current run
                     for j = 1:numTRs
-                        data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('sub-%d_task-task_run-%02d_bold.nii,%d', s-2, current_run, j));
+                        data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('uint16_run-%02d.nii,%d', current_run, j));
                     end % j (TRs/images)
                 end % r (runs)            
             spmj_realign(data);
@@ -201,12 +201,12 @@ switch(what)
             dircheck(fullfile(baseDir,imagingDir,subj_name{s}))
             for r=1:length(runs);
                 % move realigned data for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rsub-%d_task-task_run-%02d_bold.nii',s-2, runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('ruint16_run-%02d.nii',runs(r)));
                 dest = fullfile(baseDir,imagingDir,subj_name{s},sprintf('run_%2.2d.nii',runs(r)));
                 copyfile(source,dest);
                 
                 % move realignment parameter files for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rp_sub-%d_task-task_run-%02d_bold.txt',s-2, runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rp_uint16_run-%02d.txt',runs(r)));
                 dest = fullfile(baseDir,imagingDir,subj_name{s},sprintf('rp_run_%2.2d.txt',runs(r)));
                 copyfile(source,dest);
             end;            
@@ -227,7 +227,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rrmean_run_08.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S10_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -242,7 +242,8 @@ switch(what)
             coreg_options.cost_fun = 'nmi'; % Normalized Mutual Information
         
             % Run spmj_makesamealign_nifti with specified coregistration options
-            spmj_makesamealign_nifti(char(P), char(Q), coreg_options);
+            spmj_makesamealign_nifti(char(P), char(Q));
+           % spmj_makesamealign_nifti(char(P), char(Q), coreg_options);
             
             fprintf('functional images realigned for %s \n',subj_name{s})
         end
@@ -308,9 +309,9 @@ switch(what)
         % example: 'bsp_imana('SUIT:normalise_dartel',1)'
         
         cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-        job.subjND.gray       = {'c_S10_T1w_seg1.nii'};
-        job.subjND.white      = {'c_S10_T1w_seg2.nii'};
-        job.subjND.isolation  = {'c_S10_T1w_pcereb_corr.nii'};
+        job.subjND.gray       = {'c_S12_T1w_seg1.nii'};
+        job.subjND.white      = {'c_S12_T1w_seg2.nii'};
+        job.subjND.isolation  = {'c_S12_T1w_pcereb_corr.nii'};
         suit_normalize_dartel(job) 
 
     case 'SUIT:save_dartel_def'    
@@ -340,9 +341,9 @@ switch(what)
         
         for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            job.subj.affineTr = {fullfile(suitSubjDir ,'Affine_c_S10_T1w_seg1.mat')};
-            job.subj.flowfield= {fullfile(suitSubjDir ,'u_a_c_S10_T1w_seg1.nii')};
-            job.subj.mask     = {fullfile(suitSubjDir ,'c_S10_T1w_pcereb_corr.nii')};
+            job.subj.affineTr = {fullfile(suitSubjDir ,sprintf('Affine_c_%s_T1w_seg1.mat', subj_name{s}))};
+            job.subj.flowfield= {fullfile(suitSubjDir ,sprintf('u_a_c_%s_T1w_seg1.nii', subj_name{s}))};
+            job.subj.mask     = {fullfile(suitSubjDir ,sprintf('c_%s_T1w_pcereb_corr.nii', subj_name{s}))};
             switch image
                 case 'anatomical'
                     sourceDir = suitSubjDir; 
@@ -365,10 +366,14 @@ switch(what)
                     outDir = suitSubjDir; 
                     job.vox           = [1 1 1];
                 case 'functional'
-                    sourceDir = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s});
-                    source = fullfile(sourceDir, 'con_semantic_prediction.nii');
-                    job.subj.resample = {source};
-                    outDir = fullfile(baseDir,suitDir,'glm2',subj_name{s}); 
+                    taskNames = {"finger_sequence"};
+                    for taskIdx = 1:numel(taskNames)
+                        taskName = taskNames{taskIdx};
+                        sourceDir = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s});
+                        source = fullfile(sourceDir, sprintf('con_%s_16_runs.nii', taskName));
+                        job.subj.resample = {source};
+                        outDir = fullfile(baseDir,suitDir,'glm2',subj_name{s}); 
+                    end 
             end
             suit_reslice_dartel(job);   
             source=fullfile(sourceDir,'*wd*');
@@ -471,11 +476,11 @@ switch(what)
         cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
     
     case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
-        sn = good_subj;
-        vararginoptions(varargin,{'sn'}); 
+        sn = 11;
+        vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
         for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s},'mask.nii');
-            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},'mp2rage - T1w', 'c_anatomical_pcereb_corr.nii'); 
+            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{sn} '_T1w_pcereb_corr.nii']); 
             outfile = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii'); 
             Vi(1)=spm_vol(glm_mask); 
             Vi(2)=spm_vol(pcorr); 
@@ -483,11 +488,11 @@ switch(what)
         end
    
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
-        sn = 10; 
+        sn = 11; 
         saveasimg = 1;
         region_file = 'regions.mat';   % File with group ROI definitions 
-        def_dir = 'suit/anatomicals/S08/mp2rage - T1w';  % This is where the deformation can be found 
-        def_img = 'c_anatomical_seg1';  
+        def_dir = 'suit/anatomicals/S08';  % This is where the deformation can be found 
+        def_img = 'c_S08_T1w_seg1';  
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
         % Load the group regions 
@@ -495,7 +500,7 @@ switch(what)
         groupR = load(fullfile(groupDir,region_file)); 
         % For all subjects, deform those regions and save as regions 
         for s = sn
-            mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii');
+            mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask_T1w.nii');
             Vmask = spm_vol(mask); 
             Def = fullfile(baseDir,def_dir,['u_a_' def_img '.nii']);  %            Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
 
@@ -583,10 +588,10 @@ switch(what)
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},reg_name));
             % Load and transform the CIFTI files 
             for r = 1:length(R)
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_%s_%s.dscalar.nii',subj_name{s},dname,R{r}.name)));
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_beta_glm%d_%s.dscalar.nii',subj_name{s},dname,R{r}.name)));
                 C = cifti_read(filename);
                 Cnew = region_deform_cifti(R{r},C,'vol',vol); 
-                filename=(fullfile(baseDir,regDir,'data','group',sprintf('%s_%s_%s.dscalar.nii',dname,R{r}.name,subj_name{s})));
+                filename=(fullfile(baseDir,regDir,'data','group',sprintf('beta_glm%d_%s_%s.dscalar.nii',dname,R{r}.name,subj_name{s})));
                 cifti_write(Cnew,filename); 
             end
         end
@@ -689,9 +694,9 @@ switch(what)
         end
     case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
 
-        sn=8; 
-        run = [1:16]; 
-        stop = true; 
+      %  sn=15; 
+       % run = [1:8]; 
+        %stop = true; 
         vararginoptions(varargin,{'sn','run','stop'}); 
         
         for nrun= run
