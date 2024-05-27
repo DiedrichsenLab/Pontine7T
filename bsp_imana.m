@@ -27,7 +27,7 @@ loc_AC = [
 
 % Load Participant information (make sure you have Dataframe/util in your
 % path
-pinfo = dload(fullfile(baseDir,'participants1.tsv')); 
+pinfo = dload(fullfile(baseDir,'participants_new_format.tsv')); 
 subj_name = pinfo.participant_id;
 good_subj = find(pinfo.good)'; % Indices of all good subjects
 
@@ -227,7 +227,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S10_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S14_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -259,7 +259,7 @@ switch(what)
         % loop on sessions:
             for r_cell = run(1:min(numel(run),1))
             
-                mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{s},[subj_name{sn} '_whole_sbref.nii']));
+                mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{s},[subj_name{sn} 'r_whole_sbref.nii']));
                 J.source = {mean_file_name};
                 J.ref = {fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii'])}; 
                 J.other = {''};
@@ -284,11 +284,12 @@ switch(what)
         for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});dircheck(suitSubjDir);
             % Copy over the T1map image 
-            T1name = fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1map.nii']); 
+            T1name = fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii']); 
             dest=fullfile(suitSubjDir,[subj_name{sn} '_T1w.nii']);
             copyfile(T1name,dest);
             % If available, reslice the T2w image into the T1 voxel
             % resolution 
+          
             if (pinfo.T2_whole(s) >0)
                 source_vol=spm_vol(fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_whole_T2w.nii']));
                 target_vol=spm_vol(T1name); 
@@ -309,16 +310,16 @@ switch(what)
         % example: 'bsp_imana('SUIT:normalise_dartel',1)'
         
         cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-        job.subjND.gray       = {'c_S12_T1w_seg1.nii'};
-        job.subjND.white      = {'c_S12_T1w_seg2.nii'};
-        job.subjND.isolation  = {'c_S12_T1w_pcereb_corr.nii'};
+        job.subjND.gray       = {'c_S13_T1map_seg1.nii'};
+        job.subjND.white      = {'c_S13_T1map_seg2.nii'};
+        job.subjND.isolation  = {'c_S13_T1map_pcereb_corr.nii'};
         suit_normalize_dartel(job) 
 
     case 'SUIT:save_dartel_def'    
         % Saves the dartel flow field as a deformation file. 
-        for sn = 12 %IH: original was for sn = [1:length(subj_name)]
+        for sn = 15 %IH: original was for sn = [1:length(subj_name)]
             cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-            anat_name = 'S10_T1w';
+            anat_name = 'S13_T1map';
             suit_save_darteldef(anat_name);
         end; 
     case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
@@ -341,9 +342,9 @@ switch(what)
         
         for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            job.subj.affineTr = {fullfile(suitSubjDir ,sprintf('Affine_c_%s_T1w_seg1.mat', subj_name{s}))};
-            job.subj.flowfield= {fullfile(suitSubjDir ,sprintf('u_a_c_%s_T1w_seg1.nii', subj_name{s}))};
-            job.subj.mask     = {fullfile(suitSubjDir ,sprintf('c_%s_T1w_pcereb_corr.nii', subj_name{s}))};
+            job.subj.affineTr = {fullfile(suitSubjDir ,sprintf('Affine_c_%s_T1map_seg1.mat', subj_name{s}))};
+            job.subj.flowfield= {fullfile(suitSubjDir ,sprintf('u_a_c_%s_T1map_seg1.nii', subj_name{s}))};
+            job.subj.mask     = {fullfile(suitSubjDir ,sprintf('c_%s_T1map_pcereb_corr.nii', subj_name{s}))};
             switch image
                 case 'anatomical'
                     sourceDir = suitSubjDir; 
@@ -366,7 +367,7 @@ switch(what)
                     outDir = suitSubjDir; 
                     job.vox           = [1 1 1];
                 case 'functional'
-                    taskNames = {"finger_sequence"};
+                    taskNames = {"flexion_extension"};
                     for taskIdx = 1:numel(taskNames)
                         taskName = taskNames{taskIdx};
                         sourceDir = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s});
@@ -476,7 +477,7 @@ switch(what)
         cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
     
     case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
-        sn = 11;
+        sn = 14;
         vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
         for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s},'mask.nii');
@@ -488,11 +489,11 @@ switch(what)
         end
    
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
-        sn = 11; 
+        sn = 14; 
         saveasimg = 1;
         region_file = 'regions.mat';   % File with group ROI definitions 
-        def_dir = 'suit/anatomicals/S08';  % This is where the deformation can be found 
-        def_img = 'c_S08_T1w_seg1';  
+        def_dir = 'suit/anatomicals/S12';  % This is where the deformation can be found 
+        def_img = 'c_S12_T1w_seg1';  
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
         % Load the group regions 
