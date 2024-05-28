@@ -203,7 +203,7 @@ switch(what)
         
         for s=1:subjs,
             T=[];
-            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-13_scans.tsv')); % get scanning timing and order
+            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-14_scans.tsv')); % get scanning timing and order
             %A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
             glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
