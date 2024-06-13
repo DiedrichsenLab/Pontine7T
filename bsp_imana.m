@@ -154,7 +154,7 @@ switch(what)
         
         % handling input args:
         sn=varargin{1}; % subjNum
-        image = '_TSE_T2w.nii'; 
+        image = '_whole_T2w.nii'; 
         % loop on sessions:
         J.source = {fullfile(baseDir,anatomicalDir,subj_name{sn},[subj_name{sn} image])};
         J.ref = {fullfile(baseDir,anatomicalDir,subj_name{sn},[subj_name{sn} '_T1w.nii'])}; 
@@ -227,7 +227,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S14_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S17_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -259,7 +259,7 @@ switch(what)
         % loop on sessions:
             for r_cell = run(1:min(numel(run),1))
             
-                mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{s},[subj_name{sn} 'r_whole_sbref.nii']));
+                mean_file_name = fullfile(fullfile(baseDir,imagingDir,subj_name{s},[subj_name{sn} '_whole_sbref.nii']));
                 J.source = {mean_file_name};
                 J.ref = {fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii'])}; 
                 J.other = {''};
@@ -310,16 +310,16 @@ switch(what)
         % example: 'bsp_imana('SUIT:normalise_dartel',1)'
         
         cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-        job.subjND.gray       = {'c_S13_T1map_seg1.nii'};
-        job.subjND.white      = {'c_S13_T1map_seg2.nii'};
-        job.subjND.isolation  = {'c_S13_T1map_pcereb_corr.nii'};
+        job.subjND.gray       = {'c_S16_T1w_seg1.nii'};
+        job.subjND.white      = {'c_S16_T1w_seg2.nii'};
+        job.subjND.isolation  = {'c_S16_T1w_pcereb.nii'};
         suit_normalize_dartel(job) 
 
     case 'SUIT:save_dartel_def'    
         % Saves the dartel flow field as a deformation file. 
-        for sn = 15 %IH: original was for sn = [1:length(subj_name)]
+        for sn = 10 %IH: original was for sn = [1:length(subj_name)]
             cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-            anat_name = 'S13_T1map';
+            anat_name = 'S08_T1w';
             suit_save_darteldef(anat_name);
         end; 
     case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
@@ -342,9 +342,9 @@ switch(what)
         
         for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            job.subj.affineTr = {fullfile(suitSubjDir ,sprintf('Affine_c_%s_T1map_seg1.mat', subj_name{s}))};
-            job.subj.flowfield= {fullfile(suitSubjDir ,sprintf('u_a_c_%s_T1map_seg1.nii', subj_name{s}))};
-            job.subj.mask     = {fullfile(suitSubjDir ,sprintf('c_%s_T1map_pcereb_corr.nii', subj_name{s}))};
+            job.subj.affineTr = {fullfile(suitSubjDir ,sprintf('Affine_c_%s_T1w_seg1.mat', subj_name{s}))};
+            job.subj.flowfield= {fullfile(suitSubjDir ,sprintf('u_a_c_%s_T1w_seg1.nii', subj_name{s}))};
+            job.subj.mask     = {fullfile(suitSubjDir ,sprintf('c_%s_T1w_pcereb_corr.nii', subj_name{s}))};
             switch image
                 case 'anatomical'
                     sourceDir = suitSubjDir; 
@@ -477,11 +477,11 @@ switch(what)
         cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
     
     case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
-        sn = 14;
+        sn = 18;
         vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
         for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s},'mask.nii');
-            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{sn} '_T1w_pcereb_corr.nii']); 
+            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{sn} '_T1w_pcereb.nii']); 
             outfile = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii'); 
             Vi(1)=spm_vol(glm_mask); 
             Vi(2)=spm_vol(pcorr); 
@@ -489,11 +489,11 @@ switch(what)
         end
    
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
-        sn = 14; 
+        sn = 18; 
         saveasimg = 1;
         region_file = 'regions.mat';   % File with group ROI definitions 
-        def_dir = 'suit/anatomicals/S12';  % This is where the deformation can be found 
-        def_img = 'c_S12_T1w_seg1';  
+        def_dir = 'suit/anatomicals/S16';  % This is where the deformation can be found 
+        def_img = 'c_S16_T1w_seg1';  
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
         % Load the group regions 
@@ -501,9 +501,9 @@ switch(what)
         groupR = load(fullfile(groupDir,region_file)); 
         % For all subjects, deform those regions and save as regions 
         for s = sn
-            mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask_T1w.nii');
+            mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii');
             Vmask = spm_vol(mask); 
-            Def = fullfile(baseDir,def_dir,['u_a_' def_img '.nii']);  %            Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
+            Def = fullfile(baseDir,def_dir,['u_a_' def_img '.nii']);  %           
 
             mat = fullfile(baseDir,def_dir,['Affine_' def_img '.mat']);
             R=region_deformation(groupR.R,{Def,mat},'mask', mask);
@@ -547,7 +547,7 @@ switch(what)
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R.R{1,r}.name);
             end
         end
-    case 'ROI:getBetas'       % Get Betas from a specific GLM save as as cifti files 
+    case 'ROI:getBetas'       %CHECK DIRECTORY % Get Betas from a specific GLM save as as cifti files 
         % bsp_glm('ROI:getRawTs',1,1);
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
@@ -558,8 +558,6 @@ switch(what)
             fprintf('SN: %d\n',s);
             glmDirSubj=fullfile(glmDir, subj_name{s});
             D = readtable('SPM_info.tsv', 'FileType', 'text', 'Delimiter', '\t');
-            %D=load(fullfile(glmDirSubj,'SPM_info.mat'));     %IH: changes SPM_info.tsv to .mat
-            % load 
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},'regions.mat'));
             
             

@@ -46,7 +46,7 @@ switch(what)
         sn=varargin{1}; % subjNum
         tissues = [1:3];
         
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S14_mean_bold.nii'));
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S17_mean_bold.nii'));
         for i=1:length(tissues)
             P{i+1} = fullfile(baseDir, anatomicalDir, subj_name{sn}, sprintf('%s_T1w_c%d.nii', subj_name{sn}, tissues(i)));
 
@@ -203,7 +203,7 @@ switch(what)
         
         for s=1:subjs,
             T=[];
-            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-14_scans.tsv')); % get scanning timing and order
+            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-16_scans.tsv')); % get scanning timing and order
             %A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
             glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
@@ -302,7 +302,7 @@ switch(what)
         end
         
     case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum
-        % example: bsp_imana('GLM:estimate_glm',1,1)
+        % example: bsp_imana('GLM:estimate',1,1)
         sn=varargin{1};
         glm=varargin{2};
         
@@ -322,7 +322,7 @@ switch(what)
         % down code for FAST GLM).
         % Example1: bsp_glm('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
         
-        sn             = 15;             %% list of subjects
+        sn             = 19;             %% list of subjects
         glm            = 2;             %% The glm number
         
         vararginoptions(varargin, {'sn', 'glm'})
