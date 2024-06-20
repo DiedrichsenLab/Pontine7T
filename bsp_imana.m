@@ -149,7 +149,8 @@ switch(what)
             fprintf('Check segmentation results for %s\n', subj_name{s})
         end;
 
-    case 'ANAT:T2T1coreg'                                                      
+    case 'ANAT:T2T1coreg' 
+
         % coregister the whole brain T2 to the T1 image 
         
         % handling input args:
@@ -165,6 +166,58 @@ switch(what)
         J.eoptions.fwhm = [7 7];
         matlabbatch{1}.spm.spatial.coreg.estimate=J; 
         spm_jobman('run',matlabbatch);
+
+    case 'FUNC:split'
+
+    % Split 4D functional image into individual 3D volumes
+    
+    % Define the path to your 4D source image
+    source_image = '/Volumes/Diedrichsen_data$/data/Cerebellum/Pontine7T/imaging_data/S11/run_16.nii'; % Replace with your actual path
+    
+    % Load the header information of the 4D image
+    hdr = spm_vol(source_image);
+    
+    % Read the 4D volume data
+    data = spm_read_vols(hdr);
+    
+    % Create a directory to store the split 3D volumes
+    output_dir = fullfile(fileparts(source_image), 'split_volumes');
+    if ~exist(output_dir, 'dir')
+        mkdir(output_dir);
+    end
+    
+    % Initialize a cell array to store file paths of split 3D volumes
+    split_files = cell(size(data, 4), 1);
+    
+    % Loop through each volume in the 4D data
+    for i = 1:size(data, 4)
+        % Extract each 3D volume
+        volume = data(:,:,:,i);
+        
+        % Create a new header for the 3D volume
+        hdr_3D = hdr(1);
+        
+        % Construct file path for the split 3D volume
+        volume_filename = sprintf('volume_%d.nii', i);
+        output_path = fullfile(output_dir, volume_filename);
+        
+        % Update the header with the new file path
+        hdr_3D.fname = output_path;
+        
+        % Write the 3D volume to a new NIfTI file
+        spm_write_vol(hdr_3D, volume);
+        
+        % Store the file path of the split 3D volume
+        split_files{i} = output_path;
+    end
+    
+    % Display confirmation message
+    fprintf('- 4D image split into %d 3D volumes\n', numel(split_files));
+    
+    % Optionally return the file paths of split 3D volumes
+    varargout{1} = split_files;
+        
+
 
     case 'FUNC:realign'      
 
@@ -184,7 +237,8 @@ switch(what)
                     current_run = str2double(r_cell{1});
                     % Obtain the number of TRs for the current run
                     for j = 1:numTRs
-                        data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('uint16_run-%02d.nii,%d', current_run, j));
+                        %data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('uint16_run-%02d.nii,%d', current_run, j));
+                        data{current_run}{j,1} = fullfile(imagingDir,strcat(subj_name{s}),sprintf('run_%02d.nii,%d', current_run, j));
                     end % j (TRs/images)
                 end % r (runs)            
             spmj_realign(data);
@@ -227,7 +281,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S17_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S08_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -312,7 +366,7 @@ switch(what)
         cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
         job.subjND.gray       = {'c_S16_T1w_seg1.nii'};
         job.subjND.white      = {'c_S16_T1w_seg2.nii'};
-        job.subjND.isolation  = {'c_S16_T1w_pcereb.nii'};
+        job.subjND.isolation  = {'c_S16_T1w_pcereb_correct.nii'};
         suit_normalize_dartel(job) 
 
     case 'SUIT:save_dartel_def'    
@@ -477,7 +531,7 @@ switch(what)
         cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
     
     case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
-        sn = 18;
+        sn = 10;
         vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
         for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s},'mask.nii');
@@ -489,11 +543,11 @@ switch(what)
         end
    
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
-        sn = 18; 
+        sn = 10; 
         saveasimg = 1;
         region_file = 'regions.mat';   % File with group ROI definitions 
-        def_dir = 'suit/anatomicals/S16';  % This is where the deformation can be found 
-        def_img = 'c_S16_T1w_seg1';  
+        def_dir = 'suit/anatomicals/S08';  % This is where the deformation can be found 
+        def_img = 'c_S08_T1w_seg1';  
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
         % Load the group regions 

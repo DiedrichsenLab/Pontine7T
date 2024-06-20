@@ -46,16 +46,16 @@ switch(what)
         sn=varargin{1}; % subjNum
         tissues = [1:3];
         
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S17_mean_bold.nii'));
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S08_mean_bold.nii'));
         for i=1:length(tissues)
             P{i+1} = fullfile(baseDir, anatomicalDir, subj_name{sn}, sprintf('%s_T1w_c%d.nii', subj_name{sn}, tissues(i)));
 
         end
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'brain_mask.nii'));
-        spm_imcalc(char(P),out,'i1>800 & (i2+i3+i4)>0.7');
+        spm_imcalc(char(P),out,'i1>0 & (i2+i3+i4)>0.7');
         
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'gray_mask.nii'));
-        spm_imcalc(char(P),out,'i1>800 & i2>0.4');
+        spm_imcalc(char(P),out,'i1>0 & i2>0.4');
     
   case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
@@ -203,7 +203,7 @@ switch(what)
         
         for s=1:subjs,
             T=[];
-            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-16_scans.tsv')); % get scanning timing and order
+            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-08_scans.tsv')); % get scanning timing and order
             %A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
             glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
