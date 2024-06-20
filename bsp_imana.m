@@ -167,56 +167,96 @@ switch(what)
         matlabbatch{1}.spm.spatial.coreg.estimate=J; 
         spm_jobman('run',matlabbatch);
 
-    case 'FUNC:split'
+    case 'FUNC:split' % for instances where realign doesn't work becuase of 'offending images'; split 4D functional image into individual 3D volumes 
+   
+        source_image = '/Volumes/Diedrichsen_data$/data/Cerebellum/Pontine7T/imaging_data/S11/run_16.nii'; 
+    
+        % Load the header information of the 4D image
+        hdr = spm_vol(source_image);
+    
+        % Read the 4D volume data
+        data = spm_read_vols(hdr);
+    
+        % Create a directory to store the split 3D volumes
+        output_dir = fullfile(fileparts(source_image), 'split_volumes');
+        if ~exist(output_dir, 'dir')
+            mkdir(output_dir);
+        end
+    
+        % Initialize a cell array to store file paths of split 3D volumes
+        split_files = cell(size(data, 4), 1);
+    
+        % Loop through each volume in the 4D data
+        for i = 1:size(data, 4)
+            % Extract each 3D volume
+            volume = data(:,:,:,i);
+        
+            % Create a new header for the 3D volume
+            hdr_3D = hdr(1);
+        
+            % Construct file path for the split 3D volume
+            volume_filename = sprintf('volume_%d.nii', i);
+            output_path = fullfile(output_dir, volume_filename);
+        
+            % Update the header with the new file path
+            hdr_3D.fname = output_path;
+        
+            % Write the 3D volume to a new NIfTI file
+            spm_write_vol(hdr_3D, volume);
+        
+            % Store the file path of the split 3D volume
+            split_files{i} = output_path;
+        end
+    
+        % Display confirmation message
+        fprintf('- 4D image split into %d 3D volumes\n', numel(split_files));
+    
+        % Optionally return the file paths of split 3D volumes
+        varargout{1} = split_files;
 
-    % Split 4D functional image into individual 3D volumes
-    
-    % Define the path to your 4D source image
-    source_image = '/Volumes/Diedrichsen_data$/data/Cerebellum/Pontine7T/imaging_data/S11/run_16.nii'; % Replace with your actual path
-    
-    % Load the header information of the 4D image
-    hdr = spm_vol(source_image);
-    
-    % Read the 4D volume data
-    data = spm_read_vols(hdr);
-    
-    % Create a directory to store the split 3D volumes
-    output_dir = fullfile(fileparts(source_image), 'split_volumes');
-    if ~exist(output_dir, 'dir')
-        mkdir(output_dir);
-    end
-    
-    % Initialize a cell array to store file paths of split 3D volumes
-    split_files = cell(size(data, 4), 1);
-    
-    % Loop through each volume in the 4D data
-    for i = 1:size(data, 4)
-        % Extract each 3D volume
-        volume = data(:,:,:,i);
-        
-        % Create a new header for the 3D volume
-        hdr_3D = hdr(1);
-        
-        % Construct file path for the split 3D volume
-        volume_filename = sprintf('volume_%d.nii', i);
-        output_path = fullfile(output_dir, volume_filename);
-        
-        % Update the header with the new file path
-        hdr_3D.fname = output_path;
-        
-        % Write the 3D volume to a new NIfTI file
-        spm_write_vol(hdr_3D, volume);
-        
-        % Store the file path of the split 3D volume
-        split_files{i} = output_path;
-    end
-    
-    % Display confirmation message
-    fprintf('- 4D image split into %d 3D volumes\n', numel(split_files));
-    
-    % Optionally return the file paths of split 3D volumes
-    varargout{1} = split_files;
-        
+    case 'FUNC:concatenate' %concatenate 3D images back to 4D after estimate + reslice 
+
+        resliced_dir = fullfile(baseDir,imagingDir,'S11','split_volumes'); % Adjust to your directory
+
+        % Define the output directory for the concatenated 4D image
+        output_dir = fullfile(baseDir,imagingDir,'S11'); % Adjust to your directory
+
+        % Get the list of resliced 3D volumes using the wildcard pattern
+        volumes = dir(fullfile(resliced_dir, 'rvolume_*.nii'));
+        numVolumes = length(volumes);
+
+        % Initialize the header for the 4D NIfTI file using the first volume
+        hdr = spm_vol(fullfile(resliced_dir, volumes(1).name));
+        data = spm_read_vols(hdr);
+
+        % Initialize the 4D data array
+        dim = [hdr.dim, numVolumes];
+        data4D = zeros(dim);
+
+    % Read each 3D volume and store it in the 4D array
+        for i = 1:numVolumes
+            hdr = spm_vol(fullfile(resliced_dir, volumes(i).name));
+            data = spm_read_vols(hdr);
+            data4D(:,:,:,i) = data;
+        end
+
+    % Create a new header for each 3D volume and write to the same NIfTI file
+        hdr4D = hdr;  % Use the header from the last volume
+        hdr4D.fname = fullfile(output_dir, 'concatenated_4D_image.nii');
+        hdr4D.dim = [hdr4D.dim, numVolumes];
+      %  hdr4D.n = [1 numVolumes];  % Indicate the number of volumes
+        hdr4D.private.dat.fname = hdr4D.fname;
+        hdr4D.private.dat.dim = [hdr4D.dim, 1];
+
+        %errors out here 
+    % Write each 3D volume to the 4D NIfTI file
+        for i = 1:numVolumes
+            hdr4D.n(1) = i;  % Set the volume index
+            spm_write_vol(hdr4D, data4D(:,:,:,i));
+        end
+
+        fprintf('4D image saved as %s\n', hdr4D.fname);
+
 
 
     case 'FUNC:realign'      
