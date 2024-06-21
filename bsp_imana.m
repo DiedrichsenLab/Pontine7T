@@ -497,10 +497,9 @@ switch(what)
         for s = sn
             mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii');
             Vmask = spm_vol(mask); 
-            Def = fullfile(baseDir,def_dir,['u_a_' def_img '.nii']);  %            Def = fullfile(baseDir,def_dir,subj_name{s},['u_a_' def_img '.nii']);
-
-            mat = fullfile(baseDir,def_dir,['Affine_' def_img '.mat']);
-            R=region_deformation(groupR.R,{Def,mat},'mask', mask);
+            dartel_flowfield= fullfile(baseDir,def_dir,['u_a_' def_img '.nii']);  
+            dartel_affine = fullfile(baseDir,def_dir,['Affine_' def_img '.mat']);
+            R=region_deformation(groupR.R,{dartel_flowfield,dartel_affine},'mask', mask);
             outdir = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s});
             save(fullfile(outdir,[region_file]),'R'); 
             % For testing purposes, we can also save these ROIs as images 
@@ -577,7 +576,7 @@ switch(what)
         sn=varargin{1}; % subjNums 
         dname=varargin{2}; % Name of data file ('beta_glm1', 'beta_glm2')
         reg_name = 'regions.mat';  % Name of regions
-        vol = spm_vol(fullfile(baseDir,regDir,'regdef','group','dentate_mask.nii')); % Space defining image
+        vol = spm_vol(fullfile(baseDir,regDir,'regdef','group','dentate_mask.nii')); % Group Space defining image
         for s=sn,
             fprintf('SN: %d\n',s);
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},reg_name));
