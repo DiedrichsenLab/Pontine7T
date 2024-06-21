@@ -20,7 +20,7 @@ fmapDir         ='fieldmaps';
 
 % Load Participant information (make sure you have Dataframe/util in your
 % path
-pinfo = dload(fullfile(baseDir,'participants.tsv')); 
+pinfo = dload(fullfile(baseDir,'participants_new_format.tsv')); 
 subj_name = pinfo.participant_id;
 good_subj = find(pinfo.good)'; % Indices of all good subjects
 
@@ -46,18 +46,18 @@ switch(what)
         sn=varargin{1}; % subjNum
         tissues = [1:3];
         
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'rrmean_run_08.nii'));
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S08_mean_bold.nii'));
         for i=1:length(tissues)
             P{i+1} = fullfile(baseDir, anatomicalDir, subj_name{sn}, sprintf('%s_T1w_c%d.nii', subj_name{sn}, tissues(i)));
 
         end
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'brain_mask.nii'));
-        spm_imcalc(char(P),out,'i1>800 & (i2+i3+i4)>0.7');
+        spm_imcalc(char(P),out,'i1>0 & (i2+i3+i4)>0.7');
         
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'gray_mask.nii'));
-        spm_imcalc(char(P),out,'i1>800 & i2>0.4');
+        spm_imcalc(char(P),out,'i1>0 & i2>0.4');
     
-    case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
+  case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
         % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
@@ -302,7 +302,7 @@ switch(what)
         end
         
     case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum
-        % example: bsp_imana('GLM:estimate_glm',1,1)
+        % example: bsp_imana('GLM:estimate',1,1)
         sn=varargin{1};
         glm=varargin{2};
         
@@ -322,7 +322,7 @@ switch(what)
         % down code for FAST GLM).
         % Example1: bsp_glm('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
         
-        sn             = 10;             %% list of subjects
+        sn             = 19;             %% list of subjects
         glm            = 2;             %% The glm number
         
         vararginoptions(varargin, {'sn', 'glm'})
@@ -333,7 +333,7 @@ switch(what)
         for s = sn
             fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
             load(fullfile(glmDir, subj_name{s}, 'SPM.mat'))
-            num_runs = 8;
+            num_runs = 16;
 
            % SPM  = rmfield(SPM,'xCon'); %this removes an xCon field 
             cd(fullfile(glmDir, subj_name{s}))
@@ -396,7 +396,7 @@ switch(what)
                 for n = 1:numel(conName)
                     oldName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%2.4d.nii',conName{n},i));
                     %newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s_RH.nii',conName{n},SPM.xCon(i).name));
-                    newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s_right_vs_left.nii', conName{n}, SPM.xCon(i).name));
+                    newName{i} = fullfile(glmDir, subj_name{s}, sprintf('%s_%s_16_runs.nii', conName{n}, SPM.xCon(i).name));
                     movefile(oldName{i}, newName{i});
                 end % conditions (n, conName: con and spmT)
             end % i (contrasts)

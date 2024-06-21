@@ -11,7 +11,7 @@ data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInteres
 
 #
 def get_structure_data(structure='fhgkhkgk'):
-    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_no_s99.tsv', sep='\t')
+    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_var_decomp.tsv', sep='\t')
     A = []
     for i in T.participant_id:
         file_path = f'{data_dir}/beta_glm2_{structure}_{i}.dscalar.nii'

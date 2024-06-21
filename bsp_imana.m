@@ -27,7 +27,7 @@ loc_AC = [
 
 % Load Participant information (make sure you have Dataframe/util in your
 % path
-pinfo = dload(fullfile(baseDir,'participants1.tsv')); 
+pinfo = dload(fullfile(baseDir,'participants_new_format.tsv')); 
 subj_name = pinfo.participant_id;
 good_subj = find(pinfo.good)'; % Indices of all good subjects
 
@@ -149,7 +149,8 @@ switch(what)
             fprintf('Check segmentation results for %s\n', subj_name{s})
         end;
 
-    case 'ANAT:T2T1coreg'                                                      
+    case 'ANAT:T2T1coreg' 
+
         % coregister the whole brain T2 to the T1 image 
         
         % handling input args:
@@ -165,6 +166,98 @@ switch(what)
         J.eoptions.fwhm = [7 7];
         matlabbatch{1}.spm.spatial.coreg.estimate=J; 
         spm_jobman('run',matlabbatch);
+
+    case 'FUNC:split' % for instances where realign doesn't work becuase of 'offending images'; split 4D functional image into individual 3D volumes 
+   
+        source_image = '/Volumes/Diedrichsen_data$/data/Cerebellum/Pontine7T/imaging_data/S11/run_16.nii'; 
+    
+        % Load the header information of the 4D image
+        hdr = spm_vol(source_image);
+    
+        % Read the 4D volume data
+        data = spm_read_vols(hdr);
+    
+        % Create a directory to store the split 3D volumes
+        output_dir = fullfile(fileparts(source_image), 'split_volumes');
+        if ~exist(output_dir, 'dir')
+            mkdir(output_dir);
+        end
+    
+        % Initialize a cell array to store file paths of split 3D volumes
+        split_files = cell(size(data, 4), 1);
+    
+        % Loop through each volume in the 4D data
+        for i = 1:size(data, 4)
+            % Extract each 3D volume
+            volume = data(:,:,:,i);
+        
+            % Create a new header for the 3D volume
+            hdr_3D = hdr(1);
+        
+            % Construct file path for the split 3D volume
+            volume_filename = sprintf('volume_%d.nii', i);
+            output_path = fullfile(output_dir, volume_filename);
+        
+            % Update the header with the new file path
+            hdr_3D.fname = output_path;
+        
+            % Write the 3D volume to a new NIfTI file
+            spm_write_vol(hdr_3D, volume);
+        
+            % Store the file path of the split 3D volume
+            split_files{i} = output_path;
+        end
+    
+        % Display confirmation message
+        fprintf('- 4D image split into %d 3D volumes\n', numel(split_files));
+    
+        % Optionally return the file paths of split 3D volumes
+        varargout{1} = split_files;
+
+    case 'FUNC:concatenate' %concatenate 3D images back to 4D after estimate + reslice 
+
+        resliced_dir = fullfile(baseDir,imagingDir,'S11','split_volumes'); % Adjust to your directory
+
+        % Define the output directory for the concatenated 4D image
+        output_dir = fullfile(baseDir,imagingDir,'S11'); % Adjust to your directory
+
+        % Get the list of resliced 3D volumes using the wildcard pattern
+        volumes = dir(fullfile(resliced_dir, 'rvolume_*.nii'));
+        numVolumes = length(volumes);
+
+        % Initialize the header for the 4D NIfTI file using the first volume
+        hdr = spm_vol(fullfile(resliced_dir, volumes(1).name));
+        data = spm_read_vols(hdr);
+
+        % Initialize the 4D data array
+        dim = [hdr.dim, numVolumes];
+        data4D = zeros(dim);
+
+    % Read each 3D volume and store it in the 4D array
+        for i = 1:numVolumes
+            hdr = spm_vol(fullfile(resliced_dir, volumes(i).name));
+            data = spm_read_vols(hdr);
+            data4D(:,:,:,i) = data;
+        end
+
+    % Create a new header for each 3D volume and write to the same NIfTI file
+        hdr4D = hdr;  % Use the header from the last volume
+        hdr4D.fname = fullfile(output_dir, 'concatenated_4D_image.nii');
+        hdr4D.dim = [hdr4D.dim, numVolumes];
+      %  hdr4D.n = [1 numVolumes];  % Indicate the number of volumes
+        hdr4D.private.dat.fname = hdr4D.fname;
+        hdr4D.private.dat.dim = [hdr4D.dim, 1];
+
+        %errors out here 
+    % Write each 3D volume to the 4D NIfTI file
+        for i = 1:numVolumes
+            hdr4D.n(1) = i;  % Set the volume index
+            spm_write_vol(hdr4D, data4D(:,:,:,i));
+        end
+
+        fprintf('4D image saved as %s\n', hdr4D.fname);
+
+
 
     case 'FUNC:realign'      
 
@@ -184,7 +277,8 @@ switch(what)
                     current_run = str2double(r_cell{1});
                     % Obtain the number of TRs for the current run
                     for j = 1:numTRs
-                        data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('sub-%d_task-task_run-%02d_bold.nii,%d', s-2, current_run, j));
+                        %data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('uint16_run-%02d.nii,%d', current_run, j));
+                        data{current_run}{j,1} = fullfile(imagingDir,strcat(subj_name{s}),sprintf('run_%02d.nii,%d', current_run, j));
                     end % j (TRs/images)
                 end % r (runs)            
             spmj_realign(data);
@@ -201,12 +295,12 @@ switch(what)
             dircheck(fullfile(baseDir,imagingDir,subj_name{s}))
             for r=1:length(runs);
                 % move realigned data for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rsub-%d_task-task_run-%02d_bold.nii',s-2, runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('ruint16_run-%02d.nii',runs(r)));
                 dest = fullfile(baseDir,imagingDir,subj_name{s},sprintf('run_%2.2d.nii',runs(r)));
                 copyfile(source,dest);
                 
                 % move realignment parameter files for each run
-                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rp_sub-%d_task-task_run-%02d_bold.txt',s-2, runs(r)));
+                source = fullfile(baseDir,imagingDirRaw,[subj_name{s} '-n'],sprintf('rp_uint16_run-%02d.txt',runs(r)));
                 dest = fullfile(baseDir,imagingDir,subj_name{s},sprintf('rp_run_%2.2d.txt',runs(r)));
                 copyfile(source,dest);
             end;            
@@ -227,7 +321,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('rrmean_run_08.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S08_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -242,7 +336,8 @@ switch(what)
             coreg_options.cost_fun = 'nmi'; % Normalized Mutual Information
         
             % Run spmj_makesamealign_nifti with specified coregistration options
-            spmj_makesamealign_nifti(char(P), char(Q), coreg_options);
+            spmj_makesamealign_nifti(char(P), char(Q));
+           % spmj_makesamealign_nifti(char(P), char(Q), coreg_options);
             
             fprintf('functional images realigned for %s \n',subj_name{s})
         end
@@ -283,11 +378,12 @@ switch(what)
         for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});dircheck(suitSubjDir);
             % Copy over the T1map image 
-            T1name = fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1map.nii']); 
+            T1name = fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_T1w.nii']); 
             dest=fullfile(suitSubjDir,[subj_name{sn} '_T1w.nii']);
             copyfile(T1name,dest);
             % If available, reslice the T2w image into the T1 voxel
             % resolution 
+          
             if (pinfo.T2_whole(s) >0)
                 source_vol=spm_vol(fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_whole_T2w.nii']));
                 target_vol=spm_vol(T1name); 
@@ -308,16 +404,16 @@ switch(what)
         % example: 'bsp_imana('SUIT:normalise_dartel',1)'
         
         cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-        job.subjND.gray       = {'c_S10_T1w_seg1.nii'};
-        job.subjND.white      = {'c_S10_T1w_seg2.nii'};
-        job.subjND.isolation  = {'c_S10_T1w_pcereb_corr.nii'};
+        job.subjND.gray       = {'c_S16_T1w_seg1.nii'};
+        job.subjND.white      = {'c_S16_T1w_seg2.nii'};
+        job.subjND.isolation  = {'c_S16_T1w_pcereb_correct.nii'};
         suit_normalize_dartel(job) 
 
     case 'SUIT:save_dartel_def'    
         % Saves the dartel flow field as a deformation file. 
-        for sn = 12 %IH: original was for sn = [1:length(subj_name)]
+        for sn = 10 %IH: original was for sn = [1:length(subj_name)]
             cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-            anat_name = 'S10_T1w';
+            anat_name = 'S08_T1w';
             suit_save_darteldef(anat_name);
         end; 
     case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
@@ -340,9 +436,9 @@ switch(what)
         
         for s=sn
             suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            job.subj.affineTr = {fullfile(suitSubjDir ,'Affine_c_S10_T1w_seg1.mat')};
-            job.subj.flowfield= {fullfile(suitSubjDir ,'u_a_c_S10_T1w_seg1.nii')};
-            job.subj.mask     = {fullfile(suitSubjDir ,'c_S10_T1w_pcereb_corr.nii')};
+            job.subj.affineTr = {fullfile(suitSubjDir ,sprintf('Affine_c_%s_T1w_seg1.mat', subj_name{s}))};
+            job.subj.flowfield= {fullfile(suitSubjDir ,sprintf('u_a_c_%s_T1w_seg1.nii', subj_name{s}))};
+            job.subj.mask     = {fullfile(suitSubjDir ,sprintf('c_%s_T1w_pcereb_corr.nii', subj_name{s}))};
             switch image
                 case 'anatomical'
                     sourceDir = suitSubjDir; 
@@ -365,10 +461,14 @@ switch(what)
                     outDir = suitSubjDir; 
                     job.vox           = [1 1 1];
                 case 'functional'
-                    sourceDir = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s});
-                    source = fullfile(sourceDir, 'con_semantic_prediction.nii');
-                    job.subj.resample = {source};
-                    outDir = fullfile(baseDir,suitDir,'glm2',subj_name{s}); 
+                    taskNames = {"flexion_extension"};
+                    for taskIdx = 1:numel(taskNames)
+                        taskName = taskNames{taskIdx};
+                        sourceDir = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s});
+                        source = fullfile(sourceDir, sprintf('con_%s_16_runs.nii', taskName));
+                        job.subj.resample = {source};
+                        outDir = fullfile(baseDir,suitDir,'glm2',subj_name{s}); 
+                    end 
             end
             suit_reslice_dartel(job);   
             source=fullfile(sourceDir,'*wd*');
@@ -471,11 +571,11 @@ switch(what)
         cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
     
     case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
-        sn = good_subj;
-        vararginoptions(varargin,{'sn'}); 
+        sn = 10;
+        vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
         for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s},'mask.nii');
-            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},'mp2rage - T1w', 'c_anatomical_pcereb_corr.nii'); 
+            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{sn} '_T1w_pcereb.nii']); 
             outfile = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii'); 
             Vi(1)=spm_vol(glm_mask); 
             Vi(2)=spm_vol(pcorr); 
@@ -486,8 +586,8 @@ switch(what)
         sn = 10; 
         saveasimg = 1;
         region_file = 'regions.mat';   % File with group ROI definitions 
-        def_dir = 'suit/anatomicals/S08/mp2rage - T1w';  % This is where the deformation can be found 
-        def_img = 'c_anatomical_seg1';  
+        def_dir = 'suit/anatomicals/S08';  % This is where the deformation can be found 
+        def_img = 'c_S08_T1w_seg1';  
         vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
         
         % Load the group regions 
@@ -540,7 +640,7 @@ switch(what)
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R.R{1,r}.name);
             end
         end
-    case 'ROI:getBetas'       % Get Betas from a specific GLM save as as cifti files 
+    case 'ROI:getBetas'       %CHECK DIRECTORY % Get Betas from a specific GLM save as as cifti files 
         % bsp_glm('ROI:getRawTs',1,1);
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
@@ -551,8 +651,6 @@ switch(what)
             fprintf('SN: %d\n',s);
             glmDirSubj=fullfile(glmDir, subj_name{s});
             D = readtable('SPM_info.tsv', 'FileType', 'text', 'Delimiter', '\t');
-            %D=load(fullfile(glmDirSubj,'SPM_info.mat'));     %IH: changes SPM_info.tsv to .mat
-            % load 
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},'regions.mat'));
             
             
@@ -582,10 +680,10 @@ switch(what)
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},reg_name));
             % Load and transform the CIFTI files 
             for r = 1:length(R)
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_%s_%s.dscalar.nii',subj_name{s},dname,R{r}.name)));
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_beta_glm%d_%s.dscalar.nii',subj_name{s},dname,R{r}.name)));
                 C = cifti_read(filename);
                 Cnew = region_deform_cifti(R{r},C,'vol',vol); 
-                filename=(fullfile(baseDir,regDir,'data','group',sprintf('%s_%s_%s.dscalar.nii',dname,R{r}.name,subj_name{s})));
+                filename=(fullfile(baseDir,regDir,'data','group',sprintf('beta_glm%d_%s_%s.dscalar.nii',dname,R{r}.name,subj_name{s})));
                 cifti_write(Cnew,filename); 
             end
         end
@@ -688,9 +786,9 @@ switch(what)
         end
     case 'PHYS:createRegressor'       % Create Retroicor regressors using TAPAS (18 components)
 
-        sn=8; 
-        run = [1:16]; 
-        stop = true; 
+      %  sn=15; 
+       % run = [1:8]; 
+        %stop = true; 
         vararginoptions(varargin,{'sn','run','stop'}); 
         
         for nrun= run
