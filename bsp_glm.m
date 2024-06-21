@@ -300,7 +300,124 @@ switch(what)
             dsave(fullfile(J.dir{1},'SPM_info.tsv'),T); 
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
+      case 'GLM:glm3'                   % FAST glm w/out hpf one regressor per task - common instruction regressor
+        % GLM with FAST and no high pass filtering
+        % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
+        % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
+        sn=varargin{1};
+        runs=varargin{2}; % 
         
+        announceTime=5;  % Instruction duration
+        glm=2;
+        subjs=length(sn);
+        
+        % load in task information
+        C=dload(fullfile(baseDir,'pontine_taskConds_GLM_reordered.tsv'));
+        Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks
+        nTask      = max(Cc.taskNum);                                 % how many tasks there are?
+        
+        for s=1:subjs,
+            T=[];
+            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-08_scans.tsv')); % get scanning timing and order
+            %A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
+            
+            glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
+            
+            % Fill up struct for glm
+            J.dir = {glmSubjDir};
+            J.timing.units = 'secs';
+            J.timing.RT = 1.0;
+            J.timing.fmri_t = 16;
+            J.timing.fmri_t0 = 1;
+
+           
+            for r=1:numel(runs) % loop through runs
+                P=getrow(A,A.run_num==runB(r));
+                for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
+                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i+numDummys))];
+                end;
+                J.sess(r).scans= N; % number of scans in run
+                
+                instruct_onset = P.real_start_time - J.timing.RT*numDummys;
+
+
+                % Add overall Instruction regressor
+                S.task      = 0;              % task Number of the task after
+                S.taskName   = {'Instruct'};   % task name (TN)
+                S.inst      = 1;              % is it instruction (1) or not (0)?
+                S.taskOrder = 0;             % instOrder Number of task
+                S.time      = instruct_onset(1); % instruction onset time
+                S.sess      = sess(r);
+                S.run       = runB(r);
+                T  = addstruct(T, S);
+                
+                % filling in the fields for SPM.mat for the instruction
+              
+            
+                J.sess(r).cond(1).name     = 'Instruct';
+                J.sess(r).cond(1).onset    = instruct_onset; % correct start time for numDummys and announcetime included (not for instruct)
+                J.sess(r).cond(1).duration = 5;              % instructions last for 5 sec
+                J.sess(r).cond(1).tmod     = 0; %parametric modulation (1 means yes, 0 means no)
+                J.sess(r).cond(1).orth     = 0; %orthogonalized with respect to other conditions (1 means yes, 0 means no)
+                J.sess(r).cond(1).pmod     = struct('name', {}, 'param', {}, 'poly', {}); %parametric structure name, modulation, parameter, polynomial expansion
+                
+                % loop through tasks
+                for it = 1:nTask
+                    % The order of tasks are different for each run, to
+                    % have a common order for the tasks, I will be reading
+                    % from the Cc file for all the runs and subjects
+                    %the following line identifies the index of each
+                    %task in Cc.taskNames in P.task_name. (Ex: Cc.taskNames
+                    %has visual search as the first task; in P.task_name,
+                    %visual search is the third task. Thus, ST = 3)
+                    %This loop creates a regressor for each task 
+                   
+                    ST = find(strcmp(lower(P.task_name),lower(Cc.taskNames{it})));
+                    
+                    % get the task onset (instruction onset + announceTime)
+                    onset = P.real_start_time(ST) - J.timing.RT*numDummys +announceTime;
+                    
+                    % filling in the fields for SPM_info.mat
+                    S.task      = it;
+                    S.taskName  = Cc.taskNames{it};
+                    S.inst      = 0;
+                    S.time      = onset;
+                    T  = addstruct(T, S);
+                    
+                    % filling in the fields for SPM.mat
+                    J.sess(r).cond(it+1).name     = Cc.taskNames{it};
+                    J.sess(r).cond(it+1).onset    = onset;
+                    J.sess(r).cond(it+1).duration = 30;             % each task lasts for 30 sec
+                    J.sess(r).cond(it+1).tmod     = 0;
+                    J.sess(r).cond(it+1).orth     = 0;
+                    J.sess(r).cond(it+1).pmod     = struct('name', {}, 'param', {}, 'poly', {});
+                    
+
+                end % it (tasks)
+                % Load require Physion files 
+                % struct('name', {'HR1','HR2'}, 'val', {[1,2,2],[21,2,1]})
+                % Take 1-4 from Retro_HR and 1 from HR 
+                J.sess(r).multi = {''};
+                J.sess(r).regress = struct('name', {}, 'val', {});
+                J.sess(r).multi_reg = {''};
+                J.sess(r).hpf = inf;                                        % set to 'inf' if using J.cvi = 'FAST'. SPM HPF not applied
+            end
+            J.fact = struct('name', {}, 'levels', {});
+            J.bases.hrf.derivs = [0 0];
+            J.bases.hrf.params = [4.5 11];                                  % set to [] if running wls
+            J.volt = 1;
+            J.global = 'None';
+            J.mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'brain_mask.nii')};
+            J.mthresh = 0.01;
+            J.cvi_mask = {fullfile(baseDir,imagingDir,subj_name{sn(s)},'gray_mask.nii')};
+            J.cvi =  'fast';
+            
+            spm_rwls_run_fmri_spec(J);
+            
+            % save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T'); % Phase out the use of MAT files - prefer tsv files for Python-compatibility
+            dsave(fullfile(J.dir{1},'SPM_info.tsv'),T); 
+            fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
+        end
     case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum
         % example: bsp_imana('GLM:estimate',1,1)
         sn=varargin{1};
