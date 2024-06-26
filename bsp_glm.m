@@ -46,7 +46,7 @@ switch(what)
         sn=varargin{1}; % subjNum
         tissues = [1:3];
         
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S08_mean_bold.nii'));
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S16_mean_bold.nii'));
         for i=1:length(tissues)
             P{i+1} = fullfile(baseDir, anatomicalDir, subj_name{sn}, sprintf('%s_T1w_c%d.nii', subj_name{sn}, tissues(i)));
 

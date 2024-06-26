@@ -169,7 +169,7 @@ switch(what)
 
     case 'FUNC:split' % for instances where realign doesn't work becuase of 'offending images'; split 4D functional image into individual 3D volumes 
    
-        source_image = '/Volumes/Diedrichsen_data$/data/Cerebellum/Pontine7T/imaging_data/S11/run_16.nii'; 
+        source_image = '/Volumes/Diedrichsen_data$/data/Cerebellum/Pontine7T/imaging_data/S16/run_16.nii'; 
     
         % Load the header information of the 4D image
         hdr = spm_vol(source_image);
@@ -277,8 +277,7 @@ switch(what)
                     current_run = str2double(r_cell{1});
                     % Obtain the number of TRs for the current run
                     for j = 1:numTRs
-                        %data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('uint16_run-%02d.nii,%d', current_run, j));
-                        data{current_run}{j,1} = fullfile(imagingDir,strcat(subj_name{s}),sprintf('run_%02d.nii,%d', current_run, j));
+                        data{current_run}{j,1} = fullfile(imagingDirRaw,strcat(subj_name{s},'-n'),sprintf('uint16_run-%02d.nii,%d', current_run, j));                       
                     end % j (TRs/images)
                 end % r (runs)            
             spmj_realign(data);
@@ -321,7 +320,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S08_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S16_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
             
             % Select images to be realigned
             Q={};
@@ -384,7 +383,7 @@ switch(what)
             % If available, reslice the T2w image into the T1 voxel
             % resolution 
           
-            if (pinfo.T2_whole(s) >0)
+            if (pinfo.T2_whole(s) == 1)
                 source_vol=spm_vol(fullfile(baseDir,anatomicalDir,subj_name{s},[subj_name{sn} '_whole_T2w.nii']));
                 target_vol=spm_vol(T1name); 
                 outname = fullfile(suitSubjDir,[subj_name{sn} '_reslice_T2w.nii']); 
@@ -406,7 +405,7 @@ switch(what)
         cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
         job.subjND.gray       = {'c_S16_T1w_seg1.nii'};
         job.subjND.white      = {'c_S16_T1w_seg2.nii'};
-        job.subjND.isolation  = {'c_S16_T1w_pcereb_correct.nii'};
+        job.subjND.isolation  = {'c_S16_T1w_pcereb_corr.nii'};
         suit_normalize_dartel(job) 
 
     case 'SUIT:save_dartel_def'    
@@ -445,7 +444,6 @@ switch(what)
                     source = fullfile(sourceDir,[subj_name{sn} '_T1w.nii']); 
                     job.subj.resample = {source};
                     outDir = suitSubjDir; 
-                    %outDir = baseDir;
                     job.vox           = [1 1 1];
                 case 'TSE'
                     sourceDir = fullfile(baseDir,'anatomicals',subj_name{s}); 
@@ -571,11 +569,12 @@ switch(what)
         cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
     
     case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
-        sn = 10;
-        vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
-        for s=sn 
+        %sn = 15;
+       % sn = vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
+       sn  = varargin{1}; 
+       for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s},'mask.nii');
-            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{sn} '_T1w_pcereb.nii']); 
+            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{sn} '_T1w_pcereb_corr.nii']); 
             outfile = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii'); 
             Vi(1)=spm_vol(glm_mask); 
             Vi(2)=spm_vol(pcorr); 
@@ -583,33 +582,36 @@ switch(what)
         end
    
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
-        sn = 10; 
+        sn  = varargin{2}; 
         saveasimg = 1;
-        region_file = 'regions.mat';   % File with group ROI definitions 
-        def_dir = 'suit/anatomicals/S08';  % This is where the deformation can be found 
-        def_img = 'c_S08_T1w_seg1';  
-        vararginoptions(varargin,{'sn','saveasimg','region_file','def_dir','def_img'}); 
-        
-        % Load the group regions 
-        groupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
-        groupR = load(fullfile(groupDir,region_file)); 
-        % For all subjects, deform those regions and save as regions 
+        region_file = 'regions.mat'; 
         for s = sn
+            def_img = fullfile(baseDir, 'suit','anatomicals', subj_name{s},['c_' subj_name{sn} '_T1w_seg1']);
+            %def_dir = 'suit/anatomicals/S13';  % This is where the deformation can be found 
+            %def_img = 'c_S13_T1w_seg1';  
+            vararginoptions(varargin,{'sn','saveasimg','region_file',def_img'}); 
+        
+         % Load the group regions 
+            groupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
+            groupR = load(fullfile(groupDir,region_file)); 
+            % For all subjects, deform those regions and save as regions 
+            %for s = sn
             mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii');
             Vmask = spm_vol(mask); 
-            dartel_flowfield= fullfile(baseDir,def_dir,['u_a_' def_img '.nii']);  
-            dartel_affine = fullfile(baseDir,def_dir,['Affine_' def_img '.mat']);
+            dartel_flowfield= fullfile(baseDir, 'suit', 'anatomicals',subj_name{s},['u_a_c_' subj_name{sn}, '_T1w_seg1.nii']);  
+            dartel_affine = fullfile(baseDir, 'suit', 'anatomicals', subj_name{s},['Affine_c_' subj_name{sn}, '_T1w_seg1.mat']);
             R=region_deformation(groupR.R,{dartel_flowfield,dartel_affine},'mask', mask);
             outdir = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s});
             save(fullfile(outdir,[region_file]),'R'); 
-            % For testing purposes, we can also save these ROIs as images 
-            % in the original ROI space 
+             % For testing purposes, we can also save these ROIs as images 
+             % in the original ROI space 
             if (saveasimg)
                 for r=1:length(R)
-                    region_saveasimg(R{r},Vmask,'name',fullfile(outdir,[R{r}.name '_mask.nii'])); 
+                    region_saveasimg(R{r},Vmask,'name',fullfile(outdir,[R{r}.name '_mask.nii']));
                 end
             end
-        end
+        end 
+      
         
     case 'ROI:getRawTs'                % Get raw timeseries and save them
         % bsp_glm('ROI:getRawTs',1,1);
