@@ -27,7 +27,7 @@ good_subj = find(pinfo.good)'; % Indices of all good subjects
 %========================================================================================================================
 % GLM INFO
 numDummys = 3;                                                              % per run
-numTRs    = 328;                                                            % per run (includes dummies)
+numTRs    = 330;                                                            % per run (includes dummies)
 runs         = {'01','02','03','04','05','06','07','08'};
 runB        = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];  % Behavioural labelling of runs
 sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session number
@@ -439,8 +439,8 @@ switch(what)
         % down code for FAST GLM).
         % Example1: bsp_glm('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
         
-        sn             = 19;             %% list of subjects
-        glm            = 2;             %% The glm number
+        %sn             = 19;             %% list of subjects
+        %glm            = 2;             %% The glm number
         
         vararginoptions(varargin, {'sn', 'glm'})
         

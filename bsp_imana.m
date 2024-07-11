@@ -34,7 +34,7 @@ good_subj = find(pinfo.good)'; % Indices of all good subjects
 %========================================================================================================================
 % GLM INFO
 numDummys = 3;                                                              % per run
-numTRs    = 328;                                                            % per run (includes dummies)
+numTRs    = 330;                                                            % per run (includes dummies)
 run         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16'};
 runB        = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];  % Behavioural labelling of runs
 sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session number
@@ -320,8 +320,7 @@ switch(what)
             cd(fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Select image for reference
-            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},sprintf('S16_mean_bold.nii'))); %IH: original was 'rmeanrun_%2.2d.nii', runnum
-            
+            P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{s},[subj_name{sn},'_mean_bold.nii'])); %IH: original was 'rmeanrun_%2.2d.nii', runnum    
             % Select images to be realigned
             Q={};
             for r=1:numel(runs)
@@ -403,16 +402,16 @@ switch(what)
         % example: 'bsp_imana('SUIT:normalise_dartel',1)'
         
         cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-        job.subjND.gray       = {'c_S16_T1w_seg1.nii'};
-        job.subjND.white      = {'c_S16_T1w_seg2.nii'};
-        job.subjND.isolation  = {'c_S16_T1w_pcereb_corr.nii'};
+        job.subjND.gray       = {['c_', subj_name{sn}, '_T1w_seg1.nii']};
+        job.subjND.white      = {['c_', subj_name{sn}, '_T1w_seg2.nii']};
+        job.subjND.isolation  = {['c_', subj_name{sn}, '_T1w_pcereb_corr.nii']};
         suit_normalize_dartel(job) 
 
     case 'SUIT:save_dartel_def'    
         % Saves the dartel flow field as a deformation file. 
         for sn = 10 %IH: original was for sn = [1:length(subj_name)]
             cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-            anat_name = 'S08_T1w';
+            anat_name = [subj_name{sn},'_T1w'];
             suit_save_darteldef(anat_name);
         end; 
     case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
@@ -452,26 +451,51 @@ switch(what)
                     outDir = suitSubjDir; 
                     job.vox           = [1 1 1];
                 case 'csf'
-                    sourceDir = fullfile(baseDir,'anatomicals', subj_name{s}, 'mp2rage - T1w'); 
+                    sourceDir = fullfile(baseDir,'anatomicals', subj_name{s}); 
                     source = fullfile(sourceDir,'c3anatomical.nii');
                     job.subj.resample = {source};
                     job.subj.mask     =  {}; 
                     outDir = suitSubjDir; 
                     job.vox           = [1 1 1];
                 case 'functional'
-                    taskNames = {"flexion_extension"};
+                    taskNames = {"flexion_extension", "romance_movie", "finger_sequence", "n_back", "action_observation", "theory_of_mind", "visual_search", "Instruct", "semantic_prediction", "rest"};
                     for taskIdx = 1:numel(taskNames)
                         taskName = taskNames{taskIdx};
                         sourceDir = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s});
                         source = fullfile(sourceDir, sprintf('con_%s_16_runs.nii', taskName));
                         job.subj.resample = {source};
                         outDir = fullfile(baseDir,suitDir,'glm2',subj_name{s}); 
+                        suit_reslice_dartel(job);   
+                        source=fullfile(sourceDir,'*wd*');
+                        movefile(source,outDir);
                     end 
             end
             suit_reslice_dartel(job);   
             source=fullfile(sourceDir,'*wd*');
             movefile(source,outDir);
         end
+
+    case 'SUIT:flatmap'
+        %creates flatmaps for each task 
+
+       sn=varargin{1};
+       taskNames = {"flexion_extension", "romance_movie", "finger_sequence", "n_back", "action_observation", "theory_of_mind", "visual_search", "Instruct", "semantic_prediction", "rest"};
+       for taskIdx = 1:numel(taskNames)
+           taskName = taskNames{taskIdx};
+           sourceDir = fullfile(baseDir,suitDir, 'glm2', subj_name{sn});
+           source = fullfile(sourceDir,sprintf('wdcon_%s.nii',taskName));
+           Data = suit_map2surf(source,'space','SUIT');
+
+           %save plots 
+
+           figure; 
+           suit_plotflatmap(Data);
+           saveas(gcf, fullfile(sourceDir, sprintf('flatmap_%s.png', taskName)));
+
+           %close figure 
+           close(gcf);
+
+       end
 
     case 'SURF:reconall'       % Freesurfer reconall routine
         % Calls recon-all, which performs, all of the
@@ -642,7 +666,7 @@ switch(what)
                 fprintf('Raw ts saved for %s for %s \n',subj_name{s},R.R{1,r}.name);
             end
         end
-    case 'ROI:getBetas'       %CHECK DIRECTORY % Get Betas from a specific GLM save as as cifti files 
+    case 'ROI:getBetas'     % Get Betas from a specific GLM save as as cifti files 
         % bsp_glm('ROI:getRawTs',1,1);
         sn=varargin{1}; % subjNum
         glm=varargin{2}; % glmNum
@@ -652,8 +676,11 @@ switch(what)
         for s=sn,
             fprintf('SN: %d\n',s);
             glmDirSubj=fullfile(glmDir, subj_name{s});
-            D = readtable('SPM_info.tsv', 'FileType', 'text', 'Delimiter', '\t');
+            D = dload(fullfile(glmDirSubj,'SPM_info.tsv'));
             load(fullfile(baseDir,regDir,'regdef',subj_name{s},'regions.mat'));
+            
+
+          %  D = readtable('SPM_info.tsv', 'FileType', 'text', 'Delimiter', '\t');
             
             
             for i=1:length(D.run)
