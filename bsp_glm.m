@@ -57,7 +57,7 @@ switch(what)
         out =  fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'gray_mask.nii'));
         spm_imcalc(char(P),out,'i1>0 & i2>0.4');
     
-  case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
+    case 'GLM:glm1'                   % FAST glm w/out hpf one regressor per task and per instruction
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
         % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
@@ -300,7 +300,7 @@ switch(what)
             dsave(fullfile(J.dir{1},'SPM_info.tsv'),T); 
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
-      case 'GLM:glm3'                   % FAST glm w/out hpf one regressor per task - common instruction regressor
+    case 'GLM:glm3'                   % FAST glm w/out hpf one regressor per task - common instruction regressor
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
         % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
@@ -398,7 +398,26 @@ switch(what)
                 % struct('name', {'HR1','HR2'}, 'val', {[1,2,2],[21,2,1]})
                 % Take 1-4 from Retro_HR and 1 from HR 
                 J.sess(r).multi = {''};
-                J.sess(r).regress = struct('name', {}, 'val', {});
+                % Load HR file 
+                A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_hr.txt'));
+                J.sess(r).regress(1).name = 'HR'; 
+                J.sess(r).regress(1).val  = A(:,1); 
+                
+                % Load RetroIcor
+                A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_retro_hr.txt'));
+                name = ['sin1','cos1','sin2','cos2'];
+                for i = [1:4]
+                    J.sess(r).regress(1+i).name = reg_name{i}; 
+                    J.sess(r).regress(1+i).val  = A(:,i); 
+                end;
+                                    % filling in the fields for SPM_info.mat
+                S.task      = 100;
+                S.taskName  = 'HR';
+                S.inst      = 0;
+                S.time      = onset;
+                T  = addstruct(T, S);
+
+                
                 J.sess(r).multi_reg = {''};
                 J.sess(r).hpf = inf;                                        % set to 'inf' if using J.cvi = 'FAST'. SPM HPF not applied
             end
@@ -689,7 +708,7 @@ switch(what)
                     X0 = [];
                     if (~isempty(inK) && ~isempty(inK{model}))
                         for t=1:length(inK{model})
-                            X0 = [X0 get_feature(inK{model}{t},s,SPM,INFO,1,1,1)];
+                            X0 = [X0 bsp_get_feature(inK{model}{t},s,SPM,INFO,'separate',1,'sscale',1)];
                         end
                     end
                     
@@ -704,7 +723,7 @@ switch(what)
                     
                     % Add regressor of no interest to X
                     for t=1:length(inX{model})
-                        x = get_feature(inX{model}{t},s,SPM,INFO,0,1,1);
+                        x = bsp_get_feature(inX{model}{t},s,SPM,INFO,'separate',0,'sscale',1);
                         k = size(x,2);
                         indx = [i+1:i+k];
                         group(indx)=t;
@@ -868,7 +887,7 @@ switch(what)
                     X0 = [];
                     if (~isempty(inK) && ~isempty(inK{model}))
                         for t=1:length(inK{model})
-                            X0 = [X0 get_feature(inK{model}{t},s,SPM,INFO,1,1,1)];
+                            X0 = [X0 bsp_get_feature(inK{model}{t},s,SPM,INFO,'separate',1,'sscale',1)];
                         end
                     end
                     
@@ -883,7 +902,7 @@ switch(what)
                     
                     % Add regressor of no interest to X
                     for t=1:length(inX{model})
-                        x = get_feature(inX{model}{t},s,SPM,INFO,0,1,1);
+                        x = bsp_get_feature(inX{model}{t},s,SPM,INFO,'separate',0,'sscale',1);
                         k = size(x,2);
                         indx = [i+1:i+k];
                         group(indx)=t;
@@ -1923,53 +1942,58 @@ switch(what)
         varargout={D};
         
     case 'physio_reg' % Examines the covariance of physiological regressors with main regressors 
-        sn = [1:8]; 
+        sn = 5; 
         glm = 1; 
         vararginoptions(varargin,{'sn'})
         reg = {'Tasks','InstructC','Retro_HR','Retro_RESP','HR','RV'};
 
-        for s = sn
-            glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
-            glmDirSubj = fullfile(glmDir, subj_name{s});
-            load(fullfile(glmDirSubj,'SPM.mat'));
-            INFO = load(fullfile(glmDirSubj,'SPM_info.mat'));
-            nRuns = length(SPM.nscan);
-            
-            for i=1:nRuns 
-                tr(SPM.Sess(i).row,1)=[1:SPM.nscan(i)]; 
-                rn(SPM.Sess(i).row,1)=i; 
-            end; 
-    
-            for r = 1:length(reg)
-                X{r}=get_feature(reg{r},s,SPM,INFO,0,1,1); 
-            end 
-            
-            onsets = vertcat(SPM.Sess(1).U([1:2:18]).ons); 
-            % Average run-averaged 
-            to_plot=[1,2,5,6]; 
-            for i = 1:4 
-                subplot(4,2,(i-1)*2+1);
-                Y=reshape(sum(X{to_plot(i)},2),SPM.nscan(1),16); 
-                traceplot([1:SPM.nscan(1)],Y','errorfcn','stderr'); 
-                drawlines(onsets,'k'); 
-                set(gca,'XLim',[-3 SPM.nscan(1)+3]);
-            end; 
-            XI = [X{1} X{2}]; 
-            to_evaluate=[3,4,5,6]; 
-            for i = 1:4
-                for r=1:16 
-                    indx = find(rn==r); 
-                    b(:,r)=pinv(XI(indx,:))*X{to_evaluate(i)}(indx,1);
-                end;
-                subplot(4,2,(i-1)*2+2);
-                myboxplot([],b');
-                drawline(0,'dir','horz'); 
-                set(gca,'XTickLabel',{'VS','AO','FE','FS','TOM','NB','SP','R','RM','In'});
-                ylabel(reg{to_evaluate(i)});
-            end; 
-            
-            keyboard; 
-        end
+        glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        glmDirSubj = fullfile(glmDir, subj_name{sn});
+        load(fullfile(glmDirSubj,'SPM.mat'));
+        INFO = load(fullfile(glmDirSubj,'SPM_info.mat'));
+        nRuns = length(SPM.nscan);
+        
+        % find the TR and Run for each image in the entire time series
+        for i=1:nRuns 
+            tr(SPM.Sess(i).row,1)=[1:SPM.nscan(i)]; 
+            rn(SPM.Sess(i).row,1)=i; 
+        end; 
+        
+        % Get the corresponding feature  (regressor)
+        for r = 1:length(reg)
+            X{r}=bsp_get_feature(reg{r},sn,SPM,INFO,'zscale',1); 
+        end 
+
+        % Find the onset of all instruction periors 
+        onsets = vertcat(SPM.Sess(1).U([1:2:18]).ons); 
+        
+        % Run-averaged 
+        to_plot=[1,2,5,6]; 
+        for i = 1:4 
+            subplot(4,2,(i-1)*2+1);
+            Y=reshape(sum(X{to_plot(i)},2),SPM.nscan(1),16); 
+            traceplot([1:SPM.nscan(1)],Y','errorfcn','stderr'); 
+            drawlines(onsets,'k'); 
+            set(gca,'XLim',[-3 SPM.nscan(1)+3]);
+            ylabel(reg{to_plot(i)});
+        end; 
+        
+        % Run a regression of each task regressor on Physio time series 
+        XI = [X{1} X{2}]; 
+        to_evaluate=[3,4,5,6]; 
+        for i = 1:4
+            for r=1:16 
+                indx = find(rn==r); 
+                b(:,r)=pinv(XI(indx,:))*X{to_evaluate(i)}(indx,1);
+            end;
+            subplot(4,2,(i-1)*2+2);
+            myboxplot([],b');
+            drawline(0,'dir','horz'); 
+            set(gca,'XTickLabel',{'VS','AO','FE','FS','TOM','NB','SP','R','RM','In'});
+            ylabel(reg{to_evaluate(i)});
+        end; 
+
+        keyboard; 
 end
 end
 
@@ -1981,225 +2005,4 @@ function R2=calc_R2(A,B)
     R2  = 1-sum(sum((A-B).^2))./sum(sum(B.^2));
 end
 
-function XX=get_feature(what,sn,SPM,INFO,separate,sscale,zscale)
-% Function that gets the regressors
-global baseDir
-global subj_name
-glm = 1;
-nRuns = length(SPM.nscan);
-switch (what)
-    case 'Tasks'
-        for rn = 1:nRuns
-            indx = SPM.Sess(rn).col;
-            ii=INFO.inst(indx)==0;
-            X{rn} = SPM.xX.X(SPM.Sess(rn).row,indx(ii));
-        end
-    case 'Instruct'
-        for rn = 1:nRuns
-            indx = SPM.Sess(rn).col;
-            ii=INFO.inst(indx)==1;
-            X{rn} = SPM.xX.X(SPM.Sess(rn).row,indx(ii));
-        end
-    case 'InstructC'
-        for rn = 1:nRuns
-            indx = SPM.Sess(rn).col;
-            ii=INFO.inst(indx)==1;
-            X{rn} = sum(SPM.xX.X(SPM.Sess(rn).row,indx(ii)),2);
-        end
-    case 'Null'         % Null model - row/column permuted Tasks+InstructC
-        numTRs = 325;
-        for rn = 1:nRuns
-            A = load(fullfile(baseDir,'simulations','design.mat'));
-            Atemp = A.X(1:numTRs,:);
-            Atemp = Atemp(randperm(size(Atemp,1)),:); % randomly permute rows
-            Atemp = Atemp(:,randperm(size(Atemp,2))); % randomly permute columns
-            X{rn} = Atemp;
-        end
-    case 'Hpass'        % High pass filter
-        for rn = 1:nRuns
-            k.HParam = 128;
-            k.RT     = SPM.xY.RT;
-            k.row  = SPM.Sess(rn).row;
-            HPF = spm_filter(k);
-            X{rn} = HPF.X0;
-        end
-    case 'Mov'          % Realignment parameters
-        % load the motion files of every run
-        for rn = 1:nRuns
-            X{rn} = load(fullfile(baseDir,'imaging_data',subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
-        end
-    case 'MovPCA'       % 2 PCs of realigment paramenters
-        % load the motion files of every run
-        MOV  = [];
-        for rn = 1:nRuns
-            mov = load(fullfile(baseDir,'imaging_data',subj_name{sn},sprintf('rp_run_%02d.txt',rn)));
-            MOV = [MOV;mov];
-        end
-        % Get the principal components
-        [~,score] = pca(MOV);
-        for rn = 1:nRuns
-            X{rn} = score(SPM.Sess(rn).row,1:2);
-        end
-    case 'Retro_HR'    % Retroicor of cardio and resp 18 comp
-        % Load the physio regressors from TAPAS
-        for rn = 1:nRuns
-            A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'reg_retro_hr.txt'));
-            X{rn} = A(:,1:4); % Two fundamentals
-        end
-    case 'Retro_RESP'    % Retroicor of cardio and resp 18 comp
-        % Load the physio regressors from TAPAS
-        for rn = 1:nRuns
-            A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'reg_retro_resp.txt'));
-            X{rn} = A(:,1:4); % Two fundamentals
-        end
-    case 'HR'    % Retroicor of cardio and resp 18 comp
-        % Load the physio regressors from TAPAS
-        for rn = 1:nRuns
-            A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'reg_hr.txt'));
-            X{rn} = A(:,1);
-        end
-    case 'RV'    % Retroicor of cardio and resp 18 comp
-        % Load the physio regressors from TAPAS
-        for rn = 1:nRuns
-            A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',rn),'reg_rvt.txt'));
-            X{rn} = A(:,1);
-        end    
-    case 'aCompCor'    % anatomical compcor estimated from fmriprep
-        % Load the acompcor regressors from fmriprep confounds file
-        for rn = 1:nRuns
-            A = load(fullfile(baseDir,'confounds',subj_name{sn},sprintf('run%02d',rn),'acompcor.txt'));
-            X{rn} = A(4:328,1:2); % grab first two components
-        end
-    case 'CSF'          % Mean signal of the CSF around brainstem
-        % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_csf.mat'));
-        % mean CSF signal
-        for rn = 1:nRuns
-            mcsf = mean(csf.Y(SPM.Sess(rn).row,:),2);
-            X{rn} = bsxfun(@rdivide,mcsf,sqrt(sum(mcsf.^2)));
-        end
-    case 'CSFPCAindiv'       % 2 Pcs of CSF
-        % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_csf.mat'));
-        % Compute the PCs
-        for rn = 1:nRuns
-            runcsf = csf.Y(SPM.Sess(rn).row,:);
-            % Get the principal components
-            [~,score] = pca(runcsf);
-            X{rn} = score(:,1:2);
-        end
-    case 'CSFPCAall'   % 2 PCs of CSF computed over 4 runs
-        % Get the CSF mask
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_csf.mat'));
-        [~,score] = pca(csf.Y);
-        % Include the first 2 PCs of CSF in design
-        for rn = 1:nRuns
-            X{rn} = score(SPM.Sess(rn).row,1:2);
-        end
-        
-    case 'CSFpons'          % Mean signal of the CSF around brainstem
-        % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_pons.mat'));
-        % mean CSF signal
-        for rn = 1:nRuns
-            mcsf = mean(csf.Y(SPM.Sess(rn).row,:),2);
-            X{rn} = bsxfun(@rdivide,mcsf,sqrt(sum(mcsf.^2)));
-        end
-    case 'CSFponsPCAindiv'       % 2 Pcs of CSF
-        % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_pons.mat'));
-        % Compute the PCs
-        for rn = 1:nRuns
-            runcsf = csf.Y(SPM.Sess(rn).row,:);
-            % Get the principal components
-            [~,score] = pca(runcsf);
-            X{rn} = score(:,1:2);
-        end
-    case 'CSFponsPCAall'   % 2 PCs of CSF computed over 4 runs
-        % Get the CSF mask
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_pons.mat'));
-        [~,score] = pca(csf.Y);
-        % Include the first 2 PCs of CSF in design
-        for rn = 1:nRuns
-            X{rn} = score(SPM.Sess(rn).row,1:2);
-        end
-   case 'CSFmedulla'          % Mean signal of the CSF around brainstem
-        % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_medulla.mat'));
-        % mean CSF signal
-        for rn = 1:nRuns
-            mcsf = mean(csf.Y(SPM.Sess(rn).row,:),2);
-            X{rn} = bsxfun(@rdivide,mcsf,sqrt(sum(mcsf.^2)));
-        end
-    case 'CSFmedullaPCAindiv'       % 2 Pcs of CSF
-        % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_medulla.mat'));
-        % Compute the PCs
-        for rn = 1:nRuns
-            runcsf = csf.Y(SPM.Sess(rn).row,:);
-            % Get the principal components
-            [~,score] = pca(runcsf);
-            X{rn} = score(:,1:2);
-        end
-    case 'CSFmedullaPCAall'   % 2 PCs of CSF computed over 4 runs
-        % Get the CSF mask
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_medulla.mat'));
-        [~,score] = pca(csf.Y);
-        % Include the first 2 PCs of CSF in design
-        for rn = 1:nRuns
-            X{rn} = score(SPM.Sess(rn).row,1:2);
-        end
-   case 'CSFpostdrain'          % Mean signal of the CSF around brainstem
-        % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_postdrain.mat'));
-        % mean CSF signal
-        for rn = 1:nRuns
-            mcsf = mean(csf.Y(SPM.Sess(rn).row,:),2);
-            X{rn} = bsxfun(@rdivide,mcsf,sqrt(sum(mcsf.^2)));
-        end
-    case 'CSFpostdrainPCAindiv'       % 2 Pcs of CSF
-        % Get the CSF data
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_postdrain.mat'));
-        % Compute the PCs
-        for rn = 1:nRuns
-            runcsf = csf.Y(SPM.Sess(rn).row,:);
-            % Get the principal components
-            [~,score] = pca(runcsf);
-            X{rn} = score(:,1:2);
-        end
-    case 'CSFpostdrainPCAall'   % 2 PCs of CSF computed over 4 runs
-        % Get the CSF mask
-        csf = load(fullfile(baseDir,'RegionOfInterest','data',subj_name{sn},'rawts_postdrain.mat'));
-        [~,score] = pca(csf.Y);
-        % Include the first 2 PCs of CSF in design
-        for rn = 1:nRuns
-            X{rn} = score(SPM.Sess(rn).row,1:2);
-        end
-end
-if (zscale) % subtract mean from each regressor - seperate for each regressor
-    for rn = 1:nRuns
-        X{rn}=bsxfun(@minus,X{rn},mean(X{rn}));
-    end
-end
-if (sscale)
-    for rn = 1:nRuns
-        VAR(rn,:) = sum(X{rn}.*X{rn})/size(X{rn},1);
-    end
-    for rn = 1:nRuns
-        X{rn}=bsxfun(@rdivide,X{rn},sqrt(mean(VAR,1)));
-    end
-end
-N = size(SPM.xX.X,1);
-K = size(X{1},2);
-if (separate)
-    XX = zeros(N,K*nRuns);
-    for rn = 1:nRuns
-        XX(SPM.Sess(rn).row,[1:K]+(rn-1)*K) = X{rn};
-    end
-else
-    XX = zeros(N,K);
-    for rn = 1:nRuns
-        XX(SPM.Sess(rn).row,:) = X{rn};
-    end
-end
-end
+
