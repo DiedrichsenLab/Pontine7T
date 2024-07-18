@@ -1943,7 +1943,7 @@ switch(what)
         
     case 'physio_reg' % Examines the covariance of physiological regressors with main regressors 
         sn  = varargin{1}; 
-        glm = varargin{2}; %example: bsp_glm("physio_reg",5,2), with sn=5, glm=2
+        glm = varargin{2}; %example: bsp
         reg = {'Tasks','InstructC','Retro_HR','Retro_RESP','HR','RV'};
 
         glmDir = fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
