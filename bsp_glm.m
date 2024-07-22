@@ -27,7 +27,7 @@ good_subj = find(pinfo.good)'; % Indices of all good subjects
 %========================================================================================================================
 % GLM INFO
 numDummys = 3;                                                              % per run
-numTRs    = 330;                                                            % per run (includes dummies)
+numTRs    = pinfo.numTR;                                                             % per run (includes dummies)
 runs         = {'01','02','03','04','05','06','07','08'};
 runB        = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];  % Behavioural labelling of runs
 sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session number
@@ -46,7 +46,7 @@ switch(what)
         sn=varargin{1}; % subjNum
         tissues = [1:3];
         
-        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},'S16_mean_bold.nii'));
+        P{1} = fullfile(fullfile(baseDir,imagingDir,subj_name{sn},[subj_name{sn} '_mean_bold.nii']));
         for i=1:length(tissues)
             P{i+1} = fullfile(baseDir, anatomicalDir, subj_name{sn}, sprintf('%s_T1w_c%d.nii', subj_name{sn}, tissues(i)));
 
@@ -304,11 +304,12 @@ switch(what)
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
         % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
+
         sn=varargin{1};
         runs=varargin{2}; % 
         
         announceTime=5;  % Instruction duration
-        glm=2;
+        glm=3;
         subjs=length(sn);
         
         % load in task information
@@ -318,7 +319,8 @@ switch(what)
         
         for s=1:subjs,
             T=[];
-            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-08_scans.tsv')); % get scanning timing and order
+
+             A = dload(fullfile(baseDir,'data',subj_name{sn},[subj_name{sn} '_scans.tsv'])); % get scanning timing and order
             %A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
             glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
@@ -329,7 +331,6 @@ switch(what)
             J.timing.RT = 1.0;
             J.timing.fmri_t = 16;
             J.timing.fmri_t0 = 1;
-
            
             for r=1:numel(runs) % loop through runs
                 P=getrow(A,A.run_num==runB(r));
@@ -394,21 +395,24 @@ switch(what)
                     
 
                 end % it (tasks)
-                % Load require Physion files 
+
+                % Load require Physio files 
                 % struct('name', {'HR1','HR2'}, 'val', {[1,2,2],[21,2,1]})
                 % Take 1-4 from Retro_HR and 1 from HR 
+
                 J.sess(r).multi = {''};
+
                 % Load HR file 
-                A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_hr.txt'));
+                A2 = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_hr.txt'));
                 J.sess(r).regress(1).name = 'HR'; 
-                J.sess(r).regress(1).val  = A(:,1); 
+                J.sess(r).regress(1).val  = A2(1:(numTRs-numDummys),1); 
                 
                 % Load RetroIcor
-                A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_retro_hr.txt'));
-                name = ['sin1','cos1','sin2','cos2'];
+                A3 = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_retro_hr.txt'));
+                reg_name = {'sin1','cos1','sin2','cos2'};
                 for i = [1:4]
                     J.sess(r).regress(1+i).name = reg_name{i}; 
-                    J.sess(r).regress(1+i).val  = A(:,i); 
+                    J.sess(r).regress(1+i).val  = A3(1:1:(numTRs-numDummys),i); 
                 end;
                                     % filling in the fields for SPM_info.mat
                 S.task      = 100;
@@ -436,7 +440,9 @@ switch(what)
             % save(fullfile(J.dir{1},'SPM_info.mat'),'-struct','T'); % Phase out the use of MAT files - prefer tsv files for Python-compatibility
             dsave(fullfile(J.dir{1},'SPM_info.tsv'),T); 
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
+
         end
+
     case 'GLM:estimate'               % Estimate GLM depending on subjNum & glmNum
         % example: bsp_imana('GLM:estimate',1,1)
         sn=varargin{1};
@@ -1995,7 +2001,7 @@ switch(what)
 
             %save plots 
             
-           saveas(gcf, fullfile(glmDirSubj, sprintf('physio_%s.png', subj_name{sn})));
+           saveas(gcf, fullfile(baseDir,'physio',subj_name{sn},sprintf('physio_%s.png', subj_name{sn})));
 
         end; 
 

@@ -237,7 +237,8 @@ if (separate)
 else
     XX = zeros(N,K);
     for rn = 1:nRuns
-        XX(SPM.Sess(rn).row,:) = X{rn};
+        num_rows = length(SPM.Sess(rn).row);
+        XX(SPM.Sess(rn).row,:) = X{rn}(1:num_rows, :);
     end
 end
 end
