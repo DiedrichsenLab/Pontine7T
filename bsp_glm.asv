@@ -75,7 +75,7 @@ switch(what)
         
         for s=sn %IH: initially s=1:subjs
             T=[];
-            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-08_scans.tsv')); % get scanning timing and order
+            A = dload(fullfile(baseDir,'data',subj_name{sn},[subj_name{sn} '_scans.tsv']));
             %A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
             glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn}];dircheck(glmSubjDir); % Create GLM folder
@@ -203,7 +203,7 @@ switch(what)
         
         for s=1:subjs,
             T=[];
-            A = dload(fullfile(baseDir,'data',subj_name{sn},'sub-08_scans.tsv')); % get scanning timing and order
+            A = dload(fullfile(baseDir,'data',subj_name{sn},[subj_name{sn} '_scans.tsv'])); % get scanning timing and order
             %A = getrow(A,A.run_num>=funcRunNum(1) & A.run_num<=funcRunNum(2)); % get only the runs we need (remove any test or Behav training)
             
             glmSubjDir =[baseDir, sprintf('/GLM_firstlevel_%d/',glm),subj_name{sn(s)}];dircheck(glmSubjDir); % Create GLM folder
@@ -300,19 +300,11 @@ switch(what)
             dsave(fullfile(J.dir{1},'SPM_info.tsv'),T); 
             fprintf('glm_%d has been saved for %s \n',glm, subj_name{sn(s)});
         end
+
     case 'GLM:glm3'                   % FAST glm w/out hpf one regressor per task - common instruction regressor
         % GLM with FAST and no high pass filtering
         % 'spm_get_defaults' code modified to allow for -v7.3 switch (to save>2MB FAST GLM struct)
         % EXAMPLE: bsp_imana('GLM:glm1',[1:XX],[1:XX])
-
-           
-            for r=1:numel(runs) % loop through runs
-                P=getrow(A,A.run_num==runB(r));
-                for i=1:(numTRs-numDummys) % get the filenames of the nifti volumes for each run
-                    N{i} = [fullfile(baseDir,imagingDir,subj_name{sn(s)},sprintf('run_%2.2d.nii,%d',runs(r),i+numDummys))];
-                end;
-
-                %COPIED 
 
         sn=varargin{1};
         runs=varargin{2}; % 
@@ -324,7 +316,7 @@ switch(what)
         % load in task information
         C=dload(fullfile(baseDir,'pontine_taskConds_GLM_reordered.tsv'));
         Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks
-        nTask      = max(Cc.taskNum);                                 % how many tasks there are?
+        nTask      = max(Cc.taskNum);                               
         
         for s=1:subjs,
             T=[];
@@ -412,16 +404,16 @@ switch(what)
                 J.sess(r).multi = {''};
 
                 % Load HR file 
-                A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_hr.txt'));
+                A2 = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_hr.txt'));
                 J.sess(r).regress(1).name = 'HR'; 
-                J.sess(r).regress(1).val  = A(:,1); 
+                J.sess(r).regress(1).val  = A2(1:(numTRs-numDummys),1); 
                 
                 % Load RetroIcor
-                A = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_retro_hr.txt'));
+                A3 = load(fullfile(baseDir,'physio',subj_name{sn},sprintf('run%02d',r),'reg_retro_hr.txt'));
                 reg_name = {'sin1','cos1','sin2','cos2'};
                 for i = [1:4]
                     J.sess(r).regress(1+i).name = reg_name{i}; 
-                    J.sess(r).regress(1+i).val  = A(:,i); 
+                    J.sess(r).regress(1+i).val  = A3(1:1:(numTRs-numDummys),i); 
                 end;
                                     % filling in the fields for SPM_info.mat
                 S.task      = 100;
@@ -430,9 +422,33 @@ switch(what)
                 S.time      = onset;
                 T  = addstruct(T, S);
 
+                S.task = 101;
+                S.taskName = 'sin1';
+                S.inst = 0;
+                S.time = onset;
+                T = addstruct(T,S);
+
+                S.task = 102;
+                S.taskName = 'cos1';
+                S.inst = 0;
+                S.time = onset; 
+                T = addstruct(T,S);
+
+                S.task = 103;
+                S.taskName = 'sin2';
+                S.inst = 0;
+                S.time = onset;
+                T = addstruct(T,S);
+
+                S.task = 104; 
+                S.taskName = 'cos2';
+                S.inst = 0;
+                S.time = onset; 
+                T = addstruct(T,S);
                 
                 J.sess(r).multi_reg = {''};
                 J.sess(r).hpf = inf;                                        % set to 'inf' if using J.cvi = 'FAST'. SPM HPF not applied
+            
             end
             J.fact = struct('name', {}, 'levels', {});
             J.bases.hrf.derivs = [0 0];
@@ -469,6 +485,7 @@ switch(what)
 
     case 'GLM:contrast'               % Create Contrast images for each task - and instruction 
         %%% Calculating contrast images.
+
         % 'SPM_light' is created in this step (xVi is removed as it slows
         % down code for FAST GLM).
         % Example1: bsp_glm('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
@@ -582,13 +599,28 @@ switch(what)
             % F contrast
             name = sprintf('%s', type);
             switch(type)
-                case 'task'
+                case 'task' %Fcontrast for any between-task difference
                     numTasks = max(T.task);
                     con = zeros(numTasks,size(SPM.xX.X,2));
                     for i=1:numTasks
                         con(i,T.task==i & T.inst==0)=1-1/numTasks;
                         con(i,T.task~=i & T.inst==0)=-1/numTasks;
                     end
+
+                case 'retricor'
+                    con = zeros(4,size(SPM.xX.X,2));
+                    reg_num_index=[3,3,3,3];
+
+                    for i=1:4
+                        con(i,T.reg_num==reg_num_index(i))=1;
+                        con(i,T.reg_num~=3)=
+                           
+                case 'HR'
+                    con = zeros(1,size(SPM.xX.X,2));
+                    con(1,T.reg_num==2)=1;
+                    con(1,T.reg_num~=2)=-1/4;
+
+                            
             end
             
             SPM.xCon(1) = spm_FcUtil('Set',name, 'F', 'c',con',SPM.xX.xKXs);
