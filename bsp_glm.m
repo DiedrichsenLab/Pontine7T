@@ -485,6 +485,7 @@ switch(what)
 
     case 'GLM:contrast'               % Create Contrast images for each task - and instruction 
         %%% Calculating contrast images.
+
         % 'SPM_light' is created in this step (xVi is removed as it slows
         % down code for FAST GLM).
         % Example1: bsp_glm('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
@@ -606,15 +607,19 @@ switch(what)
                         con(i,T.task~=i & T.inst==0)=-1/numTasks;
                     end
 
-                case 'retricor'
-                    con = zeros(i,size(SPM.xX.X,2));
-                    con(1:4,T.reg_num==3)=1;
-                    con(1:4,T.reg_num~=3)=-1/4; 
+                case 'retroicor'
+                    con = zeros(4,size(SPM.xX.X,2));
+                    task=[101,102,103,104];
+
+                    for i=1:4
+                        con(i,T.task==task(i))=1;
+                        con(i,T.task~=task(i))=0;
+                    end
                            
                 case 'HR'
                     con = zeros(1,size(SPM.xX.X,2));
-                    con(1,T.reg_num==2)=1;
-                    con(1,T.reg_num~=2)=-1/4;
+                    con(1,T.task==100)=1;
+                    con(1,T.task~=100)=0;
 
                             
             end
