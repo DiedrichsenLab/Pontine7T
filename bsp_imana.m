@@ -597,7 +597,7 @@ switch(what)
        % sn = vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
        sn  = varargin{1}; 
        for s=sn 
-            glm_mask = fullfile(baseDir,'GLM_firstlevel_2',subj_name{s},'mask.nii');
+            glm_mask = fullfile(baseDir,'GLM_firstlevel_3',subj_name{s},'mask.nii');
             pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{sn} '_T1w_pcereb_corr.nii']); 
             outfile = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii'); 
             Vi(1)=spm_vol(glm_mask); 

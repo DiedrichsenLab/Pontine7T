@@ -552,7 +552,7 @@ switch(what)
             con(:,T.task >0 & T.inst==0) = -1./(num_runs*num_tasks);                
             name = 'Instruct'; 
             SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs); 
-            
+
             
             SPM = spm_contrasts(SPM,1:length(SPM.xCon));  %makes contrast images: initially this - SPM = spm_contrasts(SPM,1:length(SPM.xCon))
              
@@ -594,7 +594,7 @@ switch(what)
                 SPM  = rmfield(SPM,'xCon');
             end
             cd(fullfile(glmDir, subj_name{s}))
-            T = load('SPM_info.mat');
+            T = dload('SPM_info.tsv');
             
             % F contrast
             name = sprintf('%s', type);
@@ -616,7 +616,7 @@ switch(what)
                         con(i,T.task~=task(i))=0;
                     end
                            
-                case 'HR'
+                case 'HR' %change SPM.xCon to 'T' for this one 
                     con = zeros(1,size(SPM.xX.X,2));
                     con(1,T.task==100)=1;
                     con(1,T.task~=100)=0;

@@ -552,7 +552,12 @@ switch(what)
             con(:,T.task >0 & T.inst==0) = -1./(num_runs*num_tasks);                
             name = 'Instruct'; 
             SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs); 
+
+            %HR regressor 
             
+            con = zeros(1,size(SPM.xX.X,2));
+            con(1,T.task==100)=1;
+            con(1,T.task~=100)=0;
             
             SPM = spm_contrasts(SPM,1:length(SPM.xCon));  %makes contrast images: initially this - SPM = spm_contrasts(SPM,1:length(SPM.xCon))
              
@@ -607,19 +612,19 @@ switch(what)
                         con(i,T.task~=i & T.inst==0)=-1/numTasks;
                     end
 
-                case 'retricor'
+                case 'retroicor'
                     con = zeros(4,size(SPM.xX.X,2));
                     task=[101,102,103,104];
 
                     for i=1:4
                         con(i,T.task==task(i))=1;
-                        con(i,T.task~=i)=-1/4;
+                        con(i,T.task~=task(i))=0;
                     end
                            
                 case 'HR'
                     con = zeros(1,size(SPM.xX.X,2));
-                    con(1,T.reg_num==2)=1;
-                    con(1,T.reg_num~=2)=-1/4;
+                    con(1,T.task==100)=1;
+                    con(1,T.task~=100)=0;
 
                             
             end
