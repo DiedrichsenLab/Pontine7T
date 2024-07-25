@@ -438,9 +438,9 @@ switch(what)
             for r = 1:length(R)
                 Y = region_getdata(V,R{r});  % Data is N x P
                 resMS = region_getdata(VresMS,R{r});
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('rawts_%s.mat',R{r}.name)));
-                save(filename,'Y','resMS','-v7.3');
-                fprintf('Raw ts saved for %s for %s \n',subj_name{s},R{r}.name);
+                C = region_make_cifti(R(r),V(1),'data',{Y'},'struct',{'OTHER'},'dtype','series');
+                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_%s.dtseries.nii',subj_name{s},R{r}.name)));
+                cifti_write(C,filename); 
             end
         end
     case 'ROI:getBetas'       % Get Betas from a specific GLM save as as cifti files 
