@@ -649,18 +649,16 @@ switch(what)
             load(fullfile(glmDirSubj,'SPM.mat'));
             
             % load data
-            R = load(fullfile(baseDir,regDir,'regdef',subj_name{s},sprintf('regions.mat')), 'R');
+            load(fullfile(baseDir,regDir,'regdef',subj_name{s},sprintf('regions.mat')), 'R');
             
             % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Get the raw data files
             V=SPM.xY.VY; %originally: SPM.xY.VY; IH
-            VresMS = spm_vol(fullfile(glmDirSubj,'ResMS.nii'));
             
             % Get time series data
-            for r = 1:length(R)
+            for r = 1:length(R) % 1:length(R)
                 Y = region_getdata(V,R{r});  % Data is N x P
-                resMS = region_getdata(VresMS,R{r});
                 C = region_make_cifti(R(r),V(1),'data',{Y'},'struct',{'OTHER'},'dtype','series');
                 filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_%s.dtseries.nii',subj_name{s},R{r}.name)));
                 cifti_write(C,filename); 
