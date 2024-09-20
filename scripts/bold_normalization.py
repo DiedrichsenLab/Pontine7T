@@ -45,7 +45,7 @@ def test_plt():
     plt.show()
     pass 
 
-def normalize_bold_all(name,template,mask=None,tot='SyN'): 
+def normalize_bold_all(name,template,mask=None,tot='SyN',kwargs={}): 
     subj = pinfo['participant_id']
     subj = subj[pinfo.good==1]
     def_dir = f'{base_dir}/bold_normalization/deformed/{name}'
@@ -65,7 +65,12 @@ def normalize_bold_all(name,template,mask=None,tot='SyN'):
             print(f'Using sbref image for {src_sub}')
         prefix = f'{xfm_dir}/xfm_{src_sub}_'
         src_img = ants.image_read(src)
-        mytx = ants.registration(fixed=trg_img , moving=src_img,type_of_transform=tot,outprefix=prefix,write_composite_transform=False)
+        mytx = ants.registration(fixed=trg_img , 
+            moving=src_img,
+            type_of_transform=tot,
+            outprefix=prefix,
+            write_composite_transform=False,
+            **kwargs)
         fname_w = f'{def_dir}/w{src_sub}.nii'
         wsrc_img = mytx['warpedmovout']
         # ants.image_write(src_img,fname_s)
@@ -129,8 +134,9 @@ def symmetrize_template(src_sub='S03'):
 if __name__ == '__main__':
     # src_sub='S16'
     # make_initial_template()
-    symmetrize_template()
-    normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
-    normalize_bold_all('S03Sym_Agg','tpl-S03Sym_bold.nii',tot='SyNAggro')
+    # symmetrize_template()
+    kw={'verbose':True}
+    normalize_bold_all('MNI2009c_T2_CC','tpl-MNI152NLin2009cSym_res-1_T2w.nii.gz',tot='SyNCC',kwargs=kw)
+    # normalize_bold_all('S03Sym_Agg','tpl-S03Sym_bold.nii',tot='SyNAggro')
     # Save to nifti
     pass 
