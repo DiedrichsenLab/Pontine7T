@@ -45,7 +45,7 @@ def test_plt():
     plt.show()
     pass 
 
-def normalize_bold_all(name,template,source_image='_mean_bold',mask=None,tot='SyN'): 
+def normalize_bold_all(name,template,mask=None,tot='SyN'): 
     subj = pinfo['participant_id']
     subj = subj[pinfo.good==1]
     def_dir = f'{base_dir}/bold_normalization/deformed/{name}'
@@ -57,8 +57,12 @@ def normalize_bold_all(name,template,source_image='_mean_bold',mask=None,tot='Sy
     trg = f'{base_dir}/bold_normalization/templates/{template}'
     trg_img = ants.image_read(trg)
     for src_sub in subj:
-        print(f'Processing {src_sub}')
-        src = f'{base_dir}/imaging_data/{src_sub}/{src_sub}{source_image}.nii'
+        src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
+        if not os.path.isfile(src):
+            src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_bold.nii'
+            print(f'Using bold image for {src_sub}')
+        else:
+            print(f'Using sbref image for {src_sub}')
         prefix = f'{xfm_dir}/xfm_{src_sub}_'
         src_img = ants.image_read(src)
         mytx = ants.registration(fixed=trg_img , moving=src_img,type_of_transform=tot,outprefix=prefix,write_composite_transform=False)
@@ -87,11 +91,46 @@ def normalize_suit_all():
         wsrc_img = mytx['warpedmovout']
         # ants.image_write(src_img,fname_s)
         ants.image_write(wsrc_img,fname_w)
-    
 
+def make_initial_template(src_sub='S03'): 
+    template  = f'{base_dir}/bold_normalization/templates/tpl-MNI152NLin2009cSym_res-1_T2w.nii.gz'
+    src = f'{base_dir}/anatomicals/{src_sub}/{src_sub}_T1w.nii'
+
+    prefix = f'{base_dir}/bold_normalization/transforms/MNI2009c_T1w/xfm_{src_sub}_'
+    trg_img = ants.image_read(template)
+    src_img = ants.image_read(src) 
+    mytx = ants.registration(fixed=trg_img , moving=src_img,type_of_transform='SyN',outprefix=prefix,write_composite_transform=True)
+    fname_w = f'{base_dir}/bold_normalization/deformed/MNI2009c_T1w/w{src_sub}_T1w.nii'
+    wsrc_img = mytx['warpedmovout']
+    ants.image_write(wsrc_img,fname_w)
+    
+    # Read the transform and apply it to the bold image
+    tx=ants.read_transform(mytx['fwdtransforms'])
+    bold_img=ants.image_read(f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii')
+    ntemp_img  =tx.apply_to_image(bold_img,reference=trg_img)
+    ntemp_name = f'{base_dir}/bold_normalization/templates/tpl-{src_sub}_bold.nii'
+    ants.image_write(ntemp_img,ntemp_name)
+
+    pass
+
+def symmetrize_image(src,outname):
+    img = nb.load(src)
+    data = img.get_fdata()
+    data = (data + np.flip(data,axis=0))/2
+    img = nb.Nifti1Image(data, img.affine)
+    nb.save(img,outname)
+    return img
+
+def symmetrize_template(src_sub='S03'):
+    inf = f'{base_dir}/bold_normalization/templates/tpl-SyN_bold.nii'
+    outf = f'{base_dir}/bold_normalization/templates/tpl-SyNSym_bold.nii'
+    symmetrize_image(inf,outf)
 
 if __name__ == '__main__':
     # src_sub='S16'
-    normalize_bold_all('S10bold','S10_mean_bold.nii',tot='SyN')
+    # make_initial_template()
+    symmetrize_template()
+    normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
+    normalize_bold_all('S03Sym_Agg','tpl-S03Sym_bold.nii',tot='SyNAggro')
     # Save to nifti
     pass 
