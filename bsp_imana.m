@@ -535,10 +535,11 @@ switch(what)
         end % s (sn)    
     
     case 'ROI:group_define'         % Defines the group regions from the group-space images
+        reg_type = 'RegionOfInterest';
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
         outfilename = 'regions.mat'; 
-        vararginoptions(varargin,{'regions','outfilename'}); 
-        regGroupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
+        vararginoptions(varargin,{'reg_type','regions','outfilename'}); 
+        regGroupDir = fullfile(baseDir,reg_type,'regdef','group');
         for r = 1:length(regions)
             file = fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r}));
             R{r}.type = 'roi_image';
@@ -567,14 +568,13 @@ switch(what)
       %  bsp_imana('ROI:group_define','regions',regions,'outfilename',outfilename); 
    
     case 'ROI:group_exclude'        % OPTIONAL: Checks for overlapping voxels in group space 
-        regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
-        
-        vararginoptions(varargin,{'regions'}); 
-        regGroupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
+        reg_type = 'RegionOfInterest';
+        regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};        
+        vararginoptions(varargin,{'reg_type','regions'}); 
+        regGroupDir = fullfile(baseDir,reg_type,'regdef','group');
         for r = 1:length(regions)
             V(r)=spm_vol(fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r})));
             X(:,:,:,r)=spm_read_vols(V(r));
-            
         end; 
         M=sum(X,4);
         indx=find(M>1);
