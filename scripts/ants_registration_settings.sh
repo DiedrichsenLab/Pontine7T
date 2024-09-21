@@ -27,3 +27,21 @@ antsRegistration
 --float 1 
 --write-composite-transform 0 
 -v 1
+
+SyNBold
+antsRegistration 
+-d 3 
+-r [0x3519988a0,0x3519c08f0,1] 
+-m mattes[0x3519988a0,0x3519c08f0,1,32,regular,0.2] 
+-t Rigid[0.25] 
+-c [1200x1200x100,1e-6,5] 
+-s 2x1x0 
+-f 4x2x1 -
+x [NA,NA] -m mattes[0x3519988a0,0x3519c08f0,1,32] 
+-t SyN[0.200000,3.000000,0.000000] 
+-c [40x20x0,1e-7,8] 
+-s 2x1x0 
+-f 4x2x1 
+-u 1 
+-z 1 
+-o [/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/bold_normalization/transforms/MNI2009c_T1bold/xfm_S95_,0x35199ecf0,0x3519a6080] -x [NA,NA] --float 1 --write-composite-transform 0 -v 1

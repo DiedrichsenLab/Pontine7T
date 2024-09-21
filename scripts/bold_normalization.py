@@ -97,25 +97,59 @@ def normalize_suit_all():
         # ants.image_write(src_img,fname_s)
         ants.image_write(wsrc_img,fname_w)
 
-def make_initial_template(src_sub='S03'): 
-    template  = f'{base_dir}/bold_normalization/templates/tpl-MNI152NLin2009cSym_res-1_T2w.nii.gz'
+def make_initial_template_step1(src_sub='S03'):
+    """ Apply Bias field correction the the T1 image"""
     src = f'{base_dir}/anatomicals/{src_sub}/{src_sub}_T1w.nii'
+    src_img = ants.image_read(src) 
+    fname_w = f'{base_dir}/bold_normalization/templateS03_building/{src_sub}_T1w_n3.nii'
+    src_img4 = ants.n3_bias_field_correction(src_img)
+    ants.image_write(src_img4,fname_w)
 
-    prefix = f'{base_dir}/bold_normalization/transforms/MNI2009c_T1w/xfm_{src_sub}_'
+def make_initial_template_step1(src_sub='S03'): 
+    """ Get the Transform from the bias corrected s03_T1 to the MNI2009c template
+    This does not work well with mattes loss function, but much better with cross-correlation"""
+    template  = f'{base_dir}/bold_normalization/templates/tpl-MNI152NLin2009cSym_res-1_T1w.nii'
+    src = f'{base_dir}/bold_normalization/templateS03_building/{src_sub}_T1w_n3.nii'
+
+    prefix = f'{base_dir}/bold_normalization/templateS03_building/T1to2009Sym_n3cc_{src_sub}_'
     trg_img = ants.image_read(template)
     src_img = ants.image_read(src) 
-    mytx = ants.registration(fixed=trg_img , moving=src_img,type_of_transform='SyN',outprefix=prefix,write_composite_transform=True)
-    fname_w = f'{base_dir}/bold_normalization/deformed/MNI2009c_T1w/w{src_sub}_T1w.nii'
+    mytx = ants.registration(fixed=trg_img , moving=src_img,type_of_transform='SyNCC',outprefix=prefix,write_composite_transform=True)
+    fname_w = f'{base_dir}/bold_normalization/templateS03_building/w{src_sub}_T1w_n3cc.nii'
     wsrc_img = mytx['warpedmovout']
     ants.image_write(wsrc_img,fname_w)
     
-    # Read the transform and apply it to the bold image
-    tx=ants.read_transform(mytx['fwdtransforms'])
-    bold_img=ants.image_read(f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii')
-    ntemp_img  =tx.apply_to_image(bold_img,reference=trg_img)
-    ntemp_name = f'{base_dir}/bold_normalization/templates/tpl-{src_sub}_bold.nii'
-    ants.image_write(ntemp_img,ntemp_name)
+def make_initial_template_step2(src_sub='S03'):
+    """ Attempt for better alignment of S03_mean_sbref to S03_T1
+    This does not work well in the current attempts, so decide to skip this step"""
+    src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
+    template = f'{base_dir}/anatomicals/{src_sub}/{src_sub}_T1w.nii'
+    prefix = f'{base_dir}/bold_normalization/templateS03_building/boldToT1_{src_sub}_'
+    trg_img = ants.image_read(template)
+    src_img = ants.image_read(src) 
+    mytx = ants.registration(fixed=trg_img , moving=src_img,type_of_transform='SyNBold',outprefix=prefix,write_composite_transform=True)
+    fname_w = f'{base_dir}/bold_normalization/templateS03_building/{src_sub}_mean_bold_corrected.nii'
+    wsrc_img = mytx['warpedmovout']
+    ants.image_write(wsrc_img,fname_w)
 
+def make_initial_template_step3(src_sub='S03'):
+    """ Apply T1to2009cSym transform to the bold image - and symmetrize it"""
+    xfm_name = f'{base_dir}/bold_normalization/templateS03_building/T1to2009Sym_n3cc_{src_sub}_Composite.h5'
+    # Read the transform and apply it to the bold image
+    tx=ants.read_transform(xfm_name)
+    bold_img=ants.image_read(f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii')
+
+    template  = f'{base_dir}/bold_normalization/templates/tpl-MNI152NLin2009cSym_res-1_T1w.nii'
+    src = f'{base_dir}/anatomicals/{src_sub}/{src_sub}_T1w.nii'
+
+    prefix = f'{base_dir}/bold_normalization/templateS03_building/T1to2009Sym_{src_sub}_'
+    trg_img = ants.image_read(template)
+    trg_crp = ants.crop_indices( trg_img, (0,22,0), (193,160,164) )
+    ntemp_img  =tx.apply_to_image(bold_img,reference=trg_crp)
+    ntemp_name = f'{base_dir}/bold_normalization/templateS03_building/tpl-{src_sub}_bold.nii'
+    ants.image_write(ntemp_img,ntemp_name)
+    outf = f'{base_dir}/bold_normalization/templates/tpl-{src_sub}Sym_bold.nii'
+    symmetrize_image(ntemp_name,outf)
     pass
 
 def symmetrize_image(src,outname):
@@ -132,11 +166,15 @@ def symmetrize_template(src_sub='S03'):
     symmetrize_image(inf,outf)
 
 if __name__ == '__main__':
+    # make_initial_template_step3()
+    
     # src_sub='S16'
     # make_initial_template()
     # symmetrize_template()
-    kw={'verbose':True}
-    normalize_bold_all('MNI2009c_T2_CC','tpl-MNI152NLin2009cSym_res-1_T2w.nii.gz',tot='SyNCC',kwargs=kw)
-    # normalize_bold_all('S03Sym_Agg','tpl-S03Sym_bold.nii',tot='SyNAggro')
+    # kw={'verbose':True}
+    # normalize_bold_all('MNI2009c_T1bold','tpl-MNI152NLin2009cSym_res-1_T1w.nii',tot='SyNBold',kwargs=kw)
+    normalize_bold_all('S03Sym_Syn','tpl-S03Sym_bold.nii',tot='SyN')
+    normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
+    normalize_bold_all('S03Sym_Agg','tpl-S03Sym_bold.nii',tot='SyNAggro',kwargs={'syn_metric':'CC','verbose':True})
     # Save to nifti
     pass 
