@@ -69,7 +69,7 @@ def normalize_bold_all(name,template,mask=None,tot='SyN',kwargs={}):
             moving=src_img,
             type_of_transform=tot,
             outprefix=prefix,
-            write_composite_transform=False,
+            write_composite_transform=True,
             **kwargs)
         fname_w = f'{def_dir}/w{src_sub}.nii'
         wsrc_img = mytx['warpedmovout']
@@ -105,7 +105,7 @@ def make_initial_template_step1(src_sub='S03'):
     src_img4 = ants.n3_bias_field_correction(src_img)
     ants.image_write(src_img4,fname_w)
 
-def make_initial_template_step1(src_sub='S03'): 
+def make_initial_template_step2(src_sub='S03'): 
     """ Get the Transform from the bias corrected s03_T1 to the MNI2009c template
     This does not work well with mattes loss function, but much better with cross-correlation"""
     template  = f'{base_dir}/bold_normalization/templates/tpl-MNI152NLin2009cSym_res-1_T1w.nii'
@@ -119,7 +119,7 @@ def make_initial_template_step1(src_sub='S03'):
     wsrc_img = mytx['warpedmovout']
     ants.image_write(wsrc_img,fname_w)
     
-def make_initial_template_step2(src_sub='S03'):
+def make_initial_template_step2a(src_sub='S03'):
     """ Attempt for better alignment of S03_mean_sbref to S03_T1
     This does not work well in the current attempts, so decide to skip this step"""
     src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
@@ -166,11 +166,14 @@ def symmetrize_template(src_sub='S03'):
     symmetrize_image(inf,outf)
 
 
-def ants_transform_to_deformation_field(xfm,ref_img):
+def ants_transform_to_deformation_field(warp,aff,ref_img):
     """Converts the ANTs transform to a deformation field"""
     if isinstance(ref_img,str):
         ref_img = ants.image_read(ref_img)
-    def_field = ants.transform_to_displacement_field(xfm, ref_img)
+    Xv,Yv,Zv = np.meshgrid(range(ref_img.shape[0]),range(ref_img.shape[1]),range(ref_img.shape[2]),indexing='ij')
+    X,Y,Z = nt.affine_transform(Xv,Yv,Zv,ref_img.affine)
+    warp.apply_to_point([X,Y,Z])
+    aff.apply_to_point([X,Y,Z])
     return def_field
 
 
@@ -184,7 +187,7 @@ def make_deformation_fields(name,template):
     for src_sub in subj:
         aff = ants.read_transform(f'{xfm_dir}/xfm_{src_sub}_0GenericAffine.mat')
         warp = ants.read_transform(f'{xfm_dir}/xfm_{src_sub}_1Warp.nii.gz')
-        def_field = ants_transform_to_deformation_field(warp,ref_img)
+        def_field = ants_transform_to_deformation_field(warp,aff,ref_img)
         fname=f'{xfm_dir}/y_{src_sub}.nii'
         ants.image_write(def_field,fname)
         pass
@@ -195,12 +198,12 @@ if __name__ == '__main__':
     
     # src_sub='S16'
     # make_initial_template()
-    symmetrize_template()
+    # make_deformation_fields('S03Sym_CC','tpl-S03Sym_bold.nii')
     # kw={'verbose':True}
     # normalize_bold_all('MNI2009c_T1bold','tpl-MNI152NLin2009cSym_res-1_T1w.nii',tot='SyNBold',kwargs=kw)
     # normalize_bold_all('S03Sym_Syn','tpl-S03Sym_bold.nii',tot='SyN')
     # normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
-    # normalize_bold_all('S03Sym_Agg','tpl-S03Sym_bold.nii',tot='SyNAggro',kwargs={'syn_metric':'CC','verbose':True})
+    normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC')
     # make_deformation_fields('S03Sym_Syn','tpl-S03Sym_bold.nii')
     #  Save to nifti
     pass 
