@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import glob
 import os
+import nitools as nt
 
 base_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T' 
 
@@ -166,15 +167,29 @@ def symmetrize_template(src_sub='S03'):
     symmetrize_image(inf,outf)
 
 
-def ants_transform_to_deformation_field(warp,aff,ref_img):
+def ants_transform_to_deformation_field(xfm,src_img,ref_img):
     """Converts the ANTs transform to a deformation field"""
-    if isinstance(ref_img,str):
-        ref_img = ants.image_read(ref_img)
-    Xv,Yv,Zv = np.meshgrid(range(ref_img.shape[0]),range(ref_img.shape[1]),range(ref_img.shape[2]),indexing='ij')
-    X,Y,Z = nt.affine_transform(Xv,Yv,Zv,ref_img.affine)
-    warp.apply_to_point([X,Y,Z])
-    aff.apply_to_point([X,Y,Z])
-    return def_field
+    ref_img = ants.image_read(ref_img)
+    src_img = nb.load(src_img)
+    Xv,Yv,Zv = np.meshgrid(range(src_img.shape[0]),
+                           range(src_img.shape[1]),
+                           range(src_img.shape[2]),indexing='ij')
+    X,Y,Z = nt.affine_transform(Xv,Yv,Zv,src_img.affine)
+    data = np.stack([X,Y,Z],axis=3)
+    coord_img  = nb.Nifti1Image(data,src_img.affine)
+    nb.save(coord_img,'y_temp.nii')
+    src_img = ants.image_read('y_temp.nii')
+    xfm_img = ants.apply_transforms(ref_img, src_img, xfm, 
+                          interpolator='linear', 
+                          imagetype=3, 
+                          defaultvalue=np.nan)
+    ants.image_write(xfm_img,'y_temp.nii')
+    y_img = nb.load('y_temp.nii')
+    data = y_img.get_fdata()
+    data = np.expand_dims(data,axis=3)
+    y_img  = nb.Nifti1Image(data,y_img.affine)
+    os.remove('y_temp.nii')
+    return y_img
 
 
 def make_deformation_fields(name,template):
@@ -182,28 +197,31 @@ def make_deformation_fields(name,template):
     subj = pinfo['participant_id']
     subj = subj[pinfo.good==1]
     xfm_dir = f'{base_dir}/bold_normalization/transforms/{name}'
-    ref_img = ants.image_read(f'{base_dir}/bold_normalization/templates/{template}')
+    ref_img = f'{base_dir}/bold_normalization/templates/{template}'
 
-    for src_sub in subj:
-        aff = ants.read_transform(f'{xfm_dir}/xfm_{src_sub}_0GenericAffine.mat')
-        warp = ants.read_transform(f'{xfm_dir}/xfm_{src_sub}_1Warp.nii.gz')
-        def_field = ants_transform_to_deformation_field(warp,aff,ref_img)
+    for src_sub in subj[9:]:
+        src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
+        if not os.path.isfile(src):
+            src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_bold.nii'
+
+        xfm = f'{xfm_dir}/xfm_{src_sub}_composite.h5'
+        def_field = ants_transform_to_deformation_field([xfm],src,ref_img)
         fname=f'{xfm_dir}/y_{src_sub}.nii'
-        ants.image_write(def_field,fname)
+        nb.save(def_field,fname)
         pass
 
 
 if __name__ == '__main__':
-    # make_initial_template_step3()
+    #  make_initial_template_step3()
     
     # src_sub='S16'
     # make_initial_template()
-    # make_deformation_fields('S03Sym_CC','tpl-S03Sym_bold.nii')
+    make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii')
     # kw={'verbose':True}
     # normalize_bold_all('MNI2009c_T1bold','tpl-MNI152NLin2009cSym_res-1_T1w.nii',tot='SyNBold',kwargs=kw)
     # normalize_bold_all('S03Sym_Syn','tpl-S03Sym_bold.nii',tot='SyN')
     # normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
-    normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC')
+    # normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC')
     # make_deformation_fields('S03Sym_Syn','tpl-S03Sym_bold.nii')
     #  Save to nifti
     pass 
