@@ -169,26 +169,28 @@ def symmetrize_template(src_sub='S03'):
 
 def ants_transform_to_deformation_field(xfm,src_img,ref_img):
     """Converts the ANTs transform to a deformation field"""
-    ref_img = ants.image_read(ref_img)
+    ref_ants = ants.image_read(ref_img)
     src_img = nb.load(src_img)
+
+    # Make a image in src space with the voxel coordinates 
     Xv,Yv,Zv = np.meshgrid(range(src_img.shape[0]),
                            range(src_img.shape[1]),
                            range(src_img.shape[2]),indexing='ij')
     X,Y,Z = nt.affine_transform(Xv,Yv,Zv,src_img.affine)
     data = np.stack([X,Y,Z],axis=3)
     coord_img  = nb.Nifti1Image(data,src_img.affine)
-    nb.save(coord_img,'y_temp.nii')
-    src_img = ants.image_read('y_temp.nii')
-    xfm_img = ants.apply_transforms(ref_img, src_img, xfm, 
+    coord_ants = ants.from_nibabel(coord_img)
+
+    # Apply the transform to this coordinate image
+    y_ants = ants.apply_transforms(ref_ants, coord_ants, xfm, 
                           interpolator='linear', 
                           imagetype=3, 
                           defaultvalue=np.nan)
-    ants.image_write(xfm_img,'y_temp.nii')
-    y_img = nb.load('y_temp.nii')
+    # Insert a dummy 4th dimension
+    y_img = y_ants.to_nibabel()
     data = y_img.get_fdata()
     data = np.expand_dims(data,axis=3)
     y_img  = nb.Nifti1Image(data,y_img.affine)
-    os.remove('y_temp.nii')
     return y_img
 
 
@@ -199,7 +201,7 @@ def make_deformation_fields(name,template):
     xfm_dir = f'{base_dir}/bold_normalization/transforms/{name}'
     ref_img = f'{base_dir}/bold_normalization/templates/{template}'
 
-    for src_sub in subj[9:]:
+    for src_sub in subj:
         src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
         if not os.path.isfile(src):
             src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_bold.nii'
@@ -210,12 +212,34 @@ def make_deformation_fields(name,template):
         nb.save(def_field,fname)
         pass
 
+def test_bold_images():
+    subj = pinfo['participant_id']
+    subj = subj[pinfo.good==1]
+
+    for src_sub in subj:
+        src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
+        if not os.path.isfile(src):
+            src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_bold.nii'
+
+        nb_img = nb.load(src)
+
+        SA,sa=nb_img.header.get_sform(coded=True)
+        SQ,sq=nb_img.header.get_qform(coded=True)
+
+        print(f'{src_sub} sform: {sa} qform: {sq}')
+        if (np.isclose(SA,SQ,1e-4,1e-4)).all(): 
+            print('sform and qform are the same')
+        else:
+            print('sform and qform are different')
+            nb_img.header.set_qform(nb_img.header.get_sform())
+            nb.save(nb_img,src)
 
 if __name__ == '__main__':
     #  make_initial_template_step3()
     
     # src_sub='S16'
     # make_initial_template()
+    # test_bold_images()
     make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii')
     # kw={'verbose':True}
     # normalize_bold_all('MNI2009c_T1bold','tpl-MNI152NLin2009cSym_res-1_T1w.nii',tot='SyNBold',kwargs=kw)
