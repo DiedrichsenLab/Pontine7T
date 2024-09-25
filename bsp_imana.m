@@ -27,7 +27,7 @@ loc_AC = [
 
 % Load Participant information (make sure you have Dataframe/util in your
 % path
-pinfo = dload(fullfile(baseDir,'participants_new_format.tsv')); 
+pinfo = dload(fullfile(baseDir,'participants.tsv')); 
 subj_name = pinfo.participant_id;
 good_subj = find(pinfo.good)'; % Indices of all good subjects
 
@@ -535,11 +535,12 @@ switch(what)
         end % s (sn)    
     
     case 'ROI:group_define'         % Defines the group regions from the group-space images
-        reg_type = 'RegionOfInterest';
+        % EXAMPLE: bsp_imana('ROI:group_define','reg_type','BOLD','regions',{'dentate'}); 
+        reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
         outfilename = 'regions.mat'; 
         vararginoptions(varargin,{'reg_type','regions','outfilename'}); 
-        regGroupDir = fullfile(baseDir,reg_type,'regdef','group');
+        regGroupDir = fullfile(baseDir,[regDir '_' reg_type],'regdef','group');
         for r = 1:length(regions)
             file = fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r}));
             R{r}.type = 'roi_image';
@@ -549,29 +550,13 @@ switch(what)
         end
         R=region_calcregions(R);     % Calculate the ROI coordinates             
         save(fullfile(regGroupDir,outfilename),'R');
-
-    case 'ROI:group_define_csf' 
-        regCsfDir = fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'csf_separate_masks');
-        regions={'csf_','csf_'};
-        outfilename = 'regions_csf.mat'; 
-        vararginoptions(varargin,{'regions', 'outfilename'});
-        for r = 1:length(regions)
-            file = fullfile(regCsfDir, sprintf('%s_mask.nii', regions{r}));
-            R{r}.type = 'csf_image';
-            R{r}.file = file;
-            R{r}.name = regions{r};
-            R{r}.value = 1;
-        end 
-        R=region_calcregions(R);
-        save(fullfile(regCsfDir, outfilename), 'R')  %IH: edited this to make it run; not sure if the output is correct (contains no data)
-        
-      %  bsp_imana('ROI:group_define','regions',regions,'outfilename',outfilename); 
    
-    case 'ROI:group_exclude'        % OPTIONAL: Checks for overlapping voxels in group space 
-        reg_type = 'RegionOfInterest';
+    case 'ROI:group_exclude'        
+        % OPTIONAL: Checks for overlapping voxels in group space 
+        reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
         regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};        
         vararginoptions(varargin,{'reg_type','regions'}); 
-        regGroupDir = fullfile(baseDir,reg_type,'regdef','group');
+        regGroupDir = fullfile(baseDir,[regDir '_' reg_type],'regdef','group');
         for r = 1:length(regions)
             V(r)=spm_vol(fullfile(regGroupDir,sprintf('%s_mask.nii',regions{r})));
             X(:,:,:,r)=spm_read_vols(V(r));
@@ -581,30 +566,36 @@ switch(what)
         [i,j,k]=ind2sub(V(1).dim,indx)
         keyboard; 
     case 'ROI:group_cifti'          % Generate cifti file for ROI labels 
-        regGroupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
+        % OPTIONAL: bsp_imana('ROI:group_cifti','reg_type','BOLD'); 
+        reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
+        vararginoptions(varargin,{'reg_type'}); 
+        regGroupDir = fullfile(baseDir,[regDir '_' reg_type],'regdef','group');
         load(fullfile(regGroupDir,'regions.mat'));
         % Make labels 
         for r=1:length(R)
             data{r}=ones(size(R{r}.data,1),1)*r; 
         end; 
         dname = {'roi_label'}; 
-        V=spm_vol(fullfile(baseDir,'RegionOfInterest','regdef','group','SUIT.nii')); % space defining image
+        V=spm_vol(fullfile(baseDir,[regDir '_' reg_type],'template.nii')); % space defining image
         C=region_make_cifti(R,V,'data',data,'dtype','scalars');
-        cifti_write(C, fullfile(baseDir, 'RegionOfInterest', 'regdef', 'group', 'regions.dscalar.nii'));
+        cifti_write(C, fullfile(regGroupDir, 'regions.dscalar.nii'));
     
-    case 'ROI:make_mask'            % Generates masks to determine available voxels in individual space 
-        %sn = 15;
-       % sn = vararginoptions(varargin,{'sn'}); %example: bsp_imana("ROI:make_mask",'sn',11)
-       sn  = varargin{1}; 
+    case 'ROI:make_mask'            
+       % Generates masks to determine available cerebellar voxels in individual space 
+       % This is being saved into the imaging_data directory - as it's
+       % indenpendent of the type of ROI 
+       % example: bsp_imana("ROI:make_mask",'sn',11)
+       sn  = good_subj; 
+       vararginoptions(varargin,{'sn'}); 
        for s=sn 
             glm_mask = fullfile(baseDir,'GLM_firstlevel_3',subj_name{s},'mask.nii');
-            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{sn} '_T1w_pcereb_corr.nii']); 
-            outfile = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii'); 
+            pcorr = fullfile(baseDir,'suit','anatomicals',subj_name{s},['c_' subj_name{s} '_T1w_pcereb_corr.nii']); 
+            outfile = fullfile(baseDir,'imaging_data',subj_name{s},'pcereb_mask.nii'); 
             Vi(1)=spm_vol(glm_mask); 
             Vi(2)=spm_vol(pcorr); 
-            spm_imcalc(Vi,outfile,'i1>0 & i2>0'); 
-        end
-   
+            % Calculate mask in functional space - datatype to unit8 (2)
+            Vo = spm_imcalc(Vi,outfile,'i1>0 & i2>0',{0,0,0,2,'mask'}); 
+       end; 
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
         sn  = varargin{2}; 
         saveasimg = 1;
