@@ -407,12 +407,17 @@ switch(what)
         job.subjND.isolation  = {['c_', subj_name{sn}, '_T1w_pcereb_corr.nii']};
         suit_normalize_dartel(job) 
 
-    case 'SUIT:save_dartel_def'    
+    case 'SUIT:save_dartel_def'     % Save deformation into SUIT space as deformation ('y_,,') file
+        sn = good_subj;
+        target_dir = fullfile(baseDir,[regDir '_SUIT'],'deform');
+        vararginoptions(varargin,{'sn'}); 
+
         % Saves the dartel flow field as a deformation file. 
-        for sn = 10 %IH: original was for sn = [1:length(subj_name)]
-            cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{sn}));
-            anat_name = [subj_name{sn},'_T1w'];
+        for s = sn %
+            cd(fullfile(baseDir,suitDir,'anatomicals',subj_name{s}));
+            anat_name = [subj_name{s},'_T1w'];
             suit_save_darteldef(anat_name);
+            copyfile(['y_' anat_name '_suitdef.nii'],fullfile(target_dir,['y_' subj_name{s} '.nii'])); 
         end; 
     case 'SUIT:normalise_dentate'   % Uses an ROI from the dentate nucleus to improve the overlap of the DCN
         % Create the dentate mask in the imaging folder using the tse 
@@ -597,26 +602,24 @@ switch(what)
             Vo = spm_imcalc(Vi,outfile,'i1>0 & i2>0',{0,0,0,2,'mask'}); 
        end; 
     case 'ROI:deformation'          % Deform ROIs into individual space and retain mapping. 
-        sn  = varargin{2}; 
+        % Example bsp_imana('ROI:deformation','reg_type','BOLD','sn',[18 19]);
+        sn  = good_subj; 
         saveasimg = 1;
+        reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
         region_file = 'regions.mat'; 
+        vararginoptions(varargin,{'saveasimg','reg_type','sn','region_file'}); 
+        groupDir = fullfile(baseDir,[regDir '_' reg_type],'regdef','group');
+        defDir = fullfile(baseDir,[regDir '_' reg_type],'deform');
+        groupR = load(fullfile(groupDir,region_file)); 
         for s = sn
-            def_img = fullfile(baseDir, 'suit','anatomicals', subj_name{s},['c_' subj_name{sn} '_T1w_seg1']);
-            %def_dir = 'suit/anatomicals/S13';  % This is where the deformation can be found 
-            %def_img = 'c_S13_T1w_seg1';  
-            vararginoptions(varargin,{'sn','saveasimg','region_file',def_img'}); 
-        
-         % Load the group regions 
-            groupDir = fullfile(baseDir,'RegionOfInterest','regdef','group');
-            groupR = load(fullfile(groupDir,region_file)); 
-            % For all subjects, deform those regions and save as regions 
-            %for s = sn
-            mask = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s},'pcereb_mask.nii');
+            mask = fullfile(baseDir,'imaging_data',subj_name{s},'pcereb_mask.nii'); % This is the cerebellar mask in fMRI space
             Vmask = spm_vol(mask); 
-            dartel_flowfield= fullfile(baseDir, 'suit', 'anatomicals',subj_name{s},['u_a_c_' subj_name{sn}, '_T1w_seg1.nii']);  
-            dartel_affine = fullfile(baseDir, 'suit', 'anatomicals', subj_name{s},['Affine_c_' subj_name{sn}, '_T1w_seg1.mat']);
-            R=region_deformation(groupR.R,{dartel_flowfield,dartel_affine},'mask', mask);
-            outdir = fullfile(baseDir,'RegionOfInterest','regdef',subj_name{s});
+            def_file = fullfile(defDir,['y_' subj_name{s} '.nii']); 
+            R=region_deformation(groupR.R,def_file,'mask', mask);
+            outdir = fullfile(baseDir,[regDir '_' reg_type],'regdef',subj_name{s});
+            if ~exist(outdir)
+                mkdir(outdir);
+            end
             save(fullfile(outdir,[region_file]),'R'); 
              % For testing purposes, we can also save these ROIs as images 
              % in the original ROI space 
@@ -625,52 +628,65 @@ switch(what)
                     region_saveasimg(R{r},Vmask,'name',fullfile(outdir,[R{r}.name '_mask.nii']));
                 end
             end
-        end 
-      
-        
+        end    
     case 'ROI:getRawTs'                % Get raw timeseries and save them
-        % bsp_glm('ROI:getRawTs',1,1);
-        sn=varargin{1}; % subjNum
-        glm=varargin{2}; % glmNum
+        % bsp_glm('ROI:getRawTs','sn',[17],'glm',2,'reg_type','BOLD');
+        sn=good_subj; % subjNum
+        glm=2; % glmNum
+        reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
+        vararginoptions(varargin,{'sn','reg_type','glm'}); 
         
-        glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        glm_dir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        reg_dir = fullfile(baseDir,[regDir '_' reg_type]); % Specific reg_dir 
+
         
         for s=sn,
-            glmDirSubj=fullfile(glmDir, subj_name{s});
+            glmDirSubj=fullfile(glm_dir, subj_name{s});
+            outdir = fullfile(reg_dir,'data',subj_name{s});
+            if ~exist(outdir)
+                mkdir(outdir);
+            end
+
             load(fullfile(glmDirSubj,'SPM.mat'));
             
             % load data
-            load(fullfile(baseDir,regDir,'regdef',subj_name{s},sprintf('regions.mat')), 'R');
+            load(fullfile(reg_dir,'regdef',subj_name{s},sprintf('regions.mat')), 'R');
             
             % SPM=spmj_move_rawdata(SPM,fullfile(baseDir,imagingDir,subj_name{s}));
             
             % Get the raw data files
-            V=SPM.xY.VY; %originally: SPM.xY.VY; IH
+            V=SPM.xY.VY; 
             
             % Get time series data
             for r = 1:length(R) % 1:length(R)
                 Y = region_getdata(V,R{r});  % Data is N x P
                 C = region_make_cifti(R(r),V(1),'data',{Y'},'struct',{'OTHER'},'dtype','series');
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_%s.dtseries.nii',subj_name{s},R{r}.name)));
+                filename=(fullfile(outdir,sprintf('%s_%s.dtseries.nii',subj_name{s},R{r}.name)));
                 cifti_write(C,filename); 
             end
         end
+
     case 'ROI:getBetas'     % Get Betas from a specific GLM save as as cifti files 
-        % bsp_glm('ROI:getRawTs',1,1);
-        sn=varargin{1}; % subjNum
-        glm=varargin{2}; % glmNum
+        % bsp_imana('ROI:getBetas','sn',[18],'glm',2,'reg_type','BOLD');
+        sn=good_subj; % subjNum
+        glm=2; % glmNum
+        reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
+        vararginoptions(varargin,{'sn','reg_type','glm'}); 
         
-        glmDir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        glm_dir =fullfile(baseDir,sprintf('GLM_firstlevel_%d',glm));
+        reg_dir = fullfile(baseDir,[regDir '_' reg_type]); % Specific reg_dir 
+
         
         for s=sn,
             fprintf('SN: %d\n',s);
-            glmDirSubj=fullfile(glmDir, subj_name{s});
+            glmDirSubj=fullfile(glm_dir, subj_name{s});
+            outdir = fullfile(reg_dir,'data',subj_name{s});
+            if ~exist(outdir)
+                mkdir(outdir);
+            end
+            
             D = dload(fullfile(glmDirSubj,'SPM_info.tsv'));
-            load(fullfile(baseDir,regDir,'regdef',subj_name{s},'regions.mat'));
-            
-
-          %  D = readtable('SPM_info.tsv', 'FileType', 'text', 'Delimiter', '\t');
-            
+            load(fullfile(reg_dir,'regdef',subj_name{s},'regions.mat'));
             
             for i=1:length(D.run)
                 Vbeta(i) = spm_vol(fullfile(glmDirSubj,sprintf('beta_%04d.nii',i)));
@@ -683,111 +699,36 @@ switch(what)
                 Y = region_getdata(Vbeta,R{r});  % Data is N x P
                 Y = Y(1:end-1,:)./sqrt(Y(end,:));        % Prewhiten beta estimates 
                 C = region_make_cifti(R(r),Vbeta(1),'data',{Y'},'struct',{'OTHER'},'dtype','scalars','dnames',vname);
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_beta_glm%d_%s.dscalar.nii',subj_name{s},glm,R{r}.name)));
+                filename=(fullfile(outdir,sprintf('%s_beta_glm%d_%s.dscalar.nii',subj_name{s},glm,R{r}.name)));
                 cifti_write(C,filename); 
             end
         end
         
     case 'ROI:data_subj_to_group'
-        sn=varargin{1}; % subjNums 
-        dname=varargin{2}; % Name of data file ('beta_glm1', 'beta_glm2')
-        reg_name = 'regions.mat';  % Name of regions
-        vol = spm_vol(fullfile(baseDir,regDir,'regdef','group','dentate_mask.nii')); % Group Space defining image
+        % Transforms any individual region data file in individual space
+        % into group space. Use this mainly on betas 
+        % Example: 
+        % bsp_imana('ROI:data_subj_to_group','reg_type','BOLD','cifti_name','beta_glm2','sn',[18 19]);
+        sn=good_subj; % subjNum
+        cifti_name = 'beta_glm2'; % glmNum
+        reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
+        reg_name = 'regions.mat';
+
+        vararginoptions(varargin,{'sn','reg_type','cifti_name'}); 
+        reg_dir = fullfile(baseDir,[regDir '_' reg_type]); % Specific reg_dir 
+        vol = spm_vol(fullfile(reg_dir,'template.nii')); % Group Space defining image
         for s=sn,
             fprintf('SN: %d\n',s);
-            load(fullfile(baseDir,regDir,'regdef',subj_name{s},reg_name));
+            load(fullfile(reg_dir,'regdef',subj_name{s},reg_name));
             % Load and transform the CIFTI files 
             for r = 1:length(R)
-                filename=(fullfile(baseDir,regDir,'data',subj_name{s},sprintf('%s_beta_glm%d_%s.dscalar.nii',subj_name{s},dname,R{r}.name)));
+                filename=(fullfile(reg_dir,'data',subj_name{s},sprintf('%s_%s_%s.dscalar.nii',subj_name{s},cifti_name,R{r}.name)));
                 C = cifti_read(filename);
                 Cnew = region_deform_cifti(R{r},C,'vol',vol); 
-                filename=(fullfile(baseDir,regDir,'data','group',sprintf('beta_glm%d_%s_%s.dscalar.nii',dname,R{r}.name,subj_name{s})));
+                filename=(fullfile(reg_dir,'data','group',sprintf('%s_%s_%s.dscalar.nii',cifti_name,R{r}.name,subj_name{s})));
                 cifti_write(Cnew,filename); 
             end
         end
-
-    case 'ROI:make_gmwm_mask'        % Create GM-WM exclusion mask for defining CSF 
-        % example: bsp_imana('ROI:make_gmwm_mask',1)
-        sn=varargin{1}; % subjNum
-        
-        for s=sn
-            J.input = {fullfile(baseDir,anatomicalDir,subj_name{s},'c1anatomical.nii')
-                       fullfile(baseDir,anatomicalDir,subj_name{s},'c2anatomical.nii')};
-            J.output = fullfile(baseDir,anatomicalDir,subj_name{s},'gm_wm_exclusion_mask.nii');
-            J.outdir = {fullfile(baseDir,anatomicalDir,subj_name{s})};
-            J.expression = '(i1+i2)<1e-6';
-            J.var = struct('name', {}, 'value', {});
-            J.options.dmtx = 0;
-            J.options.mask = 0;
-            J.options.interp = 1;
-            J.options.dtype = 4;
-            matlabbatch{1}.spm.util.imcalc=J;
-            spm_jobman('run',matlabbatch);
-            
-            fprintf('GM-WM exlusion mask created for %s \n',subj_name{s})
-        end 
-        
-    case 'ROI:reslice_gmwm_mask'       %Resample gm-wm exclusion mask into epi resolution
-        % usage 'bsp_imana('ROI:reslice_gmwm_mask',1)'
-        sn=varargin{1};
-        J = [];
-        
-        
-        for s=sn
-            J.ref = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{s},'mask.nii')};
-            J.source = {fullfile(baseDir,anatomicalDir,subj_name{s},'gm_wm_exclusion_mask.nii')};
-            J.roptions.interp = 0;
-            J.roptions.wrap = [0 0 0];
-            J.roptions.mask = 0;
-            J.roptions.prefix = 'r';
-        
-            matlabbatch{1}.spm.spatial.coreg.write = J;
-            spm_jobman('run',matlabbatch);
-            fprintf('gm-wm exclusion mask resliced for %s \n',subj_name{s})
-        end  
-    
-        
-    case 'ROI:mask_rois'        % Mask CSF rois with subject-specific GM-WM exclusion mask
-        % example: bsp_imana('ROI:mask_rois',1)
-        sn=varargin{1}; % subjNum
-        images = {'csf_galenic','csf_medulla','csf_midbrain','csf_pons','csf_postdrain','csf_transverseL','csf_transverseR','csf_ventricle4'};
-        
-        
-        
-        for s=sn
-            regCsfDir = fullfile(baseDir,'RegionOfInterest', 'regdef', 'group', 'csf_separate_masks');
-            regSubjDir = fullfile(baseDir, 'RegionOfInterest', 'data', subj_name{s});
-
-            for im=1:length(images)
-                J.input = {fullfile(regCsfDir,sprintf('%s_mask.nii',images{im}))
-                           fullfile(baseDir,anatomicalDir,subj_name{s},'rgm_wm_exclusion_mask.nii')};
-                J.output = fullfile(regSubjDir,sprintf('mask_%s.nii',images{im}));
-                J.outdir = {fullfile(regSubjDir)};
-                J.expression = 'i1.*i2';
-                J.var = struct('name', {}, 'value', {});
-                J.options.dmtx = 0;
-                J.options.mask = 0;
-                J.options.interp = 1;
-                J.options.dtype = 4;
-                matlabbatch{1}.spm.util.imcalc=J;
-                spm_jobman('run',matlabbatch);
-            end
-            fprintf('csf ROIs masked for %s \n',subj_name{s})
-        end    
-        
-    case 'ROI:cerebellar_gray'  %IH: I might remove this (it's mask is worse than that created in ROI: deformation) 
-        sn=varargin{1};
-        for s = sn 
-            suitSubjDir = fullfile(baseDir,suitDir,'anatomicals',subj_name{s});             
-            regSubjDir = fullfile(baseDir,'RegionOfInterest','data',subj_name{s});
-            P = {fullfile(baseDir,'GLM_firstlevel_1',subj_name{sn},'mask.nii'),...
-                fullfile(suitSubjDir,'c_anatomical_seg1.nii'),...
-                fullfile(suitSubjDir,'c_anatomical_pcereb_corr.nii')}; 
-            outname = fullfile(regSubjDir,'cerebellum_gray_mask.nii'); 
-            spm_imcalc(char(P),outname,'i1 & (i2>0.1) & (i3>0.3)',{0,0,1,4}); 
-        end
-        
-        
     case 'PHYS:extract'               % Extract puls and resp files from dcm
         sn=varargin{1};
         
