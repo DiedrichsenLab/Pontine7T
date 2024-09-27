@@ -201,7 +201,7 @@ def make_deformation_fields(name,template):
     xfm_dir = f'{base_dir}/bold_normalization/transforms/{name}'
     ref_img = f'{base_dir}/bold_normalization/templates/{template}'
 
-    for src_sub in subj:
+    for src_sub in ['S95']:
         src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
         if not os.path.isfile(src):
             src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_bold.nii'
