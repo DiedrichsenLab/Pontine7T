@@ -167,6 +167,19 @@ def symmetrize_template(src_sub='S03'):
     outf = f'{base_dir}/bold_normalization/templates/tpl-SyNSym_bold.nii'
     symmetrize_image(inf,outf)
 
+def normalize_to_MNI2009c():
+    tmp_dir = f'{base_dir}/bold_normalization/templates'
+    src = f'{tmp_dir}/tpl-SyNSym_bold.nii'
+    trg = f'{tmp_dir}/tpl-MNI152NLin2009cSym_res-1_T2w.nii.gz'
+    mask_trg=f'{tmp_dir}/tpl-MNI152NLin2009cSymC_desc-cereb_mask.nii'
+    prefix = f'{tmp_dir}/xfm_SyNSym_to_2009c/xfm_SynSym_to_2009cT2'
+    trg_img = ants.image_read(trg)
+    src_img = ants.image_read(src) 
+    msk_img = ants.image_read(mask_trg)
+    mytx = ants.registration(fixed=trg_img , moving=src_img, mask = msk_img,type_of_transform='SyN',outprefix=prefix,write_composite_transform=True)
+    fname_w = f'{tmp_dir}/xfm_SyNSym_to_2009c/w_SynSym_to_2009cT2m.nii'
+    wsrc_img = mytx['warpedmovout']
+    ants.image_write(wsrc_img,fname_w)
 
 def ants_transform_to_deformation_field(xfm,src_img,ref_img):
     """Converts the ANTs transform to a deformation field"""
@@ -247,8 +260,9 @@ if __name__ == '__main__':
     # normalize_bold_all('MNI2009c_T1bold','tpl-MNI152NLin2009cSym_res-1_T1w.nii',tot='SyNBold',kwargs=kw)
     # normalize_bold_all('S03Sym_Syn','tpl-S03Sym_bold.nii',tot='SyN')
     # normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
-    normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC',subj=['S08'])
-    make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii',subj=['S08'])
+    # normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC',subj=['S08'])
+    # make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii',subj=['S08'])
     # make_deformation_fields('S03Sym_Syn','tpl-S03Sym_bold.nii')
     #  Save to nifti
+    normalize_to_MNI2009c()
     pass 
