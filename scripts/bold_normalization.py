@@ -214,9 +214,10 @@ def make_deformation_fields(name,template,subj=None):
         nb.save(def_field,fname)
         pass
 
-def test_bold_images():
-    subj = pinfo['participant_id']
-    subj = subj[pinfo.good==1]
+def test_bold_images(subj=None):
+    if subj is None: 
+        subj = pinfo['participant_id']
+        subj = subj[pinfo.good==1]
 
     for src_sub in subj:
         src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
@@ -233,7 +234,7 @@ def test_bold_images():
             print('sform and qform are the same')
         else:
             print('sform and qform are different')
-            nb_img.header.set_qform(nb_img.header.get_sform())
+            nb_img.header.set_qform(nb_img.header.get_sform(),code='aligned')
             nb.save(nb_img,src)
 
 if __name__ == '__main__':
@@ -246,8 +247,8 @@ if __name__ == '__main__':
     # normalize_bold_all('MNI2009c_T1bold','tpl-MNI152NLin2009cSym_res-1_T1w.nii',tot='SyNBold',kwargs=kw)
     # normalize_bold_all('S03Sym_Syn','tpl-S03Sym_bold.nii',tot='SyN')
     # normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
-    # normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC',subj=['S97','S08'])
-    make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii',subj=['S97'])
+    normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC',subj=['S08'])
+    make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii',subj=['S08'])
     # make_deformation_fields('S03Sym_Syn','tpl-S03Sym_bold.nii')
     #  Save to nifti
     pass 
