@@ -5,19 +5,20 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from Functional_Fusion.dataset import decompose_pattern_into_group_indiv_noise
 
-data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest/data/group'
+data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_SUIT/data/group'
  
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 
 #
-def get_structure_data(structure='fhgkhkgk'):
-    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants_var_decomp.tsv', sep='\t')
+def get_structure_data(structure='pontine', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group'):
+    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants.tsv', sep='\t')
     A = []
-    for i in T.participant_id:
-        file_path = f'{data_dir}/beta_glm2_{structure}_{i}.dscalar.nii'
-        cifti = nibabel.load(file_path)
-        A.append(cifti.get_fdata())
-    to_tensor = numpy.array(A)
+    for i, good_value in zip(T.participant_id, T.good):
+        if good_value==1:
+            file_path = f'{data_dir}/beta_glm2_{structure}_{i}.dscalar.nii'
+            cifti = nibabel.load(file_path)
+            A.append(cifti.get_fdata())
+        to_tensor = numpy.array(A)
     return to_tensor
 
 def flat2ndarray(flat_data, cond_vec, part_vec):
@@ -74,7 +75,7 @@ if __name__=='__main__':
 
     #tensor_no_inst = numpy.delete(tensor_no_nans, 0, axis=2)
 
-    variances= decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='global')
+    variances= decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='subject-wise')
     #variances_r= decompose_pattern_into_group_indiv_noise(tensor_no_inst, criterion='global')
     #var_diff = variances - variances_r
 

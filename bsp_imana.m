@@ -335,7 +335,7 @@ switch(what)
         
             % Run spmj_makesamealign_nifti with specified coregistration options
             spmj_makesamealign_nifti(char(P), char(Q));
-           % spmj_makesamealign_nifti(char(P), char(Q), coreg_options);
+            %spmj_makesamealign_nifti(char(P), char(Q), coreg_options);
             
             fprintf('functional images realigned for %s \n',subj_name{s})
         end
@@ -542,7 +542,7 @@ switch(what)
     case 'ROI:group_define'         % Defines the group regions from the group-space images
         % EXAMPLE: bsp_imana('ROI:group_define','reg_type','BOLD','regions',{'dentate'}); 
         reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
-        regions={'cerebellum_gray','dentate','pontine','olive','rednucleus'};
+        regions={'dentate','pontine','olive','rednucleus'};
         outfilename = 'regions.mat'; 
         vararginoptions(varargin,{'reg_type','regions','outfilename'}); 
         regGroupDir = fullfile(baseDir,[regDir '_' reg_type],'regdef','group');
@@ -605,7 +605,7 @@ switch(what)
         % Example bsp_imana('ROI:deformation','reg_type','BOLD','sn',[18 19]);
         sn  = good_subj; 
         saveasimg = 1;
-        reg_type = 'SUIT'; % Use 'SUIT' or 'BOLD'
+        reg_type = 'BOLD'; % Use 'SUIT' or 'BOLD'
         region_file = 'regions.mat'; 
         vararginoptions(varargin,{'saveasimg','reg_type','sn','region_file'}); 
         groupDir = fullfile(baseDir,[regDir '_' reg_type],'regdef','group');
