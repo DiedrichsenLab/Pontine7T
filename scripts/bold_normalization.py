@@ -46,9 +46,10 @@ def test_plt():
     plt.show()
     pass 
 
-def normalize_bold_all(name,template,mask=None,tot='SyN',kwargs={}): 
-    subj = pinfo['participant_id']
-    subj = subj[pinfo.good==1]
+def normalize_bold_all(name,template,mask=None,tot='SyN',kwargs={},subj=None): 
+    if subj is None: 
+        subj = pinfo['participant_id']
+        subj = subj[pinfo.good==1]
     def_dir = f'{base_dir}/bold_normalization/deformed/{name}'
     xfm_dir = f'{base_dir}/bold_normalization/transforms/{name}'
     if not os.path.isdir(def_dir):
@@ -194,14 +195,15 @@ def ants_transform_to_deformation_field(xfm,src_img,ref_img):
     return y_img
 
 
-def make_deformation_fields(name,template):
+def make_deformation_fields(name,template,subj=None):
     """ Generates SPM-compatible deformation fields from the ANTs transforms"""
-    subj = pinfo['participant_id']
-    subj = subj[pinfo.good==1]
+    if subj is None: 
+        subj = pinfo['participant_id']
+        subj = subj[pinfo.good==1]
     xfm_dir = f'{base_dir}/bold_normalization/transforms/{name}'
     ref_img = f'{base_dir}/bold_normalization/templates/{template}'
 
-    for src_sub in ['S95']:
+    for src_sub in subj:
         src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_sbref.nii'
         if not os.path.isfile(src):
             src = f'{base_dir}/bold_normalization/individual/{src_sub}_mean_bold.nii'
@@ -236,16 +238,16 @@ def test_bold_images():
 
 if __name__ == '__main__':
     #  make_initial_template_step3()
-    
     # src_sub='S16'
     # make_initial_template()
     # test_bold_images()
-    make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii')
+    
     # kw={'verbose':True}
     # normalize_bold_all('MNI2009c_T1bold','tpl-MNI152NLin2009cSym_res-1_T1w.nii',tot='SyNBold',kwargs=kw)
     # normalize_bold_all('S03Sym_Syn','tpl-S03Sym_bold.nii',tot='SyN')
     # normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
-    # normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC')
+    # normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC',subj=['S97','S08'])
+    make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii',subj=['S97'])
     # make_deformation_fields('S03Sym_Syn','tpl-S03Sym_bold.nii')
     #  Save to nifti
     pass 
