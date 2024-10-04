@@ -52,6 +52,39 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
             
     return data
 
+
+def make_contrast_vectors(): 
+    return contast, contrast_names
+
+
+
+def group_analysis(contrast,contrast_names):
+    # Does group analysis 
+    
+    Y = get_structure_data 
+    num_subj = Y.shape[0]
+    replace_nan = numpy.nan_to_num(get_structure_data)
+
+    for i,c in enumerate(contrast):
+        # Either loop over subject or broadcast
+        
+        contrast_per_subj[s,i,:] = C @ Y 
+        CON = numpy.mean(contrast_per_subj,axis=0)
+        STD = numpy.std(contrast_per_subj,axis=0)
+        T = CON/(STD*np.sqrt(num_subj))
+        
+    # Get one exmample cifti-file for the header 
+    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/ref.dscalar.nii")
+    bm = ref_img.header.get_axis(1)
+    row_axis = =nb.cifti2.ScalarAxis(contrast_names)
+    header = nb.Cifti2Header.from_axes((row_axis,bm))
+    con_img = nb.Cifti2Image(dataobj=CON,header=header)
+    T_img = nb.Cifti2Image(dataobj=Y,header=header)
+    nb.save()...
+
+
+
+
 if __name__=='__main__':
     flat_data = get_structure_data()
 
