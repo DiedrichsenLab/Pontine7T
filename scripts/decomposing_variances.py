@@ -54,7 +54,7 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
 
 
 def make_contrast_vectors(): 
-    return contast, contrast_names
+    return contrast, contrast_names
 
 
 
@@ -98,26 +98,8 @@ if __name__=='__main__':
 
     tensor_std_cond = numpy.std(tensor_no_nans, axis=1, keepdims=1)
 
-    #first_8_runs = tensor_no_nans[:, :8, :, :]
-   # last_8_runs = tensor_no_nans[:, -8:, :, :]
-    
-    #mean_first_8_r = numpy.mean(first_8_runs, axis = 1) 
-    #mean_last_8_r = numpy.mean(last_8_runs, axis = 1)
-
-    #tensor_avg_8_runs = numpy.stack([mean_first_8_r, mean_last_8_r], axis=1)
-
-    #tensor_no_inst = numpy.delete(tensor_no_nans, 0, axis=2)
 
     variances= decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='subject-wise')
-    #variances_r= decompose_pattern_into_group_indiv_noise(tensor_no_inst, criterion='global')
-    #var_diff = variances - variances_r
-
-    #print("global variances:", variances)
-    
-   # selected_column = variances[0] 
-    #sns.barplot(x=range(1, 4), y=selected_column)
-
-    #plt.show()
 
     #locating voxels with missing data:
 
@@ -128,6 +110,5 @@ if __name__=='__main__':
             missing = i
             missing_data.append(missing)
 
-   # print(missing_data)
-#    print("done")
+
             
