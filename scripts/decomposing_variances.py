@@ -1,5 +1,5 @@
-import nibabel
-import numpy 
+import nibabel as nb
+import numpy as np
 import pandas 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -16,9 +16,9 @@ def get_structure_data(structure='pontine', data_dir='/Volumes/diedrichsen_data$
     for i, good_value in zip(T.participant_id, T.good):
         if good_value==1:
             file_path = f'{data_dir}/beta_glm2_{structure}_{i}.dscalar.nii'
-            cifti = nibabel.load(file_path)
+            cifti = nb.load(file_path)
             A.append(cifti.get_fdata())
-        to_tensor = numpy.array(A)
+        to_tensor = np.array(A)
     return to_tensor
 
 def flat2ndarray(flat_data, cond_vec, part_vec):
@@ -37,52 +37,84 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
 
     [n_subjects, n_trials, n_voxels] = flat_data.shape
 
-    unique_conditions = numpy.unique(cond_vec)
-    unique_partitions = numpy.unique(part_vec)
+    unique_conditions = np.unique(cond_vec)
+    unique_partitions = np.unique(part_vec)
 
     n_conditions = unique_conditions.size
     n_partitions = unique_partitions.size
    
-    data = numpy.zeros((n_subjects, n_partitions, n_conditions, n_voxels))
+    data = np.zeros((n_subjects, n_partitions, n_conditions, n_voxels))
 
     for p,partI in enumerate(unique_partitions):
         for c,condI in enumerate(unique_conditions):
-            trial_inds = numpy.where(numpy.logical_and(cond_vec == condI, part_vec == partI))
+            trial_inds = np.where(np.logical_and(cond_vec == condI, part_vec == partI))
             data[:, p, c, :] = flat_data[:, trial_inds, :].squeeze()
             
     return data
 
 
 def make_contrast_vectors(): 
+
+    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/pontine_taskConds_GLM_reordered.tsv', sep='\t')
+
+    contrast_names = T['taskNames'].tolist()
+
+    num_conditions = 10
+
+    contrast = []
+    
+    for i in range(num_conditions):
+        c = [1 if j == i else -1/num_conditions for j in range(num_conditions)]
+        contrast.append(c)
+
+    contrast = np.array(contrast)
+    
     return contrast, contrast_names
 
 
 
 def group_analysis(contrast,contrast_names):
+
     # Does group analysis 
     
-    Y = get_structure_data 
-    num_subj = Y.shape[0]
-    replace_nan = numpy.nan_to_num(get_structure_data)
+    Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed') 
+
+    A = np.mean(Y,axis=1)
+
+    num_subj = A.shape[0]
+    num_cond = A.shape[1]
+
+    contrast_per_subj = np.zeros((num_subj,num_cond, A.shape[-1]))
 
     for i,c in enumerate(contrast):
-        # Either loop over subject or broadcast
+        for s in range(num_subj):
+            contrast_per_subj[s,i,:] = np.dot(c, A[s, :, :])
+
+    CON = np.mean(contrast_per_subj,axis=0)
+
+    STD = np.std(contrast_per_subj,axis=0)
         
-        contrast_per_subj[s,i,:] = C @ Y 
-        CON = numpy.mean(contrast_per_subj,axis=0)
-        STD = numpy.std(contrast_per_subj,axis=0)
-        T = CON/(STD*np.sqrt(num_subj))
+    t = CON/(STD*np.sqrt(num_subj))
         
     # Get one exmample cifti-file for the header 
+    
     ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/ref.dscalar.nii")
     bm = ref_img.header.get_axis(1)
-    row_axis = =nb.cifti2.ScalarAxis(contrast_names)
+
+    row_axis = nb.cifti2.ScalarAxis(contrast_names)
     header = nb.Cifti2Header.from_axes((row_axis,bm))
-    con_img = nb.Cifti2Image(dataobj=CON,header=header)
-    T_img = nb.Cifti2Image(dataobj=Y,header=header)
-    nb.save()...
 
+    for i, name in enumerate(contrast_names):
+        con_img = nb.Cifti2Image(dataobj=CON[i, :], header=header)
+        t_img = nb.Cifti2Image(dataobj=t[i, :], header=header)
 
+        # Dynamically generate the file name based on the task name or index
+        con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/{name}_contrast.dscalar.nii'
+        t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/{name}_Tstat.dscalar.nii'
+
+        # Save the contrast and T-statistic images
+        nb.save(con_img, con_filename)
+        nb.save(t_img, t_filename)
 
 
 if __name__=='__main__':
