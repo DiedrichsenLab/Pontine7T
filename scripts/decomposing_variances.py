@@ -23,7 +23,7 @@ def get_structure_data(structure='pontine', data_dir='/Volumes/diedrichsen_data$
 
 def flat2ndarray(flat_data, cond_vec, part_vec):
     """
-    convert flat data (n_subjects x n_trials x n_voxels) into a 4d ndarray (n_subjects x n_conditions x n_partitions x n_voxels)
+    convert flat data (n_subjects x n_trials x n_voxels) into a 4d ndarray (n_subjects x n_partitions x n_conditions x n_voxels)
 
     Args:
         flat_data:
@@ -68,7 +68,7 @@ def make_contrast_vectors():
     contrast = []
     
     for i in range(num_conditions):
-        c = [1 if j == i else -1/num_conditions for j in range(num_conditions)]
+        c = [1-1/num_conditions if j == i else -1/num_conditions for j in range(num_conditions)]
         contrast.append(c)
 
     contrast = np.array(contrast)
@@ -105,7 +105,7 @@ def group_analysis(contrast,contrast_names):
 
     STD = np.std(contrast_per_subj,axis=0)
         
-    t = CON/(STD*np.sqrt(num_subj))
+    t = CON/(STD/np.sqrt(num_subj))
         
     # Get one exmample cifti-file for the header 
     
@@ -127,29 +127,33 @@ def group_analysis(contrast,contrast_names):
 
 
 if __name__=='__main__':
-    flat_data = get_structure_data()
-
-    cond_vec = numpy.tile(numpy.arange(1,11),16)
-
-    part_vec = numpy.repeat(numpy.arange(1,17), 10)
-
-    tensor_4d = flat2ndarray(flat_data, cond_vec, part_vec)
-
-    tensor_no_nans = numpy.nan_to_num(tensor_4d)
-
-    tensor_std_cond = numpy.std(tensor_no_nans, axis=1, keepdims=1)
 
 
-    variances= decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='subject-wise')
+    contrast, contrast_name = make_contrast_vectors()
+    group_analysis(contrast,contrast_name)
+    # flat_data = get_structure_data()
 
-    #locating voxels with missing data:
+    # cond_vec = numpy.tile(numpy.arange(1,11),16)
 
-    missing_data = []
+    # part_vec = numpy.repeat(numpy.arange(1,17), 10)
 
-    for i in range(0, tensor_4d.shape[3]):
-        if numpy.any(numpy.isnan(tensor_4d[:, :, :, i])):
-            missing = i
-            missing_data.append(missing)
+    # tensor_4d = flat2ndarray(flat_data, cond_vec, part_vec)
+
+    # tensor_no_nans = numpy.nan_to_num(tensor_4d)
+
+    # tensor_std_cond = numpy.std(tensor_no_nans, axis=1, keepdims=1)
+
+
+    # variances= decompose_pattern_into_group_indiv_noise(tensor_no_nans, criterion='subject-wise')
+
+    # #locating voxels with missing data:
+
+    # missing_data = []
+
+    # for i in range(0, tensor_4d.shape[3]):
+    #     if numpy.any(numpy.isnan(tensor_4d[:, :, :, i])):
+    #         missing = i
+    #         missing_data.append(missing)
 
 
             
