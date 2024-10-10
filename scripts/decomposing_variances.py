@@ -57,7 +57,11 @@ def make_contrast_vectors():
 
     T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/pontine_taskConds_GLM_reordered.tsv', sep='\t')
 
-    contrast_names = T['taskNames'].tolist()
+    contrast_names_all = T['taskNames'].tolist()
+
+    contrast_names = list(set(contrast_names_all))
+
+    contrast_names = list(dict.fromkeys(contrast_names))
 
     num_conditions = 10
 
@@ -85,7 +89,7 @@ def group_analysis(contrast,contrast_names):
     
     Y_flat = flat2ndarray(Y, cond_vec, part_vec)
 
-    Y_flat_cond_avg = np.mean(Y.flat, axis=2)
+    Y_flat_cond_avg = np.mean(Y_flat, axis=1)
 
     num_subj = Y_flat_cond_avg.shape[0]
     num_cond = Y_flat_cond_avg.shape[1]
@@ -111,17 +115,15 @@ def group_analysis(contrast,contrast_names):
     row_axis = nb.cifti2.ScalarAxis(contrast_names)
     header = nb.Cifti2Header.from_axes((row_axis,bm))
 
-    for i, name in enumerate(contrast_names):
-        con_img = nb.Cifti2Image(dataobj=CON[i, :], header=header)
-        t_img = nb.Cifti2Image(dataobj=t[i, :], header=header)
+    con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
+    t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
 
-        # Dynamically generate the file name based on the task name or index
-        con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/{name}_contrast.dscalar.nii'
-        t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/{name}_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/condavg_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
-        nb.save(con_img, con_filename)
-        nb.save(t_img, t_filename)
+    nb.save(con_img, con_filename)
+    nb.save(t_img, t_filename)
 
 
 if __name__=='__main__':
