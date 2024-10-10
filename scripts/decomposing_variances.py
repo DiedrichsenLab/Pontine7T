@@ -79,16 +79,23 @@ def group_analysis(contrast,contrast_names):
     
     Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed') 
 
-    num_subj = Y.shape[0]
-    num_cond = Y.shape[1]
+    cond_vec = np.tile(np.arange(1,11),16)
 
-    contrast_per_subj = np.zeros((num_subj,num_cond, Y.shape[-1]))
+    part_vec = np.repeat(np.arange(1,17), 10)
+    
+    Y_flat = flat2ndarray(Y, cond_vec, part_vec)
 
-    print("YO")
+    Y_flat_cond_avg = np.mean(Y.flat, axis=2)
+
+    num_subj = Y_flat_cond_avg.shape[0]
+    num_cond = Y_flat_cond_avg.shape[1]
+
+    contrast_per_subj = np.zeros((num_subj,num_cond, Y_flat_cond_avg.shape[-1]))
+
 
     for i,c in enumerate(contrast):
         for s in range(num_subj):
-            contrast_per_subj[s,i,:] = np.dot(c, Y[s, :, :])
+            contrast_per_subj[s,i,:] = np.dot(c, Y_flat_cond_avg[s, :, :])
 
     CON = np.mean(contrast_per_subj,axis=0)
 
