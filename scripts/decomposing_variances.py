@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from Functional_Fusion.dataset import decompose_pattern_into_group_indiv_noise
 
-data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_SUIT/data/group'
+#data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_SUIT/data/group'
  
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 
@@ -79,16 +79,16 @@ def group_analysis(contrast,contrast_names):
     
     Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed') 
 
-    A = np.mean(Y,axis=1)
+    num_subj = Y.shape[0]
+    num_cond = Y.shape[1]
 
-    num_subj = A.shape[0]
-    num_cond = A.shape[1]
+    contrast_per_subj = np.zeros((num_subj,num_cond, Y.shape[-1]))
 
-    contrast_per_subj = np.zeros((num_subj,num_cond, A.shape[-1]))
+    print("YO")
 
     for i,c in enumerate(contrast):
         for s in range(num_subj):
-            contrast_per_subj[s,i,:] = np.dot(c, A[s, :, :])
+            contrast_per_subj[s,i,:] = np.dot(c, Y[s, :, :])
 
     CON = np.mean(contrast_per_subj,axis=0)
 

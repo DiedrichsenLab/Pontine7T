@@ -1,6 +1,6 @@
 import nibabel as nb
 import numpy as np
-import ants 
+#import ants 
 import pandas as pd
 import matplotlib.pyplot as plt
 import glob
