@@ -55,20 +55,27 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
 
 def make_contrast_vectors(): 
 
-    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/pontine_taskConds_GLM_reordered.tsv', sep='\t')
+    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/GLM_firstlevel_2/S17/SPM_info.tsv', sep='\t')
 
-    contrast_names_all = T['taskNames'].tolist()
+    contrast_names_all = T['taskName'].tolist()
 
     contrast_names = list(set(contrast_names_all))
 
-    contrast_names = list(dict.fromkeys(contrast_names))
+    contrast_names = list(dict.fromkeys(contrast_names_all))
 
     num_conditions = 10
 
     contrast = []
+
+    inst_vector = [int(1) if j==0
+                   else -1/(num_conditions-1) for j in range(0,num_conditions)]
+    contrast.append(inst_vector)
     
-    for i in range(num_conditions):
-        c = [1-1/num_conditions if j == i else -1/num_conditions for j in range(num_conditions)]
+    for i in range(1,num_conditions):
+        c = [1-1/(num_conditions-1) if j == i 
+             else int(0) if j == 0
+             else -1/(num_conditions-1) for j in range(0,num_conditions)]
+        
         contrast.append(c)
 
     contrast = np.array(contrast)
