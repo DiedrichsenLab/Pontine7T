@@ -88,25 +88,25 @@ def group_analysis(contrast,contrast_names):
 
     # Does group analysis 
     
-    Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed') 
+    Y = get_structure_data(structure='cereb_gray', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed') 
 
     cond_vec = np.tile(np.arange(1,11),16)
 
     part_vec = np.repeat(np.arange(1,17), 10)
     
-    Y_flat = flat2ndarray(Y, cond_vec, part_vec)
+    Y_array = flat2ndarray(Y, cond_vec, part_vec)
 
-    Y_flat_cond_avg = np.mean(Y_flat, axis=1)
+    Y_array_cond_avg = np.mean(Y_flat, axis=1)
 
-    num_subj = Y_flat_cond_avg.shape[0]
-    num_cond = Y_flat_cond_avg.shape[1]
+    num_subj = Y_array_cond_avg.shape[0]
+    num_cond = Y_array_cond_avg.shape[1]
 
-    contrast_per_subj = np.zeros((num_subj,num_cond, Y_flat_cond_avg.shape[-1]))
+    contrast_per_subj = np.zeros((num_subj,num_cond, Y_array_cond_avg.shape[-1]))
 
 
     for i,c in enumerate(contrast):
         for s in range(num_subj):
-            contrast_per_subj[s,i,:] = np.dot(c, Y_flat_cond_avg[s, :, :])
+            contrast_per_subj[s,i,:] = np.dot(c, Y_array_cond_avg[s, :, :])
 
     CON = np.mean(contrast_per_subj,axis=0)
 
@@ -116,7 +116,7 @@ def group_analysis(contrast,contrast_names):
         
     # Get one exmample cifti-file for the header 
     
-    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/ref.dscalar.nii")
+    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed/ref.dscalar.nii")
     bm = ref_img.header.get_axis(1)
 
     row_axis = nb.cifti2.ScalarAxis(contrast_names)
@@ -125,8 +125,8 @@ def group_analysis(contrast,contrast_names):
     con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
     t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
 
-    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/condavg_contrast.dscalar.nii'
-    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/group_avg/condavg_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/condavg_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
