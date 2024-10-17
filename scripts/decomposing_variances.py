@@ -96,7 +96,7 @@ def group_analysis(contrast,contrast_names):
     
     Y_array = flat2ndarray(Y, cond_vec, part_vec)
 
-    Y_array_cond_avg = np.mean(Y_flat, axis=1)
+    Y_array_cond_avg = np.mean(Y_array, axis=1)
 
     num_subj = Y_array_cond_avg.shape[0]
     num_cond = Y_array_cond_avg.shape[1]
