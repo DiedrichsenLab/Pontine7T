@@ -52,6 +52,67 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
             
     return data
 
+def make_contrast_vectors_handedness():
+
+    contrast = np.array([[0,1],[1,0]])
+
+    return contrast 
+
+def group_analysis_handedness(contrast):
+    
+    Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed') 
+    cond_vec = np.tile(np.arange(1,11),16)
+    part_vec = np.repeat(np.arange(1,17), 10)
+    
+    Y_array = flat2ndarray(Y, cond_vec, part_vec)
+
+    Y_array_L = Y_array[:, 4:12, 1:6, :]  #this selects tasks with hand presses (axis 2) for runs 5 through 12 (4:12)
+
+    Y_array_L_avg_runs =  np.mean(Y_array_L, axis=1)
+
+    Y_array_L_avg_conds = np.mean(Y_array_L_avg_runs, axis=1, keepdims = True)
+
+    Y_array_R = Y_array[:, np.r_[0:4, 12:16], 1:6, :] 
+
+    Y_array_R_avg_runs = np.mean(Y_array_R, axis=1)
+
+    Y_array_R_avg_conds = np.mean(Y_array_R_avg_runs, axis=1, keepdims = True)
+
+    combined_array = np.concatenate((Y_array_R_avg_conds, Y_array_L_avg_conds), axis=1)
+
+    num_subj = combined_array.shape[0]
+    num_cond = combined_array.shape[1]
+
+    contrast_per_subj = np.zeros((num_subj,num_cond,combined_array.shape[-1]))
+
+
+    for i,c in enumerate(contrast):
+        for s in range(num_subj):
+            contrast_per_subj[s,i,:] = np.dot(c, combined_array[s, :, :])
+
+    CON = np.mean(contrast_per_subj,axis=0)
+
+    STD = np.std(contrast_per_subj,axis=0)
+        
+    t = CON/(STD/np.sqrt(num_subj))
+
+    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed/ref_dentate.dscalar.nii")
+    bm = ref_img.header.get_axis(1)
+
+    row_axis = nb.cifti2.ScalarAxis(["Right vs Left"])
+    header = nb.Cifti2Header.from_axes((row_axis,bm))
+
+    con_img = nb.Cifti2Image(dataobj=CON[0:1, :], header=header)
+    t_img = nb.Cifti2Image(dataobj=t[0:1, :], header=header)
+
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/cond_rightvsleft_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/cond_rightvsleft_Tstat.dscalar.nii'
+
+        # Save the contrast and T-statistic images
+    nb.save(con_img, con_filename)
+    nb.save(t_img, t_filename)
+        
+
 
 def make_contrast_vectors(): 
 
@@ -138,6 +199,8 @@ if __name__=='__main__':
 
     contrast, contrast_name = make_contrast_vectors()
     group_analysis(contrast,contrast_name)
+
+
     # flat_data = get_structure_data()
 
     # cond_vec = numpy.tile(numpy.arange(1,11),16)
