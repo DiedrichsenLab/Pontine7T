@@ -54,7 +54,7 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
 
 def make_contrast_vectors_handedness():
 
-    contrast = np.array([[0,1],[1,0]])
+    contrast = np.array([[-1,1],[1,-1]])
 
     return contrast 
 
@@ -102,11 +102,11 @@ def group_analysis_handedness(contrast):
     row_axis = nb.cifti2.ScalarAxis(["Right vs Left"])
     header = nb.Cifti2Header.from_axes((row_axis,bm))
 
-    con_img = nb.Cifti2Image(dataobj=CON[0:1, :], header=header)
-    t_img = nb.Cifti2Image(dataobj=t[0:1, :], header=header)
+    con_img = nb.Cifti2Image(dataobj=CON[1:2, :], header=header)
+    t_img = nb.Cifti2Image(dataobj=t[1:2, :], header=header)
 
-    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/cond_rightvsleft_contrast.dscalar.nii'
-    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/cond_rightvsleft_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/cond_rightvsleft2_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/cond_rightvsleft2_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
