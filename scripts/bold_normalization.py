@@ -1,6 +1,6 @@
 import nibabel as nb
 import numpy as np
-#import ants 
+import ants 
 import pandas as pd
 import matplotlib.pyplot as plt
 import glob
@@ -207,7 +207,6 @@ def ants_transform_to_deformation_field(xfm,src_img,ref_img):
     y_img  = nb.Nifti1Image(data,y_img.affine)
     return y_img
 
-
 def make_deformation_fields(name,template,subj=None):
     """ Generates SPM-compatible deformation fields from the ANTs transforms"""
     if subj is None: 
@@ -259,10 +258,10 @@ if __name__ == '__main__':
     # kw={'verbose':True}
     # normalize_bold_all('MNI2009c_T1bold','tpl-MNI152NLin2009cSym_res-1_T1w.nii',tot='SyNBold',kwargs=kw)
     # normalize_bold_all('S03Sym_Syn','tpl-S03Sym_bold.nii',tot='SyN')
-    # normalize_bold_all('S03Sym_CC','tpl-S03Sym_bold.nii',tot='SyNCC')
+    # normalize_bold_all('MNI2009cBold','tpl-MNI2009cSym_bold.nii',tot='SyNCC')
     # normalize_bold_all('SynSym_CC','tpl-SyNSym_bold.nii',tot='SyNCC',subj=['S08'])
-    # make_deformation_fields('SynSym_CC','tpl-SynSym_bold.nii',subj=['S08'])
+    make_deformation_fields('MNI2009cBold','tpl-MNI2009cSym_bold.nii')
     # make_deformation_fields('S03Sym_Syn','tpl-S03Sym_bold.nii')
     #  Save to nifti
-    normalize_to_MNI2009c()
+    # normalize_to_MNI2009c()
     pass 
