@@ -60,7 +60,7 @@ def make_contrast_vectors_handedness():
 
 def group_analysis_handedness(contrast):
     
-    Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_smoothed') 
+    Y = get_structure_data(structure='cereb_gray', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_smoothed') 
     cond_vec = np.tile(np.arange(1,11),16)
     part_vec = np.repeat(np.arange(1,17), 10)
     
@@ -83,16 +83,14 @@ def group_analysis_handedness(contrast):
     right_rest_avg = np.mean(right_rest, axis=1)
 
     combined_array = np.stack([left_fingseq_avg, left_rest_avg, right_fingseq_avg, right_rest_avg], axis=1 )
+    combined_array = np.squeeze(combined_array)
 
     num_subj = combined_array.shape[0]
-    num_cond = combined_array.shape[1]
 
-    contrast_per_subj = np.zeros((num_subj,num_cond,combined_array.shape[-1]))
+    contrast_per_subj = np.zeros((num_subj,1,combined_array.shape[-1]))
 
-
-    for i,c in enumerate(contrast):
-        for s in range(num_subj):
-            contrast_per_subj[s,i,:] = np.dot(c, combined_array[s, :, :])
+    for s in range(num_subj):
+        contrast_per_subj[s,:,:] = np.dot(contrast, combined_array[s, :, :])
 
     CON = np.mean(contrast_per_subj,axis=0)
 
@@ -100,14 +98,14 @@ def group_analysis_handedness(contrast):
         
     t = CON/(STD/np.sqrt(num_subj))
 
-    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_smoothed/ref_dentate.dscalar.nii")
+    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_smoothed/ref_cereb.dscalar.nii")
     bm = ref_img.header.get_axis(1)
 
     row_axis = nb.cifti2.ScalarAxis(["Handedness contrast"])
     header = nb.Cifti2Header.from_axes((row_axis,bm))
 
-    con_img = nb.Cifti2Image(dataobj=CON[1, :], header=header)
-    t_img = nb.Cifti2Image(dataobj=t[1, :], header=header)
+    con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
+    t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
 
     con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_avg/cond_handedness_contrast.dscalar.nii'
     t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_avg/cond_handedness_Tstat.dscalar.nii'
