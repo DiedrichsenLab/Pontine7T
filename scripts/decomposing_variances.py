@@ -60,25 +60,29 @@ def make_contrast_vectors_handedness():
 
 def group_analysis_handedness(contrast):
     
-    Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed') 
+    Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_smoothed') 
     cond_vec = np.tile(np.arange(1,11),16)
     part_vec = np.repeat(np.arange(1,17), 10)
     
     Y_array = flat2ndarray(Y, cond_vec, part_vec)
 
-    Y_array_L = Y_array[:, 4:12, 1:6, :]  #this selects tasks with hand presses (axis 2) for runs 5 through 12 (4:12)
+    left_fingseq = Y_array[:, 4:12, 2:3, :]  #this selects tasks with finger sequence (axis 2) for runs 5 through 12 (4:12)
 
-    Y_array_L_avg_runs =  np.mean(Y_array_L, axis=1)
+    left_fingseq_avg =  np.mean(left_fingseq, axis=1)
 
-    Y_array_L_avg_conds = np.mean(Y_array_L_avg_runs, axis=1, keepdims = True)
+    left_rest = Y_array[:, 4:12, 8:9, :]  #this selects rest for left hand 
 
-    Y_array_R = Y_array[:, np.r_[0:4, 12:16], 1:6, :] 
+    left_rest_avg = np.mean(left_rest, axis=1) #shape is subj x cond x voxels 
 
-    Y_array_R_avg_runs = np.mean(Y_array_R, axis=1)
+    right_fingseq = Y_array[:, np.r_[0:4, 12:16], 2:3, :] 
 
-    Y_array_R_avg_conds = np.mean(Y_array_R_avg_runs, axis=1, keepdims = True)
+    right_fingseq_avg = np.mean(right_fingseq, axis=1)
 
-    combined_array = np.concatenate((Y_array_R_avg_conds, Y_array_L_avg_conds), axis=1)
+    right_rest = Y_array[:, np.r_[0:4, 12:16], 8:9, :]
+
+    right_rest_avg = np.mean(right_rest, axis=1)
+
+    combined_array = np.stack([left_fingseq_avg, left_rest_avg, right_fingseq_avg, right_rest_avg], axis=1 )
 
     num_subj = combined_array.shape[0]
     num_cond = combined_array.shape[1]
@@ -96,17 +100,17 @@ def group_analysis_handedness(contrast):
         
     t = CON/(STD/np.sqrt(num_subj))
 
-    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed/ref_dentate.dscalar.nii")
+    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_smoothed/ref_dentate.dscalar.nii")
     bm = ref_img.header.get_axis(1)
 
-    row_axis = nb.cifti2.ScalarAxis(["Right vs Left"])
+    row_axis = nb.cifti2.ScalarAxis(["Handedness contrast"])
     header = nb.Cifti2Header.from_axes((row_axis,bm))
 
-    con_img = nb.Cifti2Image(dataobj=CON[1:2, :], header=header)
-    t_img = nb.Cifti2Image(dataobj=t[1:2, :], header=header)
+    con_img = nb.Cifti2Image(dataobj=CON[1, :], header=header)
+    t_img = nb.Cifti2Image(dataobj=t[1, :], header=header)
 
-    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/cond_rightvsleft2_contrast.dscalar.nii'
-    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/cond_rightvsleft2_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_avg/cond_handedness_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_avg/cond_handedness_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
@@ -124,18 +128,21 @@ def make_contrast_vectors():
 
     contrast_names = list(dict.fromkeys(contrast_names_all))
 
-    num_conditions = 10
+    num_condxrep = 160
 
     contrast = []
-
-    inst_vector = [int(1) if j==0
-                   else -1/(num_conditions-1) for j in range(0,num_conditions)]
+   
+   #a 160 x 160 matrix where every row is a 
+    
+    inst_vector = [int(1) if j % 10 ==0
+                   else -1/(num_condxrep-1) for j in range(0,num_condxrep)]
     contrast.append(inst_vector)
     
-    for i in range(1,num_conditions):
-        c = [1-1/(num_conditions-1) if j == i 
+    for i in range(1,num_condxrep):
+        c = [1-1/(num_condxrep-1) if j == i and j % 10 != 0
              else int(0) if j == 0
-             else -1/(num_conditions-1) for j in range(0,num_conditions)]
+             else -1/(num_condxrep-1) if j % 10 !=0 
+             else 0 for j in range(0,num_condxrep)]
         
         contrast.append(c)
 
