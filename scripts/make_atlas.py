@@ -10,7 +10,9 @@ import HierarchBayesParcel.emissions as em
 import HierarchBayesParcel.full_model as fm
 import HierarchBayesParcel.util as ut
 import matplotlib.pyplot as plt
-
+import SUITPy as suit 
+import nitools as nt 
+import Functional_Fusion.plot as plot
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
@@ -90,29 +92,25 @@ def estimate_new_atlas(cereb_Vs):
      M, _, _, _ = M.fit_em(iter=200, tol=0.01,
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
-     return ar_model
-     
-     #corresponding with the dataset
+     return ar_model, em_model1
 
-    # Set the parameter list of the emission models to kappa only to avoid fitting of V. 
-     
-    #for em in em_models:
-     #   em.set_param_list(['kappa'])
-    #M = fm.FullMultiModel(ar_model, em_models)
-
-
-    #M.initialize([data])
-
-    #M, _, _, _ = M.fit_em(iter=200, tol=0.01,
-     #   fit_arrangement=True,fit_emission=True,first_evidence=True)
-
-    #return ar_model
 
 if __name__ == '__main__':
     Vs = estimate_emission_models()
 
     dentate_group_map = estimate_new_atlas(Vs)
 
+    # Load colormap and labels
+
+    lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
+    # Make a nifti image of the first subject
+    dentate_atlas, _ = am.get_atlas('MNISymDentate1')
+
+    nifti = dentate_atlas.data_to_nifti(dentate_group_map.marginal_prob().numpy())
+
+    #plot group map 
+
+    dentate_parcellation = plot.plot_dentate(nifti,cmap)
     
     Vs = [em.V for em in M.emissions]
     #plt.imshow(Vs[0])
