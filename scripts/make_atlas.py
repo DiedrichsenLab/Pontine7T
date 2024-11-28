@@ -99,9 +99,11 @@ def estimate_new_atlas(cereb_Vs):
      em_model1 = em.MixVMF(K=32, P=dentate_atlas.P, X=X, part_vec=part_v)
      em_model2 = em.MixVMF(K=32, P=dentate_atlas.P, X=X2, part_vec = part_v2)
 
-     for k in range(len(cereb_Vs)):
-         em_model1.V[k] = cereb_Vs[k]
-         em_model2.V[k] = cereb_Vs[k]
+     for k in range(len(cereb_Vs[0])):
+         em_model1.V[k] = cereb_Vs[0][k]
+    
+     for k in range(len(cereb_Vs[1])):
+         em_model2.V[k] = cereb_Vs[1][k]
 
      em_model1.set_param_list(['kappa'])
      em_model2.set_param_list(['kappa'])
@@ -113,7 +115,7 @@ def estimate_new_atlas(cereb_Vs):
      M, _, _, _ = M.fit_em(iter=200, tol=0.01,
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
-     return ar_model, em_model1, em_model2
+     return M
 
 
 if __name__ == '__main__':
@@ -130,11 +132,12 @@ if __name__ == '__main__':
     #plot group map 
     data = dentate_group_map[0].marginal_prob().numpy()
     #wta = np.argmax(data,axis=0)
-    wta = np.argmax(data, axis=0)
+    wta = np.argmax(data, axis=0) 
+    wta += 1
 
     wta_int32 = wta.astype(np.int32)
     
-    dentate_parcellation = plot.plot_dentate(wta_int32,cmap=cmap_string)
+    dentate_parcellation = plot.plot_dentate(wta_int32,cscale=[0,32],cmap=cmap_string)
 
     
     
