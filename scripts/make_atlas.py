@@ -20,7 +20,7 @@ base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
 
 
-def build_emission_mdtb(K,P,atlas='MNISymC2'):
+def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
     data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='all',subj=None)
     cond_v = info['cond_num_uni']
     part_v = info['run']
@@ -34,16 +34,16 @@ def build_emission_mdtb(K,P,atlas='MNISymC2'):
 
 def build_emission_language(K,P,atlas='MNISymCereb2'):
     data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,type='CondRun', sess='ses-localizer_cond_fm', subj=None)
-    cond_v2 = info['task']
-    part_v2 = info['run']
+    cond_v = info['task']
+    part_v = info['run']
 
     # Make a design matrix
-    X2= ut.indicator(cond_v2)
+    X= ut.indicator(cond_v)
 
-    data = ds.remove_baseline(data,part_v2)
+    data = ds.remove_baseline(data,part_v)
 
     # Build an emission model
-    em_model = em.MixVMF(K=K,P=atlas.P, X=X2,part_vec=part_v2)
+    em_model = em.MixVMF(K=K,P=P, X=X,part_vec=part_v)
     em_model.initialize(data)
     return em_model
 
@@ -55,24 +55,24 @@ def build_emission_pontine(K,P,atlas='MNISymCereb2'):
     elif atlas == 'MNISymDentate1':
         pontine_flat_data = ac.get_structure_data(structure='cereb_gray',  data_dir=data_dir)
  
-    cond_v3 = np.tile(np.arange(1,11),16)
+    cond_v = np.tile(np.arange(1,11),16)
 
-    part_v3 = np.repeat(np.arange(1,17), 10)
+    part_v = np.repeat(np.arange(1,17), 10)
 
-    tensor_pontine = ac.flat2ndarray(pontine_flat_data, cond_v3, part_v3)
+    tensor_pontine = ac.flat2ndarray(pontine_flat_data, cond_v, part_v)
 
     tensor_no_nans = np.nan_to_num(tensor_pontine)
 
     tensor_avg_cond = tensor_no_nans.mean(axis=3, keepdims=1) #this is the mean activity pattern 
 
-    data3 = tensor_no_nans - tensor_avg_cond
+    data_p = tensor_no_nans - tensor_avg_cond
 
-    data3_reshape = data3.reshape(16,160,18207)
+    data = data_p.reshape(16,160,18290)
 
-    X3 = ut.indicator(cond_v3)
+    X = ut.indicator(cond_v)
 
-    em_model3 = em.MixVMF(K=K,P=P,X=X3,part_vec=part_v3)
-    em_model3.initialize(data3)
+    em_model = em.MixVMF(K=K,P=P,X=X,part_vec=part_v)
+    em_model.initialize(data)
 
 def estimate_emission_models():
     """ Estimate emission models for dataset
