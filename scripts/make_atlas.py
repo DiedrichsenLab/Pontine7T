@@ -117,9 +117,9 @@ def estimate_new_atlas(cereb_Vs):
 
      ar_model = ar.ArrangeIndependent(K=32, P=atlas.P, spatial_specific=True, remove_redundancy=False)
          
-     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymCereb2')
-     em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymCereb2')
-     em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymCereb2')
+     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymDentate1')
+     em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymDentate1')
+     em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymDentate1')
 
      em_model1.V = cereb_Vs[0]
      em_model2.V = cereb_Vs[1]
