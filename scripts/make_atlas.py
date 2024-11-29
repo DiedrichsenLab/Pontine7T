@@ -19,6 +19,61 @@ from scripts import decomposing_variances as ac
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
 
+
+def build_emission_mdtb(K,P,atlas='MNISymC2'):
+    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='all',subj=None)
+    cond_v = info['cond_num_uni']
+    part_v = info['run']
+
+    # Make a design matrix
+    X= ut.indicator(cond_v)
+    # Build an emission model
+    em_model = em.MixVMF(K=K,P=P, X=X,part_vec=part_v)
+    em_model.initialize(data)
+    return em_model
+
+def build_emission_language(K,P,atlas='MNISymCereb2'):
+    data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,type='CondRun', sess='ses-localizer_cond_fm', subj=None)
+    cond_v2 = info['task']
+    part_v2 = info['run']
+
+    # Make a design matrix
+    X2= ut.indicator(cond_v2)
+
+    data = ds.remove_baseline(data,part_v2)
+
+    # Build an emission model
+    em_model = em.MixVMF(K=K,P=atlas.P, X=X2,part_vec=part_v2)
+    em_model.initialize(data)
+    return em_model
+
+
+def build_emission_pontine(K,P,atlas='MNISymCereb2'):
+    data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group'
+    if atlas=='MNISymCereb2': 
+        pontine_flat_data = ac.get_structure_data(structure='cereb_gray', data_dir=data_dir )
+    elif atlas == 'MNISymDentate1':
+        pontine_flat_data = ac.get_structure_data(structure='cereb_gray',  data_dir=data_dir)
+ 
+    cond_v3 = np.tile(np.arange(1,11),16)
+
+    part_v3 = np.repeat(np.arange(1,17), 10)
+
+    tensor_pontine = ac.flat2ndarray(pontine_flat_data, cond_v3, part_v3)
+
+    tensor_no_nans = np.nan_to_num(tensor_pontine)
+
+    tensor_avg_cond = tensor_no_nans.mean(axis=3, keepdims=1) #this is the mean activity pattern 
+
+    data3 = tensor_no_nans - tensor_avg_cond
+
+    data3_reshape = data3.reshape(16,160,18207)
+
+    X3 = ut.indicator(cond_v3)
+
+    em_model3 = em.MixVMF(K=K,P=P,X=X3,part_vec=part_v3)
+    em_model3.initialize(data3)
+
 def estimate_emission_models():
     """ Estimate emission models for dataset
     """
@@ -34,62 +89,16 @@ def estimate_emission_models():
         
     # Load the data using functional fusion 
 
-    #mdtb 
-    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas='MNISymCereb2',type='CondRun',sess='all',subj=None)
-    cond_v = info['cond_num_uni']
-    part_v = info['run']
-
-    # K is the number of parcels
-    K = ar_model.K
-    # Make a design matrix
-    X= ut.indicator(cond_v)
-    # Build an emission model
-    em_model1 = em.MixVMF(K=K,P=atlas.P, X=X,part_vec=part_v)
-
-    #language 
-
-    data2, info2, ds_obj2 = ds.get_dataset(base_dir,'Language',atlas='MNISymCereb2',type='CondRun', sess='ses-localizer_cond_fm', subj=None)
-    cond_v2 = info2['task']
-    part_v2 = info2['run']
-
-    K2 = ar_model.K
-    # Make a design matrix
-    X2= ut.indicator(cond_v2)
-    X2_b = ut.indicator(part_v2)
-    data2_r_baseline = ds.remove_baseline(data2,X2_b)
-
-    # Build an emission model
-    em_model2 = em.MixVMF(K=K2,P=atlas.P, X=X2,part_vec=part_v2)
-
-    #pontine7T
-
-    pontine_flat_data = ac.get_structure_data(structure='cereb_gray',  data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group')
-
-    cond_v3 = np.tile(np.arange(1,11),16)
-
-    part_v3 = np.repeat(np.arange(1,17), 10)
-
-    tensor_pontine = ac.flat2ndarray(pontine_flat_data, cond_v3, part_v3)
-
-    tensor_no_nans = np.nan_to_num(tensor_pontine)
-
-    tensor_avg_cond = tensor_no_nans.mean(axis=3, keepdims=1) #this is the mean activity pattern 
-
-    data3 = tensor_no_nans - tensor_avg_cond
-
-    data3_reshape = data3.reshape(16,160,146192)
-
-    X3 = ut.indicator(cond_v3)
-
-    em_model3 = em.MixVMF(K=ar_model.K,P=atlas.P,X=X3,part_vec=part_v3)
-
+    em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymCereb2')
+    em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymCereb2')
+    em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymCereb2')
+ 
     # Build the full model: The emission models are passed as a list, as usually we have multiple data sets
     M = fm.FullMultiModel(ar_model, [em_model1, em_model2, em_model3])
 
     # Attach the data to the model - this is done for speed
     # The data is passed as a list with on element per data set
-
-    M.initialize([data,data2_r_baseline, data3_reshape])
+    M.initialize() # Initialize the default that each em has different subjects
 
     # Now we can run the EM algorithm
     M, _, _, _ = M.fit_em(iter=200, tol=0.01,
@@ -114,6 +123,9 @@ def estimate_new_atlas(cereb_Vs):
      cond_v2 = info2['task']
      part_v2 = info2['run']
 
+     #X2_b = ut.indicator(part_v2)
+     #data2_r_baseline = ds.remove_baseline(data2,X2_b)
+
      #pontine7T
 
      pontine_flat_data = ac.get_structure_data(structure='dentate',  data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group')
@@ -131,8 +143,6 @@ def estimate_new_atlas(cereb_Vs):
      data3 = tensor_no_nans - tensor_avg_cond
 
      data3_reshape = data3.reshape(16,160,3973)
-
-     X3 = ut.indicator(cond_v3)
      
      ar_model = ar.ArrangeIndependent(K=32, P=dentate_atlas.P, spatial_specific=True, remove_redundancy=False)
     
@@ -140,6 +150,7 @@ def estimate_new_atlas(cereb_Vs):
      
      X= ut.indicator(cond_v)
      X2 = ut.indicator(cond_v2)
+     X3 = ut.indicator(cond_v3)
      
      em_model1 = em.MixVMF(K=32, P=dentate_atlas.P, X=X, part_vec=part_v)
      em_model2 = em.MixVMF(K=32, P=dentate_atlas.P, X=X2, part_vec = part_v2)
