@@ -18,7 +18,7 @@ from scripts import decomposing_variances as ac
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
-
+wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/dentate_atlas'
 
 def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
     data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='all',subj=None)
@@ -51,23 +51,15 @@ def build_emission_language(K,P,atlas='MNISymCereb2'):
 def build_emission_pontine(K,P,atlas='MNISymCereb2'):
     data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group'
     if atlas=='MNISymCereb2': 
-        pontine_flat_data = ac.get_structure_data(structure='cereb_gray', data_dir=data_dir )
+        data = ac.get_structure_data(structure='cereb_gray', data_dir=data_dir )
     elif atlas == 'MNISymDentate1':
-        pontine_flat_data = ac.get_structure_data(structure='cereb_gray',  data_dir=data_dir)
+        data = ac.get_structure_data(structure='dentate',  data_dir=data_dir)
  
     cond_v = np.tile(np.arange(1,11),16)
 
     part_v = np.repeat(np.arange(1,17), 10)
 
-    tensor_pontine = ac.flat2ndarray(pontine_flat_data, cond_v, part_v)
-
-    tensor_no_nans = np.nan_to_num(tensor_pontine)
-
-    tensor_avg_cond = tensor_no_nans.mean(axis=3, keepdims=1) #this is the mean activity pattern 
-
-    data_p = tensor_no_nans - tensor_avg_cond
-
-    data = data_p.reshape(16,160,18290)
+    data = ds.remove_baseline(data,part_v)
 
     X = ut.indicator(cond_v)
 
@@ -105,11 +97,13 @@ def estimate_emission_models():
     M, _, _, _ = M.fit_em(iter=200, tol=0.01,
         fit_arrangement=False,fit_emission=True,first_evidence=False)
     
-    Vs = [i.V for i in M.emissions]
+    pt.save(M.emissions[0].V,f"{wk_dir}/V_cerebcortex_MDTB.pt")
+    pt.save(M.emissions[1].V,f"{wk_dir}/V_cerebcortex_Language.pt")
+    pt.save(M.emissions[2].V,f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
     return Vs    
 
-def estimate_new_atlas(cereb_Vs): 
+def estimate_new_atlas(): 
      
     # Get atlas for dentate 
 
@@ -121,9 +115,9 @@ def estimate_new_atlas(cereb_Vs):
      em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymDentate1')
      em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymDentate1')
 
-     em_model1.V = cereb_Vs[0]
-     em_model2.V = cereb_Vs[1]
-     em_model3.V = cereb_Vs[2]
+     em_model1.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB.pt")
+     em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
+     em_model3.V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
      em_model1.set_param_list(['kappa'])
      em_model2.set_param_list(['kappa'])
@@ -133,16 +127,19 @@ def estimate_new_atlas(cereb_Vs):
 
      M.initialize()
 
-     M, _, _, _ = M.fit_em(iter=200, tol=0.01,
+     M, ll, _, _ = M.fit_em(iter=200, tol=0.01,
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
+     Prob = M.arrange.marginal_prob().numpy()
+     np.save(f"{wk_dir}/Prob_dentate.npy",Prob)
+
      return M
 
 
 if __name__ == '__main__':
-    all_Vs = estimate_emission_models()
+    # all_Vs = estimate_emission_models()
 
-    dentate_group_map = estimate_new_atlas(all_Vs)
+    # dentateM = estimate_new_atlas()
 
     # Load colormap and labels
 
