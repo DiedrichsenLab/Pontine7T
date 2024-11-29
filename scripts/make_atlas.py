@@ -14,6 +14,7 @@ import SUITPy as suit
 import nitools as nt 
 import Functional_Fusion.plot as plot
 from matplotlib.colors import ListedColormap
+from scripts import decomposing_variances as ac
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
@@ -54,16 +55,41 @@ def estimate_emission_models():
     K2 = ar_model.K
     # Make a design matrix
     X2= ut.indicator(cond_v2)
+    X2_b = ut.indicator(part_v2)
+    data2_r_baseline = ds.remove_baseline(data2,X2_b)
+
     # Build an emission model
     em_model2 = em.MixVMF(K=K2,P=atlas.P, X=X2,part_vec=part_v2)
 
+    #pontine7T
+
+    pontine_flat_data = ac.get_structure_data(structure='cereb_gray',  data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group')
+
+    cond_v3 = np.tile(np.arange(1,11),16)
+
+    part_v3 = np.repeat(np.arange(1,17), 10)
+
+    tensor_pontine = ac.flat2ndarray(pontine_flat_data, cond_v3, part_v3)
+
+    tensor_no_nans = np.nan_to_num(tensor_pontine)
+
+    tensor_avg_cond = tensor_no_nans.mean(axis=3, keepdims=1) #this is the mean activity pattern 
+
+    data3 = tensor_no_nans - tensor_avg_cond
+
+    data3_reshape = data3.reshape(16,160,146192)
+
+    X3 = ut.indicator(cond_v3)
+
+    em_model3 = em.MixVMF(K=ar_model.K,P=atlas.P,X=X3,part_vec=part_v3)
+
     # Build the full model: The emission models are passed as a list, as usually we have multiple data sets
-    M = fm.FullMultiModel(ar_model, [em_model1, em_model2])
+    M = fm.FullMultiModel(ar_model, [em_model1, em_model2, em_model3])
 
     # Attach the data to the model - this is done for speed
     # The data is passed as a list with on element per data set
 
-    M.initialize([data,data2])
+    M.initialize([data,data2_r_baseline, data3_reshape])
 
     # Now we can run the EM algorithm
     M, _, _, _ = M.fit_em(iter=200, tol=0.01,
@@ -87,9 +113,28 @@ def estimate_new_atlas(cereb_Vs):
      data2, info2, ds_obj2 = ds.get_dataset(base_dir,'Language',atlas='MNISymDentate1',type='CondRun',sess='ses-localizer_cond_fm',subj=None)
      cond_v2 = info2['task']
      part_v2 = info2['run']
+
+     #pontine7T
+
+     pontine_flat_data = ac.get_structure_data(structure='dentate',  data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group')
+
+     cond_v3 = np.tile(np.arange(1,11),16)
+
+     part_v3 = np.repeat(np.arange(1,17), 10)
+
+     tensor_pontine = ac.flat2ndarray(pontine_flat_data, cond_v3, part_v3)
+
+     tensor_no_nans = np.nan_to_num(tensor_pontine)
+
+     tensor_avg_cond = tensor_no_nans.mean(axis=3, keepdims=1) #this is the mean activity pattern 
+
+     data3 = tensor_no_nans - tensor_avg_cond
+
+     data3_reshape = data3.reshape(16,160,3973)
+
+     X3 = ut.indicator(cond_v3)
      
      ar_model = ar.ArrangeIndependent(K=32, P=dentate_atlas.P, spatial_specific=True, remove_redundancy=False)
-
     
     # Make a design matrix
      
@@ -98,19 +143,24 @@ def estimate_new_atlas(cereb_Vs):
      
      em_model1 = em.MixVMF(K=32, P=dentate_atlas.P, X=X, part_vec=part_v)
      em_model2 = em.MixVMF(K=32, P=dentate_atlas.P, X=X2, part_vec = part_v2)
+     em_model3 = em.MixVMF(K=32, P=dentate_atlas.P, X=X3, part_vec=part_v3 )
 
      for k in range(len(cereb_Vs[0])):
          em_model1.V[k] = cereb_Vs[0][k]
     
      for k in range(len(cereb_Vs[1])):
          em_model2.V[k] = cereb_Vs[1][k]
+         
+     for k in range(len(cereb_Vs[2])):
+         em_model3.V[k] = cereb_Vs[2][k]
 
      em_model1.set_param_list(['kappa'])
      em_model2.set_param_list(['kappa'])
+     em_model3.set_param_list(['kappa'])
 
-     M= fm.FullMultiModel(ar_model, [em_model1, em_model2])
+     M= fm.FullMultiModel(ar_model, [em_model1, em_model2, em_model3])
 
-     M.initialize([data, data2])
+     M.initialize([data, data2, data3_reshape])
 
      M, _, _, _ = M.fit_em(iter=200, tol=0.01,
         fit_arrangement=True,fit_emission=True,first_evidence=True)
@@ -130,7 +180,7 @@ if __name__ == '__main__':
     cmap_string = ListedColormap(cmap)
 
     #plot group map 
-    data = dentate_group_map[0].marginal_prob().numpy()
+    data = dentate_group_map.arrange.marginal_prob().numpy()
     #wta = np.argmax(data,axis=0)
     wta = np.argmax(data, axis=0) 
     wta += 1
