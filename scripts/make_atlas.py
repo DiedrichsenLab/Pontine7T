@@ -141,23 +141,21 @@ if __name__ == '__main__':
 
     # dentateM = estimate_new_atlas()
 
+    # Load probability 
+    pmap = np.load(f"{wk_dir}/Prob_dentate.npy")
     # Load colormap and labels
-
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
 
-    cmap_string = ListedColormap(cmap)
 
-    #plot group map 
-    data = dentate_group_map.arrange.marginal_prob().numpy()
     #wta = np.argmax(data,axis=0)
-    wta = np.argmax(data, axis=0) 
+    wta = np.argmax(pmap, axis=0) 
     wta += 1
 
     wta_int32 = wta.astype(np.int32)
     
-    dentate_parcellation = plot.plot_dentate(wta_int32,cscale=[0,32],cmap=cmap_string)
+    dentate_parcellation = plot.plot_dentate(wta_int32,cscale=[0,32],cmap=cmap)
 
-    
+    pass 
     
     Vs = [em.V for em in M.emissions]
     #plt.imshow(Vs[0])
