@@ -126,21 +126,21 @@ def make_contrast_vectors():
 
     contrast_names = list(dict.fromkeys(contrast_names_all))
 
-    num_condxrep = 160
+    num_cond = 10
 
     contrast = []
    
    #a 160 x 160 matrix where every row is a 
     
     inst_vector = [int(1) if j % 10 ==0
-                   else -1/(num_condxrep-1) for j in range(0,num_condxrep)]
+                   else -1/(num_cond-1) for j in range(0,num_cond)]
     contrast.append(inst_vector)
     
-    for i in range(1,num_condxrep):
-        c = [1-1/(num_condxrep-1) if j == i and j % 10 != 0
+    for i in range(1,num_cond):
+        c = [1-1/(num_cond-1) if j == i and j % 10 != 0
              else int(0) if j == 0
-             else -1/(num_condxrep-1) if j % 10 !=0 
-             else 0 for j in range(0,num_condxrep)]
+             else -1/(num_cond-1) if j % 10 !=0 
+             else 0 for j in range(0,num_cond)]
         
         contrast.append(c)
 
@@ -154,7 +154,7 @@ def group_analysis(contrast,contrast_names):
 
     # Does group analysis 
     
-    Y = get_structure_data(structure='cereb_gray', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed') 
+    Y = get_structure_data(structure='dentate', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_smoothed') 
 
     cond_vec = np.tile(np.arange(1,11),16)
 
@@ -182,7 +182,7 @@ def group_analysis(contrast,contrast_names):
         
     # Get one exmample cifti-file for the header 
     
-    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_smoothed/ref.dscalar.nii")
+    ref_img = nb.load("/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_smoothed/ref_dentate.dscalar.nii")
     bm = ref_img.header.get_axis(1)
 
     row_axis = nb.cifti2.ScalarAxis(contrast_names)
@@ -191,8 +191,8 @@ def group_analysis(contrast,contrast_names):
     con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
     t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
 
-    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/condavg_contrast.dscalar.nii'
-    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group_avg/condavg_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_avg/condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group_avg/condavg_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
