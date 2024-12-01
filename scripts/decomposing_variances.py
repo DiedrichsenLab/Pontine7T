@@ -3,15 +3,15 @@ import numpy as np
 import pandas 
 import seaborn as sns
 import matplotlib.pyplot as plt
-from Functional_Fusion.dataset import decompose_pattern_into_group_indiv_noise
-
-#data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_SUIT/data/group'
+import Functional_Fusion.dataset as ds
+import pandas as pd
  
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
-
+ff_base = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
+pt_base ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T'
 #
-def get_structure_data(structure='pontine', data_dir='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLD/data/group'):
-    T = pandas.read_csv('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/participants.tsv', sep='\t')
+def get_structure_data(structure='pontine', data_dir=f'{pt_base}/RegionOfInterest_BOLD/data/group'):
+    T = pandas.read_csv(f'{pt_base}/participants.tsv', sep='\t')
     A = []
     for i, good_value in zip(T.participant_id, T.good):
         if good_value==1:
@@ -19,7 +19,10 @@ def get_structure_data(structure='pontine', data_dir='/Volumes/diedrichsen_data$
             cifti = nb.load(file_path)
             A.append(cifti.get_fdata())
         to_tensor = np.array(A)
-    return to_tensor
+    cond_v = np.tile(np.arange(1,11),16)
+    part_v = np.repeat(np.arange(1,17), 10)
+    subj_id = T.participant_id[T.good==1]
+    return to_tensor,cond_v,part_v,subj_id
 
 def flat2ndarray(flat_data, cond_vec, part_vec):
     """
@@ -51,6 +54,48 @@ def flat2ndarray(flat_data, cond_vec, part_vec):
             data[:, p, c, :] = flat_data[:, trial_inds, :].squeeze()
             
     return data
+
+def decompose_variance_by_subject(dataset=['Pontine','MDTB','Language'],atlas=['MNISymDentate1','MNISymCereb2']):
+    """
+    Decompose the variance of the data into group, individual and noise components.
+    Args:
+        dataset: list of datasets to use
+        atlas: list of atlases to use
+    Returns:
+        Dataframe with variances 
+    """
+    DF = pd.DataFrame()
+    for at in atlas:
+        for datas in dataset:
+            if datas == 'MDTB':
+                data, info,ds_obj = ds.get_dataset(ff_base,datas,atlas=at,type='CondRun',sess='all',subj=None)
+                cond_v = info['cond_num_uni']
+                part_v = info['run']
+                subj_id = ds_obj.get_participants().participant_id
+            elif datas == 'Language':
+                data, info, ds_obj = ds.get_dataset(ff_base,datas,atlas=at,type='CondRun', sess='ses-localizer_cond_fm', subj=None)
+                cond_v = info['task']
+                part_v = info['run']
+                data = ds.remove_baseline(data,part_v)
+                subj_id = ds_obj.get_participants().participant_id
+            elif datas == 'Pontine':
+                if at == 'MNISymCereb2': 
+                    structure = 'cereb_gray'
+                    d_dir = f'{pt_base}/RegionOfInterest_BOLDMNI/data/group_smoothed'
+                elif at == 'MNISymDentate1':
+                    structure = 'dentate'
+                    d_dir = f'{pt_base}/RegionOfInterest_BOLDMNI/data/group'
+                data,cond_v,part_v,subj_id = get_structure_data(structure=structure, data_dir=d_dir)
+
+            tensor_4d = np.nan_to_num(flat2ndarray(data, cond_v, part_v))
+            variances = ds.decompose_pattern_into_group_indiv_noise(tensor_4d, criterion='subject_wise')
+            variances = variances / variances.sum(axis=1, keepdims=True)
+            df = pd.DataFrame(variances, columns=['group', 'individual', 'noise'])
+            df['subj-id'] = subj_id
+            df['dataset'] = datas
+            df['atlas'] = at
+            DF = pd.concat([DF,df],ignore_index=True)
+    return DF
 
 def make_contrast_vectors_handedness():
 
@@ -202,10 +247,10 @@ def group_analysis(contrast,contrast_names):
 if __name__=='__main__':
 
 
-    contrast, contrast_name = make_contrast_vectors()
-    group_analysis(contrast,contrast_name)
-
-
+    # contrast, contrast_name = make_contrast_vectors()
+    # group_analysis(contrast,contrast_name)
+    DF = decompose_variance_by_subject()
+    DF.to_csv('notebooks/variance_decomp.tsv',sep='\t',index=False)
     # flat_data = get_structure_data()
 
     # cond_vec = numpy.tile(numpy.arange(1,11),16)
