@@ -51,9 +51,14 @@ def build_emission_language(K,P,atlas='MNISymCereb2'):
 def build_emission_pontine(K,P,atlas='MNISymCereb2'):
     data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group'
     if atlas=='MNISymCereb2': 
-        data = ac.get_structure_data(structure='cereb_gray', data_dir=data_dir )
+        at,_ = am.get_atlas('MNISymCereb2')
+        data_pontine = ac.get_structure_data(structure='cereb_gray', data_dir=data_dir )
+        data = at.read_data(data_pontine[4])
+        
     elif atlas == 'MNISymDentate1':
-        data = ac.get_structure_data(structure='dentate',  data_dir=data_dir)
+        at,_ = am.get_atlas('MNISymDentate1')
+        data_pontine = ac.get_structure_data(structure='dentate',  data_dir=data_dir)
+        data = at.read_data(data_pontine[4])
  
     cond_v = np.tile(np.arange(1,11),16)
 
@@ -101,8 +106,6 @@ def estimate_emission_models():
     pt.save(M.emissions[1].V,f"{wk_dir}/V_cerebcortex_Language.pt")
     pt.save(M.emissions[2].V,f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
-    return Vs    
-
 def estimate_new_atlas(): 
      
     # Get atlas for dentate 
@@ -137,6 +140,9 @@ def estimate_new_atlas():
 
 
 if __name__ == '__main__':
+
+    dentate_pontine7T = build_emission_pontine(32,3934,'MNISymDentate1')
+
     # all_Vs = estimate_emission_models()
 
     # dentateM = estimate_new_atlas()
@@ -155,15 +161,15 @@ if __name__ == '__main__':
     
     dentate_parcellation = plot.plot_dentate(wta_int32,cscale=[0,32],cmap=cmap)
 
-    pass 
+    #pass 
     
-    Vs = [em.V for em in M.emissions]
+    #Vs = [em.V for em in M.emissions]
     #plt.imshow(Vs[0])
 
-   # plt.yticks(info.cond_name[info.run==1].values)
-   # plt.y()
+    #plt.yticks(info.cond_name[info.run==1].values)
+    #plt.y()
 
 
-   # arrangement = estimate_new_atlas(ems)
+    #arrangement = estimate_new_atlas(ems)
     
     # arrangement.marginal_prob() will give the probability of each parcel for each voxel in the new atlas. (KxP)

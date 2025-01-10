@@ -4,13 +4,14 @@ import pandas
 import seaborn as sns
 import matplotlib.pyplot as plt
 import Functional_Fusion.dataset as ds
+import Functional_Fusion.atlas_map as am 
 import pandas as pd
  
  #appending files: 10 conditions, 16 runs; converting to tensor subj x cond x voxels
 ff_base = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 pt_base ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T'
 #
-def get_structure_data(structure='pontine', data_dir=f'{pt_base}/RegionOfInterest_BOLD/data/group'):
+def get_structure_data(structure='pontine', data_dir=f'{pt_base}/RegionOfInterest_BOLDMNI/data/group'):
     T = pandas.read_csv(f'{pt_base}/participants.tsv', sep='\t')
     A = []
     for i, good_value in zip(T.participant_id, T.good):
@@ -22,7 +23,7 @@ def get_structure_data(structure='pontine', data_dir=f'{pt_base}/RegionOfInteres
     cond_v = np.tile(np.arange(1,11),16)
     part_v = np.repeat(np.arange(1,17), 10)
     subj_id = T.participant_id[T.good==1]
-    return to_tensor,cond_v,part_v,subj_id
+    return to_tensor,cond_v,part_v,subj_id, cifti 
 
 def flat2ndarray(flat_data, cond_vec, part_vec):
     """
