@@ -14,16 +14,18 @@ pt_base ='/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T'
 def get_structure_data(structure='pontine', data_dir=f'{pt_base}/RegionOfInterest_BOLDMNI/data/group'):
     T = pandas.read_csv(f'{pt_base}/participants.tsv', sep='\t')
     A = []
+    cifti_objects = []
     for i, good_value in zip(T.participant_id, T.good):
         if good_value==1:
             file_path = f'{data_dir}/beta_glm2_{structure}_{i}.dscalar.nii'
             cifti = nb.load(file_path)
             A.append(cifti.get_fdata())
+            cifti_objects.append(cifti)
         to_tensor = np.array(A)
     cond_v = np.tile(np.arange(1,11),16)
     part_v = np.repeat(np.arange(1,17), 10)
     subj_id = T.participant_id[T.good==1]
-    return to_tensor,cond_v,part_v,subj_id, cifti 
+    return to_tensor,cond_v,part_v,subj_id, cifti_objects
 
 def flat2ndarray(flat_data, cond_vec, part_vec):
     """

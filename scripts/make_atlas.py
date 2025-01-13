@@ -33,6 +33,8 @@ def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
     return em_model
 
 def build_emission_language(K,P,atlas='MNISymCereb2'):
+
+    #data is in form: (subjects, run x tasks, voxels)
     data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,type='CondRun', sess='ses-localizer_cond_fm', subj=None)
     cond_v = info['task']
     part_v = info['run']
@@ -53,13 +55,21 @@ def build_emission_pontine(K,P,atlas='MNISymCereb2'):
     if atlas=='MNISymCereb2': 
         at,_ = am.get_atlas('MNISymCereb2')
         data_pontine = ac.get_structure_data(structure='cereb_gray', data_dir=data_dir )
-        data = at.read_data(data_pontine[4])
         
     elif atlas == 'MNISymDentate1':
         at,_ = am.get_atlas('MNISymDentate1')
         data_pontine = ac.get_structure_data(structure='dentate',  data_dir=data_dir)
-        data = at.read_data(data_pontine[4])
  
+    cifti_objects = data_pontine[4]
+
+    data = []
+
+    for cifti in cifti_objects:
+        subject_data = at.read_data(cifti).T
+        data.append(subject_data)
+
+    data = np.stack(data)
+
     cond_v = np.tile(np.arange(1,11),16)
 
     part_v = np.repeat(np.arange(1,17), 10)
@@ -141,11 +151,9 @@ def estimate_new_atlas():
 
 if __name__ == '__main__':
 
-    dentate_pontine7T = build_emission_pontine(32,3934,'MNISymDentate1')
+    all_Vs = estimate_emission_models()
 
-    # all_Vs = estimate_emission_models()
-
-    # dentateM = estimate_new_atlas()
+    dentateM = estimate_new_atlas()
 
     # Load probability 
     pmap = np.load(f"{wk_dir}/Prob_dentate.npy")
@@ -163,7 +171,7 @@ if __name__ == '__main__':
 
     #pass 
     
-    #Vs = [em.V for em in M.emissions]
+    Vs = [em.V for em in M.emissions]
     #plt.imshow(Vs[0])
 
     #plt.yticks(info.cond_name[info.run==1].values)
