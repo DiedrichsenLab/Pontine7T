@@ -112,6 +112,9 @@ def estimate_emission_models():
     M, _, _, _ = M.fit_em(iter=200, tol=0.01,
         fit_arrangement=False,fit_emission=True,first_evidence=False)
     
+    Prob = M.arrange.marginal_prob().numpy()
+    np.save(f"{wk_dir}/Prob_cereb_grey.npy",Prob)
+
     pt.save(M.emissions[0].V,f"{wk_dir}/V_cerebcortex_MDTB.pt")
     pt.save(M.emissions[1].V,f"{wk_dir}/V_cerebcortex_Language.pt")
     pt.save(M.emissions[2].V,f"{wk_dir}/V_cerebcortex_Pontine.pt")
@@ -153,10 +156,11 @@ if __name__ == '__main__':
 
     all_Vs = estimate_emission_models()
 
-    dentateM = estimate_new_atlas()
+   # dentateM = estimate_new_atlas()
 
     # Load probability 
     pmap = np.load(f"{wk_dir}/Prob_dentate.npy")
+    pmap_cereb = np.load(f"{wk_dir}/Prob_cereb_grey.npy")
     # Load colormap and labels
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
 
