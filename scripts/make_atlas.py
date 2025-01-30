@@ -14,13 +14,13 @@ import SUITPy as suit
 import nitools as nt 
 import Functional_Fusion.plot as plot
 from matplotlib.colors import ListedColormap
-from scripts import decomposing_variances as ac
+from scripts import decomposing_variances as dv
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
 wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/dentate_atlas'
 
-def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
+def build_emission_mdtb(K,P,atlas='MNISymCereb1'):
     data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='all',subj=None)
     cond_v = info['cond_num_uni']
     part_v = info['run']
@@ -32,7 +32,7 @@ def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
     em_model.initialize(data)
     return em_model
 
-def build_emission_language(K,P,atlas='MNISymCereb2'):
+def build_emission_language(K,P,atlas='MNISymCereb1'):
 
     #data is in form: (subjects, run x tasks, voxels)
     data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,type='CondRun', sess='ses-localizer_cond_fm', subj=None)
@@ -50,18 +50,33 @@ def build_emission_language(K,P,atlas='MNISymCereb2'):
     return em_model
 
 
-def build_emission_pontine(K,P,atlas='MNISymCereb2'):
+def build_emission_pontine(K,P,atlas='MNISymCereb1'):
     data_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/data/group'
-    if atlas=='MNISymCereb2': 
-        at,_ = am.get_atlas('MNISymCereb2')
-        data_pontine = ac.get_structure_data(structure='cereb_gray', data_dir=data_dir )
+    if atlas=='MNISymCereb1': 
+        at,_ = am.get_atlas('MNISymCereb1')
+        data_pontine = dv.get_structure_data(structure='cereb_gray', data_dir=data_dir )
         
     elif atlas == 'MNISymDentate1':
         at,_ = am.get_atlas('MNISymDentate1')
-        data_pontine = ac.get_structure_data(structure='dentate',  data_dir=data_dir)
+        data_pontine = dv.get_structure_data(structure='dentate',  data_dir=data_dir)
+
+    elif atlas == 'MNISymOlive11':
+        at,_ = am.get_atlas('MNISymOlive1')
+        data_pontine = dv.get_structure_data(structure='olive',  data_dir=data_dir)
+
+    elif atlas == 'MNISymRedNucleus1':
+        at,_ = am.get_atlas('MNISymRedNucleus1')
+        data_pontine = dv.get_structure_data(structure='rednucleus',  data_dir=data_dir)
+
+    elif atlas == 'MNISymPontine1':
+        at,_ = am.get_atlas('MNISymPontine1')
+        data_pontine = dv.get_structure_data(structure='pontine',  data_dir=data_dir)
+
+    elif atlas == 'MNISymThalamus1':
+        at,_ = am.get_atlas('MNISymThalamus1')
+        data_pontine = dv.get_structure_data(structure='thalamus',  data_dir=data_dir)
  
     cifti_objects = data_pontine[4]
-
     data = []
 
     for cifti in cifti_objects:
@@ -86,7 +101,7 @@ def estimate_emission_models():
     """ Estimate emission models for dataset
     """
     # Get the atlas for the cerebellar cortex
-    atlas, _ = am.get_atlas('MNISymCereb2')
+    atlas, _ = am.get_atlas('MNISymCereb1')
 
     # Load the probabilistic atlas into that space 
     atlas_fname = 'atl-NettekovenSym32_space-MNI152NLin2009cSymC_probseg.nii'
@@ -97,12 +112,12 @@ def estimate_emission_models():
         
     # Load the data using functional fusion 
 
-    em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymCereb2')
-    em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymCereb2')
-    em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymCereb2')
+    em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymCereb1')
+    em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymCereb1')
+   # em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymCereb1')
  
     # Build the full model: The emission models are passed as a list, as usually we have multiple data sets
-    M = fm.FullMultiModel(ar_model, [em_model1, em_model2, em_model3])
+    M = fm.FullMultiModel(ar_model, [em_model1, em_model2])
 
     # Attach the data to the model - this is done for speed
     # The data is passed as a list with on element per data set
@@ -115,31 +130,31 @@ def estimate_emission_models():
     Prob = M.arrange.marginal_prob().numpy()
     np.save(f"{wk_dir}/Prob_cereb_grey.npy",Prob)
 
-    pt.save(M.emissions[0].V,f"{wk_dir}/V_cerebcortex_MDTB.pt")
-    pt.save(M.emissions[1].V,f"{wk_dir}/V_cerebcortex_Language.pt")
-    pt.save(M.emissions[2].V,f"{wk_dir}/V_cerebcortex_Pontine.pt")
+    pt.save(M.emissions[0].V,f"{wk_dir}/V_cerebcortex_res1_MDTB.pt")
+    pt.save(M.emissions[1].V,f"{wk_dir}/V_cerebcortex_res1_Language.pt")
+   # pt.save(M.emissions[2].V,f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
 def estimate_new_atlas(): 
      
     # Get atlas for dentate 
 
-     atlas, _ = am.get_atlas('MNISymDentate1')    
+     atlas, _ = am.get_atlas('MNISymRedNucleus1')    
 
      ar_model = ar.ArrangeIndependent(K=32, P=atlas.P, spatial_specific=True, remove_redundancy=False)
          
-     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymDentate1')
-     em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymDentate1')
-     em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymDentate1')
+     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymRedNucleus1')
+     em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymRedNucleus1')
+     #em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymDentate1')
 
-     em_model1.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB.pt")
-     em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
-     em_model3.V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
+     em_model1.V = pt.load(f"{wk_dir}/V_cerebcortex_res1_MDTB.pt")
+     em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_res1_Language.pt")
+     #em_model3.V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
-     em_model1.set_param_list(['kappa'])
+     #em_model1.set_param_list(['kappa'])
      em_model2.set_param_list(['kappa'])
-     em_model3.set_param_list(['kappa'])
+     #em_model3.set_param_list(['kappa'])
 
-     M= fm.FullMultiModel(ar_model, [em_model1, em_model2, em_model3])
+     M= fm.FullMultiModel(ar_model, [em_model2])
 
      M.initialize()
 
@@ -147,20 +162,21 @@ def estimate_new_atlas():
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
      Prob = M.arrange.marginal_prob().numpy()
-     np.save(f"{wk_dir}/Prob_dentate.npy",Prob)
+     np.save(f"{wk_dir}/Prob_rednucleus_res1_lang+mdtb.npy",Prob)
 
      return M
 
 
 if __name__ == '__main__':
 
-    all_Vs = estimate_emission_models()
+    #lang_data = build_emission_pontine(32,18290,'MNISymCereb1')
 
-   # dentateM = estimate_new_atlas()
+    #all_Vs = estimate_emission_models()
+
+    dentateM = estimate_new_atlas()
 
     # Load probability 
-    pmap = np.load(f"{wk_dir}/Prob_dentate.npy")
-    pmap_cereb = np.load(f"{wk_dir}/Prob_cereb_grey.npy")
+    pmap = np.load(f"{wk_dir}/Prob_rednucleus_res1_lang+mdtb.npy")
     # Load colormap and labels
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
 
