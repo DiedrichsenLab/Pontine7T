@@ -20,8 +20,8 @@ base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
 wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/dentate_atlas'
 
-def build_emission_mdtb(K,P,atlas='MNISymCereb1'):
-    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='all',subj=None)
+def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
+    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='ses-s1',subj=None)
     cond_v = info['cond_num_uni']
     part_v = info['run']
 
@@ -32,7 +32,7 @@ def build_emission_mdtb(K,P,atlas='MNISymCereb1'):
     em_model.initialize(data)
     return em_model
 
-def build_emission_language(K,P,atlas='MNISymCereb1'):
+def build_emission_language(K,P,atlas='MNISymCereb2'):
 
     #data is in form: (subjects, run x tasks, voxels)
     data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,type='CondRun', sess='ses-localizer_cond_fm', subj=None)
@@ -101,23 +101,28 @@ def estimate_emission_models():
     """ Estimate emission models for dataset
     """
     # Get the atlas for the cerebellar cortex
-    atlas, _ = am.get_atlas('MNISymCereb1')
+    atlas, _ = am.get_atlas('MNISymCereb2')
 
     # Load the probabilistic atlas into that space 
     atlas_fname = 'atl-NettekovenSym32_space-MNI152NLin2009cSymC_probseg.nii'
-    U = atlas.read_data(atlas_dir + '/' + atlas_fname).T
+
+    #I had to remove the "T" for it to work 
+
+    U = atlas.read_data(atlas_dir + '/' + atlas_fname)
     
     # Build the arrangement model 
     ar_model = ar.build_arrangement_model(U, prior_type='prob', atlas=atlas)
         
     # Load the data using functional fusion 
 
-    em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymCereb1')
-    em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymCereb1')
+    em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymCereb2')
+
+    em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymCereb2')
+
    # em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymCereb1')
  
     # Build the full model: The emission models are passed as a list, as usually we have multiple data sets
-    M = fm.FullMultiModel(ar_model, [em_model1, em_model2])
+    M = fm.FullMultiModel(ar_model, [em_model1])
 
     # Attach the data to the model - this is done for speed
     # The data is passed as a list with on element per data set
@@ -128,33 +133,34 @@ def estimate_emission_models():
         fit_arrangement=False,fit_emission=True,first_evidence=False)
     
     Prob = M.arrange.marginal_prob().numpy()
-    np.save(f"{wk_dir}/Prob_cereb_grey.npy",Prob)
+    
+    np.save(f"{wk_dir}/Prob_cereb_grey_lang+mdtb(ses1).npy",Prob)
 
-    pt.save(M.emissions[0].V,f"{wk_dir}/V_cerebcortex_res1_MDTB.pt")
-    pt.save(M.emissions[1].V,f"{wk_dir}/V_cerebcortex_res1_Language.pt")
+    pt.save(M.emissions[0].V,f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
+    #pt.save(M.emissions[1].V,f"{wk_dir}/V_cerebcortex_res2_Language.pt")
    # pt.save(M.emissions[2].V,f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
 def estimate_new_atlas(): 
      
     # Get atlas for dentate 
 
-     atlas, _ = am.get_atlas('MNISymRedNucleus1')    
+     atlas, _ = am.get_atlas('MNISymDentate1')    
 
      ar_model = ar.ArrangeIndependent(K=32, P=atlas.P, spatial_specific=True, remove_redundancy=False)
          
-     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymRedNucleus1')
-     em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymRedNucleus1')
+     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymDentate1')
+     #em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymDentate1')
      #em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymDentate1')
 
-     em_model1.V = pt.load(f"{wk_dir}/V_cerebcortex_res1_MDTB.pt")
-     em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_res1_Language.pt")
+     em_model1.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
+     #em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
      #em_model3.V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
-     #em_model1.set_param_list(['kappa'])
-     em_model2.set_param_list(['kappa'])
+     em_model1.set_param_list(['kappa'])
+     #em_model2.set_param_list(['kappa'])
      #em_model3.set_param_list(['kappa'])
 
-     M= fm.FullMultiModel(ar_model, [em_model2])
+     M= fm.FullMultiModel(ar_model, [em_model1])
 
      M.initialize()
 
@@ -162,7 +168,7 @@ def estimate_new_atlas():
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
      Prob = M.arrange.marginal_prob().numpy()
-     np.save(f"{wk_dir}/Prob_rednucleus_res1_lang+mdtb.npy",Prob)
+     np.save(f"{wk_dir}/Prob_dentate_mdtb(ses1).npy",Prob)
 
      return M
 
@@ -173,10 +179,10 @@ if __name__ == '__main__':
 
     #all_Vs = estimate_emission_models()
 
-    dentateM = estimate_new_atlas()
+    #dentateM = estimate_new_atlas()
 
     # Load probability 
-    pmap = np.load(f"{wk_dir}/Prob_rednucleus_res1_lang+mdtb.npy")
+    pmap = np.load(f"{wk_dir}/Prob_dentate_language.npy")
     # Load colormap and labels
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
 
