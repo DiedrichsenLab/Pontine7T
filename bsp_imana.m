@@ -285,6 +285,24 @@ switch(what)
 
         end % s (sn)
 
+    case 'FUNC:sbref_realign'
+
+        sn = varargin{1};
+        for s = sn
+            spm_jobman('initcfg')
+
+            data = {};
+
+            for r_cell = run(1:min(numel(run)))
+                current_run = str2double(r_cell{1});
+                for j=1
+                    data{current_run}{j,1}= fullfile(baseDire,sbrefDirRaw,subj_name{s}, sprintf('%s_sbref_gradcorr_run-%02d.nii,%d', subj_name{sn}, current_run, j));
+                end 
+            end 
+                spmj_realign(data);
+                fprintf(' = runs realigned for %s ', subj_name{s});
+        end 
+                
     case 'FUNC:move_data'             % Move realigned data
         % Moves image data from imaging_data_raw into imaging_data.
         % example: bsp_imana('FUNC:move_data',1,[1:16])
