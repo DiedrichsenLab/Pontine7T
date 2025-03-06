@@ -18,7 +18,7 @@ from scripts import decomposing_variances as dv
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
-wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/olive_atlas'
+wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus_atlas'
 
 def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
     data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='ses-s1',subj=None)
@@ -114,23 +114,23 @@ def estimate_new_atlas():
      
     # Get atlas for dentate 
 
-     atlas, _ = am.get_atlas('MNISymOlive1')    
+     atlas, _ = am.get_atlas('MNISym1')    
 
      ar_model = ar.ArrangeIndependent(K=32, P=atlas.P, spatial_specific=True, remove_redundancy=False)
          
-     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymOlive1')
-     #em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymOlive1')
-     em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymOlive1')
+     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymThalamus1')
+     em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymThalamus1')
+     em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymThalamus1')
 
      em_model1.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
-     #em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
+     em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
      em_model3.V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
      em_model1.set_param_list(['kappa'])
-     #em_model2.set_param_list(['kappa'])
+     em_model2.set_param_list(['kappa'])
      em_model3.set_param_list(['kappa'])
 
-     M= fm.FullMultiModel(ar_model, [em_model1, em_model3])
+     M= fm.FullMultiModel(ar_model, [em_model1, em_model2, em_model3])
 
      M.initialize()
 
@@ -138,17 +138,17 @@ def estimate_new_atlas():
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
      Prob = M.arrange.marginal_prob().numpy()
-     np.save(f"{wk_dir}/Prob_olive.npy",Prob)
+     np.save(f"{wk_dir}/Prob_thalamus.npy",Prob)
 
      return M
 
 
 if __name__ == '__main__':
 
-    olive = estimate_new_atlas()
+    thalamus = estimate_new_atlas()
 
     # Load probability 
-    pmap = np.load(f"{wk_dir}/Prob_olive.npy")
+    pmap = np.load(f"{wk_dir}/Prob_thalamus.npy")
     # Load colormap and labels
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
 
