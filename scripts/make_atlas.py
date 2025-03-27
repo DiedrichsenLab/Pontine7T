@@ -114,7 +114,7 @@ def estimate_new_atlas():
      
     # Get atlas for dentate 
 
-     atlas, _ = am.get_atlas('MNISym1')    
+     atlas, _ = am.get_atlas('MNISymThalamus1')    
 
      ar_model = ar.ArrangeIndependent(K=32, P=atlas.P, spatial_specific=True, remove_redundancy=False)
          
@@ -144,6 +144,8 @@ def estimate_new_atlas():
 
 
 if __name__ == '__main__':
+
+    cereb = estimate_emission_models()
 
     thalamus = estimate_new_atlas()
 
