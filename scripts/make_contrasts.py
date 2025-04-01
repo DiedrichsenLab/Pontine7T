@@ -80,7 +80,7 @@ def make_pontine_contrasts(atlas='MNISymDentate1'):
 
 def make_language_contrasts(atlas='MNISymDentate1'):
     data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,
-                                        type='CondRun', sess='ses-s1', 
+                                        type='CondRun', sess='ses-localizer_cond_fm', 
                                         subj=None)
     cond_v = info['task']
     part_v = info['run']
@@ -144,6 +144,73 @@ def make_language_contrasts(atlas='MNISymDentate1'):
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
     nb.save(t_img, t_filename)
+
+
+def make_mdtb_contrasts(atlas='MNISymDentate1'):
+    data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,
+                                        type='CondRun', sess='ses-s1', 
+                                        subj=None)
+    cond_v = info['cond_num_uni']
+    part_v = info['run']
+
+    flat_data = decomposing_variances.flat2ndarray(data, cond_v, part_v)
+
+    flat_data = np.nan_to_num(flat_data)
+
+    cond_avg = np.mean(flat_data, axis=1)
+
+    num_subj = cond_avg.shape[0]
+    num_cond = cond_avg.shape[1]
+
+    contrast_per_subj = np.zeros((num_subj,num_cond, cond_avg.shape[-1]))
+
+    #make contrast vectors
+
+    T = pd.read_csv(f"{base_dir}/MDTB/derivatives/sub-02/data/sub-02_ses-s1_CondRun.tsv", sep='\t')
+
+    contrast_names_all = T['task_name'].tolist()
+
+    contrast_names = list(set(contrast_names_all))
+
+    contrast_names = list(dict.fromkeys(contrast_names_all))
+
+    contrast = []
+
+    for i in range(num_cond):  # Loop over all conditions (tasks)
+        c = [1 if j == i else -1 / (num_cond - 1) for j in range(num_cond)]
+        contrast.append(c)
+
+    contrast = np.array(contrast)
+
+    for i,c in enumerate(contrast):
+        for s in range(num_subj):
+            contrast_per_subj[s,i,:] = np.dot(c, cond_avg[s, :, :])
+
+    CON = np.mean(contrast_per_subj,axis=0)
+
+    STD = np.std(contrast_per_subj,axis=0)
+        
+    t = CON/(STD/np.sqrt(num_subj))
+        
+    # Get one example cifti-file for the header 
+    
+    ref_img=nb.load(f"{base_dir}/MDTB/derivatives/sub-02/data/sub-02_space-MNISymDentate1_ses-s1_CondRun.dscalar.nii")
+    
+    bm = ref_img.header.get_axis(1)
+
+    row_axis = nb.cifti2.ScalarAxis(contrast_names)
+    header = nb.Cifti2Header.from_axes((row_axis,bm))
+
+    con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
+    t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
+
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/dentate/contrasts/condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/dentate/contrasts/condavg_Tstat.dscalar.nii'
+
+        # Save the contrast and T-statistic images
+    nb.save(con_img, con_filename)
+    nb.save(t_img, t_filename)
+
 
 
     #beyond this point is garbage 
@@ -244,8 +311,6 @@ def make_contrast_vectors():
     
     return contrast, contrast_names
 
-
-
 def group_analysis(contrast,contrast_names):
 
     # Does group analysis 
@@ -296,6 +361,6 @@ def group_analysis(contrast,contrast_names):
 
 if __name__ == '__main__':
 
-    pontine = make_language_contrasts()
+    pontine = make_mdtb_contrasts()
 
     print("YO")
