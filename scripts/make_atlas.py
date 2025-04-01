@@ -27,6 +27,7 @@ def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
 
     # Make a design matrix
     X= ut.indicator(cond_v)
+
     # Build an emission model
     em_model = em.MixVMF(K=K,P=P, X=X,part_vec=part_v)
     em_model.initialize(data)
@@ -160,7 +161,9 @@ def estimate_new_atlas():
 
 if __name__ == '__main__':
 
-    
+    pontine = build_emission_pontine(32, 18290)
+
+
     #cereb = estimate_emission_models()
 
     dentate = estimate_new_atlas()
