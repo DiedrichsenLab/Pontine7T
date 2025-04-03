@@ -213,7 +213,7 @@ def make_mdtb_contrasts(atlas='MNISymDentate1'):
 
 
 
-    #beyond this point is garbage 
+    #BEYOND THIS POINT IS GARBAGE 
 
 def make_contrast_vectors_handedness():
 
