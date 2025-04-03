@@ -148,7 +148,7 @@ def make_language_contrasts(atlas='MNISymDentate1'):
 
 def make_mdtb_contrasts(atlas='MNISymDentate1'):
     data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,
-                                        type='CondRun', sess='ses-s1', 
+                                        type='CondRun', sess='ses-s2', 
                                         subj=None)
     cond_v = info['cond_num_uni']
     part_v = info['run']
@@ -166,9 +166,9 @@ def make_mdtb_contrasts(atlas='MNISymDentate1'):
 
     #make contrast vectors
 
-    T = pd.read_csv(f"{base_dir}/MDTB/derivatives/sub-02/data/sub-02_ses-s1_CondRun.tsv", sep='\t')
+    T = pd.read_csv(f"{base_dir}/MDTB/derivatives/sub-02/data/sub-02_ses-s2_CondRun.tsv", sep='\t')
 
-    contrast_names_all = T['task_name'].tolist()
+    contrast_names_all = T['cond_name'].tolist()
 
     contrast_names = list(set(contrast_names_all))
 
@@ -194,7 +194,7 @@ def make_mdtb_contrasts(atlas='MNISymDentate1'):
         
     # Get one example cifti-file for the header 
     
-    ref_img=nb.load(f"{base_dir}/MDTB/derivatives/sub-02/data/sub-02_space-MNISymDentate1_ses-s1_CondRun.dscalar.nii")
+    ref_img=nb.load(f"{base_dir}/MDTB/derivatives/sub-02/data/sub-02_space-MNISymDentate1_ses-s2_CondRun.dscalar.nii")
     
     bm = ref_img.header.get_axis(1)
 
@@ -363,4 +363,4 @@ if __name__ == '__main__':
 
     pontine = make_mdtb_contrasts()
 
-    print("YO")
+    print("DONE")
