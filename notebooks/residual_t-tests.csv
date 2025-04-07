@@ -89,42 +89,6 @@ cereb_gray vs dentate,Act_Obs,2.5435705532063353,0.02248264472237564,0.224826447
 cereb_gray vs dentate,Flex_Ext,-1.5402022448751116,0.14433883149211443,0.48112943830704813,Not Significant,Pontine7T
 cereb_gray vs dentate,Rest,-1.779455208002994,0.09542968505451256,0.4771484252725628,Not Significant,Pontine7T
 cereb_gray vs dentate,Rom_mov,-0.4805213622321394,0.6377896423453795,0.6377896423453795,Not Significant,Pontine7T
-cereb_gray vs dentate,Rest,-4.63410531569379,0.00027572493422490363,0.004963048816048266,Significant,Language
-cereb_gray vs dentate,Word_reading,-0.2525336543910361,0.8038441830682967,0.8511291350134907,Not Significant,Language
-cereb_gray vs dentate,Verb_generation,-0.8873937956318768,0.38801190175906386,0.6969148363874068,Not Significant,Language
-cereb_gray vs dentate,Act_Obs_Act,-0.5492316441439634,0.5904302605981291,0.7976169821549801,Not Significant,Language
-cereb_gray vs dentate,Act_Obs,-1.326977671140461,0.20314303530925445,0.616799429045906,Not Significant,Language
-cereb_gray vs dentate,Intact_passage,-0.8865244004303219,0.3884660432514,0.6969148363874068,Not Significant,Language
-cereb_gray vs dentate,Degraded_passage,1.2207497053482166,0.23986644462896345,0.616799429045906,Not Significant,Language
-cereb_gray vs dentate,Tongue_movement,-1.0162527714649583,0.32463103175055286,0.6969148363874068,Not Significant,Language
-cereb_gray vs dentate,Finger_Seq,0.3567046000459081,0.7259736184166167,0.8167203207186938,Not Significant,Language
-cereb_gray vs dentate,ToM,-2.8346235487457636,0.011955228917798011,0.07173137350678807,Significant,Language
-cereb_gray vs dentate,Aud_Narr,0.36411337675855826,0.7205404136906648,0.8167203207186938,Not Significant,Language
-cereb_gray vs dentate,N_back,-2.6588631951045905,0.01715607211555351,0.07720232451999079,Significant,Language
-cereb_gray vs dentate,Oddball,-1.220827510516037,0.23983777612929197,0.616799429045906,Not Significant,Language
-cereb_gray vs dentate,Demand_Grid,0.8170621943935453,0.42589240001452644,0.6969148363874068,Not Significant,Language
-cereb_gray vs dentate,Rom_mov,-2.9062744420019295,0.010305897360232196,0.07173137350678807,Significant,Language
-cereb_gray vs dentate,Spatial_Nav,0.7224258425730135,0.4804595428688817,0.7206893143033226,Not Significant,Language
-cereb_gray vs dentate,Sentence_Reading,-0.14859264937502178,0.8837317293832365,0.8837317293832365,Not Significant,Language
-cereb_gray vs dentate,Non-word_reading,-0.5051086901125821,0.6203687638983179,0.7976169821549801,Not Significant,Language
-dentate vs cereb_gray,Rest,2.960075614819611,0.009215214493582013,0.16587386088447625,Not Significant,Language
-dentate vs cereb_gray,Word_reading,0.2820388194350231,0.7815292759690837,0.981438322296815,Not Significant,Language
-dentate vs cereb_gray,Verb_generation,-0.21218335119466558,0.8346434621203909,0.981438322296815,Not Significant,Language
-dentate vs cereb_gray,Act_Obs_Act,0.9873905566764463,0.33814871727578877,0.7608346138705248,Not Significant,Language
-dentate vs cereb_gray,Act_Obs,-0.09726545408340465,0.9237235864037505,0.981438322296815,Not Significant,Language
-dentate vs cereb_gray,Intact_passage,0.653793461338941,0.5225311170227489,0.8157012411774116,Not Significant,Language
-dentate vs cereb_gray,Degraded_passage,-1.1773920605562453,0.2562568497329222,0.6589461850275141,Not Significant,Language
-dentate vs cereb_gray,Tongue_movement,0.8113787066147603,0.4290539574465764,0.8157012411774116,Not Significant,Language
-dentate vs cereb_gray,Finger_Seq,0.6202909467755356,0.5438008274516077,0.8157012411774116,Not Significant,Language
-dentate vs cereb_gray,ToM,2.5452629698041203,0.021609180069006216,0.19448262062105595,Not Significant,Language
-dentate vs cereb_gray,Aud_Narr,-0.767841179424332,0.4537652091870453,0.8157012411774116,Not Significant,Language
-dentate vs cereb_gray,N_back,1.8026386453036485,0.09031180988407152,0.4064031444783219,Not Significant,Language
-dentate vs cereb_gray,Oddball,1.2194642527281272,0.24034047240243173,0.6589461850275141,Not Significant,Language
-dentate vs cereb_gray,Demand_Grid,0.023632059310571076,0.981438322296815,0.981438322296815,Not Significant,Language
-dentate vs cereb_gray,Rom_mov,1.8827465210742655,0.07804789903795858,0.4064031444783219,Not Significant,Language
-dentate vs cereb_gray,Spatial_Nav,-1.1824513511831996,0.2543013774562642,0.6589461850275141,Not Significant,Language
-dentate vs cereb_gray,Sentence_Reading,-0.043101046351626586,0.9661542941246708,0.981438322296815,Not Significant,Language
-dentate vs cereb_gray,Non-word_reading,0.2685090649525818,0.7917387578768988,0.981438322296815,Not Significant,Language
 dentate vs cereb_gray,NoGo,1.8362049070704078,0.07928821563107069,0.28741978166263127,Not Significant,MDTB
 dentate vs cereb_gray,Go,1.7658820768476646,0.09068861843811322,0.2922188816339204,Not Significant,MDTB
 dentate vs cereb_gray,ToM,-0.7466490233223992,0.46284006893289287,0.600634031294355,Not Significant,MDTB
@@ -247,3 +211,39 @@ dentate vs cereb_gray,ToM,-0.3905423202139115,0.6997293935556107,0.8587621082047
 dentate vs cereb_gray,VideoAct,-5.799301731851318,6.576055680352333e-06,0.00021043378177127467,Significant,MDTB_ses2
 dentate vs cereb_gray,VideoKnots,-4.677776645917566,0.00010391435137059143,0.001662629621929463,Significant,MDTB_ses2
 dentate vs cereb_gray,Rest,0.9597434226058436,0.3471657782490679,0.7454234248992876,Not Significant,MDTB_ses2
+dentate vs cereb_gray,Rest,0.29769902582840113,0.7697636059884397,0.8823713799888899,Not Significant,Language
+dentate vs cereb_gray,Word_reading,0.2783217793160459,0.7843301155456799,0.8823713799888899,Not Significant,Language
+dentate vs cereb_gray,Verb_generation,-1.4167673067226563,0.17572733073689234,0.5190011657094079,Not Significant,Language
+dentate vs cereb_gray,Act_Obs_Act,1.0322899337743363,0.3172886410564186,0.5190011657094079,Not Significant,Language
+dentate vs cereb_gray,Act_Obs,-3.5999043984427246,0.0023996976390649595,0.04319455750316927,Significant,Language
+dentate vs cereb_gray,Intact_passage,1.0984585560744993,0.2882597038895115,0.5190011657094079,Not Significant,Language
+dentate vs cereb_gray,Degraded_passage,-1.8248846255772762,0.08674586045122169,0.39035637203049767,Not Significant,Language
+dentate vs cereb_gray,Tongue_movement,0.9393673113317391,0.36150813964726436,0.5190011657094079,Not Significant,Language
+dentate vs cereb_gray,Finger_Seq,1.6008247647578764,0.12897262422068242,0.4643014471944567,Not Significant,Language
+dentate vs cereb_gray,ToM,1.186657960994214,0.2526841547440059,0.5190011657094079,Not Significant,Language
+dentate vs cereb_gray,Aud_Narr,-0.9305555972056375,0.365912187227345,0.5190011657094079,Not Significant,Language
+dentate vs cereb_gray,N_back,-0.9129238288200099,0.3748341752345724,0.5190011657094079,Not Significant,Language
+dentate vs cereb_gray,Oddball,2.028324873289583,0.059512484534098055,0.35707490720458834,Not Significant,Language
+dentate vs cereb_gray,Demand_Grid,0.02603681324398071,0.9795499533621206,0.9795499533621206,Not Significant,Language
+dentate vs cereb_gray,Rom_mov,-1.0469357727237663,0.31068817142772226,0.5190011657094079,Not Significant,Language
+dentate vs cereb_gray,Spatial_Nav,-2.0821181292049227,0.05374244579634379,0.35707490720458834,Not Significant,Language
+dentate vs cereb_gray,Sentence_Reading,-0.10515876357077668,0.9175568717542681,0.9715308053868722,Not Significant,Language
+dentate vs cereb_gray,Non-word_reading,0.36054688759880427,0.7231539792414795,0.8823713799888899,Not Significant,Language
+cereb_gray vs dentate,Rest,-1.0919777046057118,0.2910134614066668,0.5238242305320002,Not Significant,Language
+cereb_gray vs dentate,Word_reading,-0.24655902910216743,0.8083849466137222,0.8083849466137222,Not Significant,Language
+cereb_gray vs dentate,Verb_generation,-2.0361076336525827,0.058644203087703774,0.263898913894667,Not Significant,Language
+cereb_gray vs dentate,Act_Obs_Act,-0.6530097110379885,0.5230232992230313,0.6957975321053387,Not Significant,Language
+cereb_gray vs dentate,Act_Obs,3.5956590822806658,0.0024213167583633298,0.04358370165053994,Significant,Language
+cereb_gray vs dentate,Intact_passage,-1.625992095531388,0.1234827753300829,0.4445379911882984,Not Significant,Language
+cereb_gray vs dentate,Degraded_passage,2.0720220054364202,0.05478485085840836,0.263898913894667,Not Significant,Language
+cereb_gray vs dentate,Tongue_movement,-1.2780476654981372,0.219463667838131,0.4937932526357948,Not Significant,Language
+cereb_gray vs dentate,Finger_Seq,1.3301174320549225,0.20212967738079474,0.4937932526357948,Not Significant,Language
+cereb_gray vs dentate,ToM,-0.6213961115311389,0.5430917232656512,0.6957975321053387,Not Significant,Language
+cereb_gray vs dentate,Aud_Narr,0.49687531057476,0.6260347631822224,0.7042891085800003,Not Significant,Language
+cereb_gray vs dentate,N_back,1.3249447383983495,0.20380132356611308,0.4937932526357948,Not Significant,Language
+cereb_gray vs dentate,Oddball,-2.200804490214467,0.042779603671542724,0.263898913894667,Not Significant,Language
+cereb_gray vs dentate,Demand_Grid,1.139308654806705,0.27134482847123204,0.5238242305320002,Not Significant,Language
+cereb_gray vs dentate,Rom_mov,0.9748814741146595,0.3441288730278127,0.5631199740455116,Not Significant,Language
+cereb_gray vs dentate,Spatial_Nav,0.5651188685074002,0.5798312767544489,0.6957975321053387,Not Significant,Language
+cereb_gray vs dentate,Sentence_Reading,-0.36795666484134903,0.7177280083322328,0.7599473029400112,Not Significant,Language
+cereb_gray vs dentate,Non-word_reading,-0.7850451452005116,0.4438967410286172,0.6658451115429258,Not Significant,Language
