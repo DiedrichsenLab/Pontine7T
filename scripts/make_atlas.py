@@ -147,7 +147,7 @@ def estimate_new_atlas():
      em_model2.set_param_list(['kappa'])
      em_model3.set_param_list(['kappa'])
 
-     M= fm.FullMultiModel(ar_model, [em_model, em_model1, em_model2, em_model3])
+     M= fm.FullMultiModel(ar_model, [em_model])
 
      M.initialize()
 
@@ -170,7 +170,7 @@ if __name__ == '__main__':
     thalamus = estimate_new_atlas()
 
     # Load probability 
-    pmap = np.load(f"{wk_dir}/Prob_dentate.npy")
+    pmap = np.load(f"{wk_dir}/Prob_thalamus.npy")
     # Load colormap and labels
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
 
