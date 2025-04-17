@@ -11,7 +11,7 @@ from scripts import decomposing_variances
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
 
-def make_pontine_contrasts(atlas='MNISymThalamus1'):
+def make_pontine_contrasts(atlas='MNISymOlive1'):
     data, info, ds_obj = ds.get_dataset(base_dir,'Pontine',atlas=atlas,
                                         type='CondRun', sess='ses-s1', 
                                         subj=None)
@@ -61,7 +61,7 @@ def make_pontine_contrasts(atlas='MNISymThalamus1'):
         
     # Get one example cifti-file for the header 
     
-    ref_img=nb.load(f"{base_dir}/Pontine/derivatives/sub-01/data/sub-01_space-MNISymThalamus1_ses-s1_CondRun.dscalar.nii")
+    ref_img=nb.load(f"{base_dir}/Pontine/derivatives/sub-01/data/sub-01_space-MNISymOlive1_ses-s1_CondRun.dscalar.nii")
     
     bm = ref_img.header.get_axis(1)
 
@@ -71,14 +71,14 @@ def make_pontine_contrasts(atlas='MNISymThalamus1'):
     con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
     t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
 
-    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus/contrasts/high-res-mdtb_thalamus_condavg_contrast.dscalar.nii'
-    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus/contrasts/high-res-mdtb_thalamus_condavg_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/olive/contrasts/high-res-mdtb_olive_condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/olive/contrasts/high-res-mdtb_olive_condavg_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
     nb.save(t_img, t_filename)
 
-def make_language_contrasts(atlas='MNISymThalamus1'):
+def make_language_contrasts(atlas='MNISymOlive1'):
     data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,
                                         type='CondRun', sess='ses-localizer_cond_fm', 
                                         subj=None)
@@ -128,7 +128,7 @@ def make_language_contrasts(atlas='MNISymThalamus1'):
         
     # Get one example cifti-file for the header 
     
-    ref_img=nb.load(f"{base_dir}/Language/derivatives/sub-01/data/sub-01_space-MNISymThalamus1_ses-localizer_cond_fm_CondRun.dscalar.nii")
+    ref_img=nb.load(f"{base_dir}/Language/derivatives/sub-01/data/sub-01_space-MNISymOlive1_ses-localizer_cond_fm_CondRun.dscalar.nii")
     
     bm = ref_img.header.get_axis(1)
 
@@ -138,15 +138,15 @@ def make_language_contrasts(atlas='MNISymThalamus1'):
     con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
     t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
 
-    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/dentate/contrasts/language_thalamus_condavg_contrast.dscalar.nii'
-    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/dentate/contrasts/language_thalamus_condavg_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/olive/contrasts/language_olive_condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/olive/contrasts/language_olive_condavg_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
     nb.save(t_img, t_filename)
 
 
-def make_mdtb_contrasts(atlas='MNISymThalamus1'):
+def make_mdtb_contrasts(atlas='MNISymOlive1'):
     data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,
                                         type='CondRun', sess='ses-s1', 
                                         subj=None)
@@ -194,7 +194,7 @@ def make_mdtb_contrasts(atlas='MNISymThalamus1'):
         
     # Get one example cifti-file for the header 
     
-    ref_img=nb.load(f"{base_dir}/MDTB/derivatives/sub-02/data/sub-02_space-MNISymThalamus1_ses-s1_CondRun.dscalar.nii")
+    ref_img=nb.load(f"{base_dir}/MDTB/derivatives/sub-02/data/sub-02_space-MNISymOlive1_ses-s1_CondRun.dscalar.nii")
     
     bm = ref_img.header.get_axis(1)
 
@@ -204,8 +204,8 @@ def make_mdtb_contrasts(atlas='MNISymThalamus1'):
     con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
     t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
 
-    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus/contrasts/mdtb_ses1_thalamus_condavg_contrast.dscalar.nii'
-    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus/contrasts/mdtb_ses1_thalamus_condavg_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/olive/contrasts/mdtb_ses1_olive_condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/olive/contrasts/mdtb_ses1_olive_condavg_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
@@ -361,8 +361,8 @@ def group_analysis(contrast,contrast_names):
 
 if __name__ == '__main__':
 
-    #pontine = make_pontine_contrasts()
+    pontine = make_pontine_contrasts()
     mdtb = make_mdtb_contrasts()
-    #langauge = make_language_contrasts()
+    langauge = make_language_contrasts()
 
     print("DONE")
