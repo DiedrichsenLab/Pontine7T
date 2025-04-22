@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
     # Load probability 
     
-    pmap = np.load(f"{wk_dir}/Prob_olive.npy")
+    pmap = np.load(f"{wk_dir}/Prob_olive_language.npy")
 
     # Load colormap and labels
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
