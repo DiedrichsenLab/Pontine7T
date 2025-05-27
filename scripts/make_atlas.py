@@ -18,7 +18,7 @@ from scripts import decomposing_variances as dv
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
-wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/pontine'
+wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus'
 
 def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
     data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='ses-s1',subj=None)
@@ -171,16 +171,18 @@ if __name__ == '__main__':
 
     # Load probability 
     
-    pmap = np.load(f"{wk_dir}/Prob_pontine.npy")
+    pmap = np.load(f"{wk_dir}/Prob_thalamus_mdtb(ses1).npy")
+
+    pmap_combined = pmap[0:16] + pmap[16:32]
 
     # Load colormap and labels
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
 
-    wta = np.argmax(pmap, axis=0) 
+    wta = np.argmax(pmap_combined, axis=0) 
     wta += 1
     wta_int32 = wta.astype(np.int32)
     
-    dentate_parcellation = plot.plot_pontine2(wta_int32,cscale=[0,32],cmap=cmap)
+    dentate_parcellation = plot.plot_thalamus(wta_int32,cscale=[0,32],cmap=cmap)
 
     #pass 
     
