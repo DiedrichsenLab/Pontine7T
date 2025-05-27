@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
     # Load probability 
     
-    pmap = np.load(f"{wk_dir}/Prob_thalamus_mdtb(ses1).npy")
+    pmap = np.load(f"{wk_dir}/Prob_thalamus.npy")
 
     pmap_combined = pmap[0:16] + pmap[16:32]
 
@@ -182,7 +182,7 @@ if __name__ == '__main__':
     wta += 1
     wta_int32 = wta.astype(np.int32)
     
-    dentate_parcellation = plot.plot_thalamus(wta_int32,cscale=[0,32],cmap=cmap)
+    dentate_parcellation = plot.plot_thalamus(wta_int32,cscale=[0,16],cmap=cmap[0:17])
 
     #pass 
     

@@ -1,0 +1,39 @@
+Comparison (olive),original corr,randomized corr (mean ± std),permutation-based p-value
+mdtb_ses1 vs mdtb_high_res,-0.0137,-0.0011 ± 0.0458,0.5840
+mdtb_ses1 vs lang,0.1747,-0.0025 ± 0.1063,0.0580
+mdtb_high_res vs lang,0.0510,-0.0006 ± 0.0691,0.2130
+mdtb_ses1 vs mdtb_ses2,0.1359,-0.0046 ± 0.0731,0.0270
+mdtb_high_res vs mdtb_ses2,0.0127,0.0022 ± 0.0418,0.3820
+lang vs mdtb_ses2,0.0009,0.0016 ± 0.1009,0.4040
+
+Comparison (thalamus),original corr,randomized corr (mean ± std),permutation-based p-value
+mdtb_ses1 vs mdtb_high_res,0.0578,-0.0000 ± 0.0297,0.0370
+mdtb_ses1 vs lang,0.1265,-0.0008 ± 0.0469,0.0100
+mdtb_high_res vs lang,0.0822,-0.0001 ± 0.0208,0.0000
+mdtb_ses1 vs mdtb_ses2,0.2976,0.0012 ± 0.0848,0.0120
+mdtb_high_res vs mdtb_ses2,0.0812,-0.0008 ± 0.0281,0.0010
+lang vs mdtb_ses2,0.2411,0.0004 ± 0.0494,0.0000
+
+Comparison (rednucleus),original corr,randomized corr (mean ± std),permutation-based p-value
+mdtb_ses1 vs mdtb_high_res,-0.0349,-0.0009 ± 0.0398,0.7980
+mdtb_ses1 vs lang,0.0145,-0.0014 ± 0.0727,0.3920
+mdtb_high_res vs lang,0.0209,0.0007 ± 0.0295,0.2560
+mdtb_ses1 vs mdtb_ses2,0.2922,-0.0011 ± 0.0779,0.0000
+mdtb_high_res vs mdtb_ses2,-0.0060,-0.0000 ± 0.0309,0.5750
+lang vs mdtb_ses2,0.0738,-0.0018 ± 0.0568,0.0880
+
+Comparison (dentate),original corr,randomized corr (mean ± std),permutation-based p-value
+mdtb_ses1 vs mdtb_high_res,0.0139,-0.0006 ± 0.0322,0.3350
+mdtb_ses1 vs lang,0.0220,0.0010 ± 0.0519,0.3400
+mdtb_high_res vs lang,0.0099,0.0003 ± 0.0268,0.3600
+mdtb_ses1 vs mdtb_ses2,0.1484,0.0009 ± 0.0726,0.0310
+mdtb_high_res vs mdtb_ses2,0.0251,0.0011 ± 0.0306,0.2210
+lang vs mdtb_ses2,0.0830,0.0010 ± 0.0521,0.0700
+
+Comparison (pontine nuclei),original corr,randomized corr (mean ± std),permutation-based p-value
+mdtb_ses1 vs mdtb_high_res,0.0201,-0.0012 ± 0.0280,0.2360
+mdtb_ses1 vs lang,0.0391,0.0001 ± 0.0497,0.2130
+mdtb_high_res vs lang,0.0788,-0.0008 ± 0.0477,0.0500
+mdtb_ses1 vs mdtb_ses2,0.1518,-0.0009 ± 0.0449,0.0000
+mdtb_high_res vs mdtb_ses2,0.0469,-0.0009 ± 0.0258,0.0300
+lang vs mdtb_ses2,0.0423,0.0007 ± 0.0438,0.1790
