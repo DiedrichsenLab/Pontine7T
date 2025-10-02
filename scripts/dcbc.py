@@ -9,6 +9,8 @@ import numpy as np
 import os
 import time
 import torch as pt
+import Functional_Fusion.atlas_map as am
+
 
 
 def calc_test_dcbc(
@@ -64,19 +66,24 @@ def calc_test_dcbc(
 
 
 if __name__ == "__main__":
-    
-    base_dir = "/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus/indiv_parcellations/MDTB-ses2"
 
-    dcbc_values = calc_test_dcbc()
+    atlas, _ = am.get_atlas('MNISymThalamus1')
 
-    np.save(f"{base_dir}/MDTB_ses2_DCBC/dcbc.npy",dcbc_values)
+    base_dir = "/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus/indiv_parcellations/MDTB-ses1"
 
+    indiv_parcellation = np.load(f"{base_dir}/all_indiv_parcels.npy")
+    indiv_parcellation_torch = pt.tensor(indiv_parcellation, dtype=pt.int32)
 
-    
+    dataset = np.load(f"{base_dir}/MDTB_ses1_data.npy")
+    dataset_torch = pt.tensor(dataset, dtype=pt.float32)
 
-def calc_test_dcbc(
-    parcels, testdata, dist, max_dist=110, bin_width=5, trim_nan=False, verbose=True
-):
+    dcbc_values = calc_test_dcbc(parcels = indiv_parcellation_torch, 
+                                 testdata = dataset_torch, dist = atlas, 
+                                 max_dist=110, bin_width=5, trim_nan=False, verbose=True)
+
+    dcbc_values_npy = dcbc_values.cpu().numpy() if pt.is_tensor(dcbc_values) else dcbc_values
+
+    np.save(f"{base_dir}/dcbc.npy", dcbc_values.cpu().numpy())
     
     """DCBC: evaluate the resultant parcellation using DCBC
     Args:
