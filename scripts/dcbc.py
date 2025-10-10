@@ -21,9 +21,11 @@ def calc_test_dcbc(
         parcels (np.ndarray): the input parcellation:
             either group parcellation (1-dimensional: P)
             individual parcellation (num_subj x P )
-        dist (<AtlasVolumetric>): the class object of atlas
         testdata (np.ndarray): the functional test dataset,
                                 shape (num_sub, N, P)
+        dist (<AtlasVolumetric>): the class object of atlas
+        max_dist (int): the maximum distance between voxel pairs
+        bin_width (int): the bin width of distance
         trim_nan (boolean): if true, the nan voxel label will be
                             removed from DCBC calculation. Otherwise,
                             we treat nan voxels are in the same parcel
