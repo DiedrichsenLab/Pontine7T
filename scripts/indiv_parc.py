@@ -69,7 +69,7 @@ def get_info_emission(data_dir = data_dir, sample_subj = 'sub_01', session = 'lo
 
     return cond_v, part_v
 
-def build_indiv_parc_group(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_dir):
+def build_indiv_parc(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_dir):
     K = ar_model.K
     
     X= ut.indicator(cond_v)
@@ -86,10 +86,14 @@ def build_indiv_parc_group(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_di
     
     M, _, _, _ = M.fit_em(iter=200, tol=0.01,
                           fit_arrangement=False,fit_emission=True,first_evidence=False)
-    
-    U_indiv,_ = M.Estep()
 
-    return U_indiv
+    emloglik = M.emissions[0].Estep()
+
+    U_indiv_data = pt.softmax(emloglik, dim=1) 
+
+    U_indiv_group, _ = M.arrange.Estep(emloglik)
+
+    return U_indiv_data, U_indiv_group 
 
 if __name__ == '__main__':
 
@@ -99,6 +103,5 @@ if __name__ == '__main__':
     
     cond_v, part_v = get_info_emission()
     
-    U_indiv = build_indiv_parc_group(ar_model, atlas, data, cond_v, part_v)
-    
+    U_indiv = build_indiv_parc(ar_model, atlas, data, cond_v, part_v)
     
