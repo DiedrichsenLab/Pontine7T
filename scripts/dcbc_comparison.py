@@ -50,23 +50,23 @@ def evaluate_dcbc(wta_indiv_data,wta_indiv_group,U_group,atlas='MNISymThalamus1'
         T = pd.concat([T, pd.DataFrame(D1)])
 
         for r in range(len(wta_indiv_data)):
-            dcbc_indiv_data = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_indiv_data[r][i],
+            dcbc_indiv_data = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_indiv_data[r],
                                             func= data, dist=dist, weighting=True, backend='numpy')
-            dcbc_indiv_group = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_indiv_group[r][i],
+            dcbc_indiv_group = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_indiv_group[r],
                                             func= data, dist=dist, weighting=True, backend='numpy')
             
             D1 = {}
             D1['type'] = ['data']
             D1['runs'] = [r + 1]
             D1['dcbc'] = [dcbc_indiv_data['DCBC']]
-            D1['subject'] = [s + 1]
+            D1['subject'] = [i + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
             
             D1 = {}
             D1['type'] = ['data and group']
             D1['runs'] = [r + 1]
             D1['dcbc'] = [dcbc_indiv_group['DCBC']]
-            D1['subject'] = [s + 1]
+            D1['subject'] = [i + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
 
     return T 
