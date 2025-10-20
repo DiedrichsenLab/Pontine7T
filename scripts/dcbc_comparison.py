@@ -37,7 +37,8 @@ def evaluate_dcbc(wta_indiv_data,wta_indiv_group,U_group,atlas='MNISymThalamus1'
     
     for i, s in enumerate(subj_info['participant_id']):
         
-        data = data_section[i].T
+        # Clean up re
+        data,info,_ = ds.get_dataset(base_dir,'MDTB',session='sc2',atlas='MNI',type='CondAll')
         
         dcbc_group = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_group,
                                 func= data, dist=dist, weighting=True, backend='numpy')
