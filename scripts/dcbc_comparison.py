@@ -78,7 +78,9 @@ def get_info_emission(data_dir = data_dir, sample_subj = 'sub_01', session = 'lo
 
     return cond_v, part_v
 
-def build_indiv_parc_runwise(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_dir):
+def build_indiv_parc_runwise_globalk(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_dir):
+    #global kappa 
+    
     K = ar_model.K
     
     X= ut_hierarch.indicator(cond_v)
@@ -116,6 +118,51 @@ def build_indiv_parc_runwise(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_
         Uhat_indiv_group.append(U_indiv_group_run)
 
     return Uhat_indiv_data, Uhat_indiv_group 
+
+def build_indiv_parc_runwise_runk(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_dir):
+
+    #runwise kappas
+
+    K = ar_model.K
+
+    V_fixed = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
+
+    Uhat_indiv_data_cumulative = []
+    Uhat_indiv_group_cumulative = []
+
+    runs = np.unique(part_v)
+
+    for r in runs:
+        print(f"Processing run data up to run {r}...")
+
+        ind = part_v <=r
+
+        cumulative_data = data[:,ind,:]    
+        cumulative_cond_v = cond_v[ind]
+        cumulative_part_v = part_v[ind]   
+
+        X_cumulative = ut_hierarch.indicator(cumulative_cond_v)
+        em_model_cumulative = em.MixVMF(K=K,P=atlas.P, X=X_cumulative,part_vec=cumulative_part_v)
+
+        em_model_cumulative.V = V_fixed
+        em_model_cumulative.set_param_list(['kappa'])
+
+        M_cumulative = fm.FullMultiModel(ar_model, [em_model_cumulative])
+
+        M_cumulative.initialize([cumulative_data])
+
+        M_cumulative, _, _, _ = M_cumulative.fit_em(iter=200, tol=0.01,
+                              fit_arrangement=False,fit_emission=True,first_evidence=False)
+
+
+        emloglik = M_cumulative.emissions[0].Estep()
+        U_indiv_data_run = pt.softmax(emloglik, dim=1)
+        Uhat_indiv_data_cumulative.append(U_indiv_data_run)
+        
+        U_indiv_group_run, _ = M_cumulative.arrange.Estep(emloglik)
+        Uhat_indiv_group_cumulative.append(U_indiv_group_run)
+
+    return Uhat_indiv_data_cumulative, Uhat_indiv_group_cumulative 
 
 def evaluate_dcbc(U_indiv_data,U_indiv_group,U_group,atlas='MNISymThalamus1',max_dist=40):
     
