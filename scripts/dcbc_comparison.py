@@ -23,7 +23,11 @@ from DCBC.dcbc import compute_DCBC
 
 wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus'
 data_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new/MDTB'
+<<<<<<< HEAD
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new'
+=======
+ff_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new'
+>>>>>>> 0ec1f61c8d66c1ada1feda1513c8f38f491d906f
 
 def get_group_atlas(wk_dir = wk_dir, atlas_name = 'MNISymThalamus1', roi = 'thalamus'):
     atlas, _ = am.get_atlas(atlas_name)
@@ -229,12 +233,22 @@ if __name__ == "__main__":
 
     ar_model, atlas = get_group_atlas(wk_dir = wk_dir, atlas_name = 'MNISymThalamus1', roi = 'thalamus')
 
+<<<<<<< HEAD
     data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas="MNISymThalamus1",sess='ses-s1', subj=None, 
                                 type='CondRun')
 
     #cond_v, part_v = get_info_emission(data_dir = data_dir, sample_subj = 'sub-02', session = 's1', dataset = 'MDTB')
 
     Uhat_indiv_data, Uhat_indiv_group = build_indiv_parc_runwise_globalk(ar_model, atlas, data, info.cond_num, info.run, wk_dir = wk_dir)
+=======
+    data,info,ds = ds.get_dataset(ff_dir,'MDTB', atlas = 'MNISymThalamus1', sess = 'ses-s1',type='CondRun')
+
+
+    Uhat_indiv_data, Uhat_indiv_group = build_indiv_parc_runwise_globalk(ar_model, atlas, data, 
+                                                                            cond_v = info.cond_num, 
+                                                                            part_v = info.run, 
+                                                                            wk_dir = wk_dir)
+>>>>>>> 0ec1f61c8d66c1ada1feda1513c8f38f491d906f
 
     D = evaluate_dcbc(Uhat_indiv_data,Uhat_indiv_group,
                       np.load(f'{wk_dir}/Prob_thalamus.npy'),atlas='MNISymThalamus1',max_dist=40)
