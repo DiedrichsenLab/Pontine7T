@@ -23,6 +23,7 @@ from DCBC.dcbc import compute_DCBC
 
 wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus'
 data_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new/MDTB'
+base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new'
 
 def get_group_atlas(wk_dir = wk_dir, atlas_name = 'MNISymThalamus1', roi = 'thalamus'):
     atlas, _ = am.get_atlas(atlas_name)
@@ -173,18 +174,23 @@ def evaluate_dcbc(U_indiv_data,U_indiv_group,U_group,atlas='MNISymThalamus1',max
     wta_indiv_data = [pt.argmax(r, dim=1) + 1 for r in U_indiv_data]
     wta_indiv_group = [pt.argmax(r, dim=1) + 1 for r in U_indiv_group]
 
-    dist = ut.compute_dist(coords,1.5, backend='numpy')
+    dist = ut.compute_dist(coords, backend='numpy')
 
     T = pd.DataFrame()
 
     subj_info = pd.read_csv(f'{data_dir}/participants.tsv',sep='\t')
     
     for i, s in enumerate(subj_info['participant_id']):
+
+        data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas="MNISymThalamus1",sess='ses-s2', subj=None, 
+                                type='CondRun')
         
-        data = get_data(data_dir = data_dir, atlas_name = atlas, session = 's2')[i].T.numpy()
+        datai = data[i].T
+        
+        #data = get_data(data_dir = data_dir, atlas_name = atlas, session = 's2')[i].T.numpy()
         
         dcbc_group = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_group,
-                                func= data, dist=dist, weighting=True, backend='numpy')
+                                func= datai, dist=dist, weighting=True, backend='numpy')
 
         D1 = {}
         D1['type'] = ['group']
@@ -194,10 +200,14 @@ def evaluate_dcbc(U_indiv_data,U_indiv_group,U_group,atlas='MNISymThalamus1',max
         T = pd.concat([T, pd.DataFrame(D1)])
 
         for r in range(len(wta_indiv_data)):
+
+            print(f"Processing run data up to run {r}...")
+
+
             dcbc_indiv_data = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_indiv_data[r][i],
-                                            func= data, dist=dist, weighting=True, backend='numpy')
+                                            func= datai, dist=dist, weighting=True, backend='numpy')
             dcbc_indiv_group = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_indiv_group[r][i],
-                                            func= data, dist=dist, weighting=True, backend='numpy')
+                                            func= datai, dist=dist, weighting=True, backend='numpy')
             
             D1 = {}
             D1['type'] = ['data']
@@ -219,11 +229,12 @@ if __name__ == "__main__":
 
     ar_model, atlas = get_group_atlas(wk_dir = wk_dir, atlas_name = 'MNISymThalamus1', roi = 'thalamus')
 
-    data = get_data(data_dir = data_dir, atlas_name = 'MNISymThalamus1', session = 's1')
+    data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas="MNISymThalamus1",sess='ses-s1', subj=None, 
+                                type='CondRun')
 
-    cond_v, part_v = get_info_emission(data_dir = data_dir, sample_subj = 'sub-02', session = 's1', dataset = 'MDTB')
+    #cond_v, part_v = get_info_emission(data_dir = data_dir, sample_subj = 'sub-02', session = 's1', dataset = 'MDTB')
 
-    Uhat_indiv_data, Uhat_indiv_group = build_indiv_parc_runwise(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_dir)
+    Uhat_indiv_data, Uhat_indiv_group = build_indiv_parc_runwise_globalk(ar_model, atlas, data, info.cond_num, info.run, wk_dir = wk_dir)
 
     D = evaluate_dcbc(Uhat_indiv_data,Uhat_indiv_group,
                       np.load(f'{wk_dir}/Prob_thalamus.npy'),atlas='MNISymThalamus1',max_dist=40)
