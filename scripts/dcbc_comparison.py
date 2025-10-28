@@ -186,9 +186,7 @@ def evaluate_dcbc(U_indiv_data,U_indiv_group,U_group,atlas='MNISymThalamus1',max
                                 type='CondRun')
         
         datai = data[i].T
-        
-        #data = get_data(data_dir = data_dir, atlas_name = atlas, session = 's2')[i].T.numpy()
-        
+                
         dcbc_group = compute_DCBC(maxDist=max_dist, binWidth=1.5, parcellation=wta_group,
                                 func= datai, dist=dist, weighting=True, backend='numpy')
 
