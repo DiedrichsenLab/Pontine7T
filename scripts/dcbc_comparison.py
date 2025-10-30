@@ -28,58 +28,13 @@ base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new'
 def get_group_atlas(wk_dir = wk_dir, atlas_name = 'MNISymThalamus1', roi = 'thalamus'):
     atlas, _ = am.get_atlas(atlas_name)
     atlas_group = np.load(f"{wk_dir}/Prob_{roi}.npy")
+
     ar_model = ar.build_arrangement_model(atlas_group, prior_type='prob', atlas=atlas)
 
     return ar_model, atlas 
 
-def get_data(data_dir = data_dir, atlas_name = 'MNISymThalamus1', session = 'localizerfm'):
-    subj_info = pd.read_csv(f'{data_dir}/participants.tsv',sep='\t')
-    data = []
-
-    for i, s in enumerate(subj_info['participant_id']):
-
-        file_name = f'{data_dir}/derivatives/ffextract/{s}/{s}_space-{atlas_name}_ses-{session}_CondRun.dscalar.nii'
-
-        #MDTB - {s}_space-{atlas_name.name}_ses-s1_CondRun.dscalar.nii (or ses-s2)
-        #Language - {s}_space-{atlas_name.name}_ses-localizerfm_CondRun.dscalar.nii
-        #MDTB-high-res - {s}_space-{atlas_name.name}_ses-s1_CondRun.dscalar.nii
-        
-        if not os.path.exists(file_name):
-            print(f"File {file_name} does not exist. Skipping subject {s}.")
-            continue
-
-        datafile = nb.load(file_name)
-        data.append(datafile.get_fdata())
-
-    data_np = np.stack(data)
-
-    # data is: numsubj x numcond (repetitions x conditions) x numvoxel tensor
-
-    data = pt.tensor(data_np, dtype=pt.get_default_dtype())
-
-
-    return data
-
-def get_info_emission(data_dir = data_dir, sample_subj = 'sub_01', session = 'localizerfm', dataset = 'Language'):
-
-    info = pd.read_csv(f'{data_dir}/derivatives/ffextract/{sample_subj}/{sample_subj}_ses-{session}_CondRun.tsv',sep='\t')
-
-    #MDTB - sub-02_ses-s1_CondRun.tsv (cond_name)
-    #Language - sub-01_ses-localizerfm_CondRun.tsv (task_name)
-    #MDTB-high-res - sub-01_ses-s1_CondRun.tsv (task_name)
-
-    if dataset in ['Language', 'MDTB-high-res']:
-        cond_v = info['task_name'].values
-    if dataset in ['MDTB']:
-        cond_v = info['cond_name'].values 
-
-    part_v = info['run'].values
-
-    #data = ds.remove_baseline(data,part_v) #for language, pontine, do this separately 
-
-    return cond_v, part_v
-
 def build_indiv_parc_runwise_globalk(ar_model, atlas, data, cond_v, part_v, wk_dir = wk_dir):
+    
     #global kappa 
     
     K = ar_model.K
@@ -113,10 +68,14 @@ def build_indiv_parc_runwise_globalk(ar_model, atlas, data, cond_v, part_v, wk_d
 
         emloglik = M.emissions[0].Estep()
         U_indiv_data_run = pt.softmax(emloglik, dim=1)
-        Uhat_indiv_data.append(U_indiv_data_run)
+        Uhat_indiv_data_run = U_indiv_data_run[:, 0:16, :] + U_indiv_data_run[:, 16:32, :]
+        
+        Uhat_indiv_data.append(Uhat_indiv_data_run)
         
         U_indiv_group_run, _ = M.arrange.Estep(emloglik)
-        Uhat_indiv_group.append(U_indiv_group_run)
+        Uhat_indiv_group_run = U_indiv_group_run[:, 0:16, :] + U_indiv_group_run[:, 16:32, :]    
+
+        Uhat_indiv_group.append(Uhat_indiv_group_run)
 
     return Uhat_indiv_data, Uhat_indiv_group 
 
@@ -170,11 +129,20 @@ def evaluate_dcbc(U_indiv_data,U_indiv_group,U_group,atlas='MNISymThalamus1',max
     atlas_obj, _ = am.get_atlas(atlas)
     coords = atlas_obj.world.T
 
-    wta_group = np.argmax(U_group, axis=0) + 1
+    U_group_sum = U_group[0:16] + U_group[16:32]
+
+
+    wta_group = np.argmax(U_group_sum, axis=0) + 1
     wta_indiv_data = [pt.argmax(r, dim=1) + 1 for r in U_indiv_data]
     wta_indiv_group = [pt.argmax(r, dim=1) + 1 for r in U_indiv_group]
 
     dist = ut.compute_dist(coords, backend='numpy')
+
+    signs =  np.sign(coords[:,0])  #extracts sign of x-coord voxels (right is positive, left is negative)
+    
+    cross_hemisph_voxels = signs[:, None] != signs[None, :]  #True where signs are opposite 
+    
+    dist[cross_hemisph_voxels]=100 #changing cross-correlated voxel distances to 100 
 
     T = pd.DataFrame()
 
@@ -230,10 +198,8 @@ if __name__ == "__main__":
     data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas="MNISymThalamus1",sess='ses-s1', subj=None, 
                                 type='CondRun')
 
-    #cond_v, part_v = get_info_emission(data_dir = data_dir, sample_subj = 'sub-02', session = 's1', dataset = 'MDTB')
-
     Uhat_indiv_data, Uhat_indiv_group = build_indiv_parc_runwise_globalk(ar_model, atlas, data, info.cond_num, info.run, wk_dir = wk_dir)
-
+                                
     D = evaluate_dcbc(Uhat_indiv_data,Uhat_indiv_group,
                       np.load(f'{wk_dir}/Prob_thalamus.npy'),atlas='MNISymThalamus1',max_dist=40)
 

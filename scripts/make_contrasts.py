@@ -80,9 +80,13 @@ def make_pontine_contrasts(atlas='MNISymRedNucleus1'):
     nb.save(t_img, t_filename)
 
 def make_language_contrasts(atlas='MNISymRedNucleus1'):
+
+    print("HEY")
+    
     data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,
-                                        sess='ses-localizer_cond_fm', 
+                                        sess='ses-localizerfm', 
                                         subj=None, type='CondRun')
+    
     
     cond_v = info['task']
     part_v = info['run']
