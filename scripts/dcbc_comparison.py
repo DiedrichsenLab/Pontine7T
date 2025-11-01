@@ -43,7 +43,7 @@ def build_indiv_parc_runwise_globalk(ar_model, atlas, data, cond_v, part_v, wk_d
     
     em_model = em.MixVMF(K=K,P=atlas.P, X=X,part_vec=part_v)
     
-    em_model.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
+    em_model.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses2).pt")
     
     em_model.set_param_list(['kappa'])
     
@@ -150,7 +150,7 @@ def evaluate_dcbc(U_indiv_data,U_indiv_group,U_group,atlas='MNISymThalamus1',max
     
     for i, s in enumerate(subj_info['participant_id']):
 
-        data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas="MNISymThalamus1",sess='ses-s2', subj=None, 
+        data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas="MNISymThalamus1",sess='ses-s1', subj=None, 
                                 type='CondRun')
         
         datai = data[i].T
@@ -195,7 +195,7 @@ if __name__ == "__main__":
 
     ar_model, atlas = get_group_atlas(wk_dir = wk_dir, atlas_name = 'MNISymThalamus1', roi = 'thalamus')
 
-    data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas="MNISymThalamus1",sess='ses-s1', subj=None, 
+    data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas="MNISymThalamus1",sess='ses-s2', subj=None, 
                                 type='CondRun')
 
     Uhat_indiv_data, Uhat_indiv_group = build_indiv_parc_runwise_globalk(ar_model, atlas, data, info.cond_num, info.run, wk_dir = wk_dir)
