@@ -16,12 +16,12 @@ import Functional_Fusion.plot as plot
 from matplotlib.colors import ListedColormap
 from scripts import decomposing_variances as dv
 
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion' 
+base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
 wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/rednucleus'
 
 def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
-    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='ses-s1',subj=None)
+    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s1',  subj=None, type='CondRun')
     cond_v = info['cond_num_uni']
     part_v = info['run']
 
@@ -34,7 +34,8 @@ def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
     return em_model
 
 def build_emission_mdtb_ses2(K,P,atlas='MNISymCereb2'):
-    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,type='CondRun',sess='ses-s2',subj=None)
+    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s2',subj=None, type='CondRun')
+
     cond_v = info['cond_num_uni']
     part_v = info['run']
 
@@ -48,7 +49,7 @@ def build_emission_mdtb_ses2(K,P,atlas='MNISymCereb2'):
 def build_emission_language(K,P,atlas='MNISymCereb2'):
 
     #data is in form: (subjects, run x tasks, voxels)
-    data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas,type='CondRun', sess='ses-localizer_cond_fm', subj=None)
+    data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas, sess='ses-localizer_cond_fm', subj=None, type='CondRun')
     cond_v = info['task']
     part_v = info['run']
 
@@ -64,9 +65,7 @@ def build_emission_language(K,P,atlas='MNISymCereb2'):
 
 
 def build_emission_pontine(K,P,atlas='MNISymCereb2'):
-    data, info, ds_obj = ds.get_dataset(base_dir,'Pontine',atlas=atlas,
-                                        type='CondRun', sess='ses-s1', 
-                                        subj=None)
+    data, info, ds_obj = ds.get_dataset(base_dir,'Pontine',atlas=atlas, sess='ses-s1', subj=None, type='CondRun')
     cond_v = info['task']
     part_v = info['run']
 
@@ -130,23 +129,23 @@ def estimate_new_atlas():
      
     # Get atlas for dentate 
 
-     atlas, _ = am.get_atlas('MNISymCereb2')    
+     atlas, _ = am.get_atlas('MNISymThalamus1')    
 
      ar_model = ar.ArrangeIndependent(K=32, P=atlas.P, spatial_specific=True, remove_redundancy=False)
         
-     #em_model = build_emission_mdtb_ses2(ar_model.K,atlas.P,atlas='MNISymPontine1')
-     #em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymPontine1')
-     #em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymPontine1')
-     em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymCereb2')
+     em_model = build_emission_mdtb_ses2(ar_model.K,atlas.P,atlas='MNISymThalamus1')
+     #em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymThalamus1')
+     em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymThalamus1')
+     em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymThalamus1')
 
-     #em_model.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses2).pt")
+     em_model.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses2).pt")
      #em_model1.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
-     #em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
+     em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
      em_model3.V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
-     #em_model.set_param_list(['kappa'])
+     em_model.set_param_list(['kappa'])
      #em_model1.set_param_list(['kappa'])
-     #em_model2.set_param_list(['kappa'])
+     em_model2.set_param_list(['kappa'])
      em_model3.set_param_list(['kappa'])
 
      M= fm.FullMultiModel(ar_model, [em_model3])
@@ -157,23 +156,31 @@ def estimate_new_atlas():
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
      Prob = M.arrange.marginal_prob().numpy()
-     np.save(f"{wk_dir}/Prob_cereb_grey_mdtb(high-res).npy",Prob)
+     np.save(f"{wk_dir}/Prob_thalamus_without_mdtbses1.npy",Prob)
 
      return M
 
 
+#def individual_parcell ():
+ #   atlas, _ = am.get_atlas('MNISymThalamus1')
+
+  #  atlas_thalamus = np.load(f"{wk_dir}/Prob_thalamus.npy")
+
+   # ar_model = ar.build_arrangement_model(atlas_thalamus, prior_type='prob', atlas=atlas)
+
+   # em_model = build_emission_mdtb_ses2(ar_model.K,atlas.P,atlas='MNISymPontine1')
+   # em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymPontine1')
+   # em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymPontine1')
+   # em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymCereb2')
+
+
 if __name__ == '__main__':
 
-    #pontine = build_emission_pontine(32, 18290)
-
-
-    #cereb = estimate_new_atlas()
-
-    #redn = estimate_new_atlas()
+    thalamus_leave_out = estimate_new_atlas()
 
     # Load probability 
     
-    pmap = np.load(f"{wk_dir}/Prob_rednucleus.npy")
+    pmap = np.load(f"{wk_dir}/Prob_thalamus_without_mdtbses1.npy")
 
     pmap_combined = pmap[0:16] + pmap[16:32]
 
@@ -184,11 +191,11 @@ if __name__ == '__main__':
     wta += 1
     wta_int32 = wta.astype(np.int32)
     
-    dentate_parcellation = plot.plot_rednucleus(wta_int32,cscale=[0,16],cmap=cmap[0:17])
+    dentate_parcellation = plot.plot_thalamus(wta_int32,cscale=[0,16],cmap=cmap[0:17])
 
     #pass 
     
-    Vs = [em.V for em in M.emissions]
+    #Vs = [em.V for em in M.emissions]
     #plt.imshow(Vs[0])
 
     #plt.yticks(info.cond_name[info.run==1].values)
