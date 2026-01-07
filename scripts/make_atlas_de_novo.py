@@ -18,9 +18,9 @@ from scripts import decomposing_variances as dv
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
 atlas_dir = base_dir + '/Atlases/tpl-MNI152NLin2009cSymC'
-wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/rednucleus'
+wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/thalamus'
 
-def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
+def build_emission_mdtb(K,P,atlas='MNISymThalamus1'):
     data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s1',  subj=None, type='CondRun')
     cond_v = info['cond_num_uni']
     part_v = info['run']
@@ -33,7 +33,7 @@ def build_emission_mdtb(K,P,atlas='MNISymCereb2'):
     em_model.initialize(data)
     return em_model
 
-def build_emission_mdtb_ses2(K,P,atlas='MNISymCereb2'):
+def build_emission_mdtb_ses2(K,P,atlas='MNISymThalamus1'):
     data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s2',subj=None, type='CondRun')
 
     cond_v = info['cond_num_uni']
@@ -46,7 +46,7 @@ def build_emission_mdtb_ses2(K,P,atlas='MNISymCereb2'):
     em_model.initialize(data)
     return em_model
 
-def build_emission_language(K,P,atlas='MNISymCereb2'):
+def build_emission_language(K,P,atlas='MNISymThalamus1'):
 
     #data is in form: (subjects, run x tasks, voxels)
     data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas=atlas, sess='ses-localizer_cond_fm', subj=None, type='CondRun')
@@ -64,7 +64,7 @@ def build_emission_language(K,P,atlas='MNISymCereb2'):
     return em_model
 
 
-def build_emission_pontine(K,P,atlas='MNISymCereb2'):
+def build_emission_pontine(K,P,atlas='MNISymThalamus1'):
     data, info, ds_obj = ds.get_dataset(base_dir,'Pontine',atlas=atlas, sess='ses-s1', subj=None, type='CondRun')
     cond_v = info['task']
     part_v = info['run']
@@ -79,34 +79,36 @@ def build_emission_pontine(K,P,atlas='MNISymCereb2'):
     em_model.initialize(data)
     return em_model
 
+#add more build_emission functions for remaining datasets: HCP, Social, Somatotopic, Working Memory, IBC, Demand, Nishimito 
+
 def estimate_emission_models():
     """ Estimate emission models for dataset
     """
-    # Get the atlas for the cerebellar cortex
-    atlas, _ = am.get_atlas('MNISymCereb2')
+    # Get the atlas for the thalamus
+    atlas, _ = am.get_atlas('MNISymThalamus1')
 
-    # Load the probabilistic atlas into that space 
+    # Load the probabilistic atlas into that space - this will be replaced with the Iglesias thalamus atlas if it is of form "KxP" 
+
     atlas_fname = 'atl-NettekovenSym32_space-MNI152NLin2009cSymC_probseg.nii'
-
-    #I had to remove the "T" for it to work 
 
     U = atlas.read_data(atlas_dir + '/' + atlas_fname)
     
     # Build the arrangement model 
     ar_model = ar.build_arrangement_model(U, prior_type='prob', atlas=atlas)
         
-    # Load the data using functional fusion 
+    # Load the data using functional fusion for all 10 datasets
 
-    #em_model = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymCereb2')
+    em_model = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymThalamus1')
 
-    #em_model1 = build_emission_mdtb_ses2(ar_model.K,atlas.P,atlas='MNISymCereb2')
+    em_model1 = build_emission_mdtb_ses2(ar_model.K,atlas.P,atlas='MNISymThalamus1')
 
-    #em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymCereb2')
+    em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymThalamus1')
 
-    em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymCereb2')
+    em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymThalamus1')
  
-    # Build the full model: The emission models are passed as a list, as usually we have multiple data sets
-    M = fm.FullMultiModel(ar_model, [em_model3])
+    # Build the full model: inlcude all 10 datasets
+
+    M = fm.FullMultiModel(ar_model, [em_model, em_model1, em_model2, em_model3])
 
     # Attach the data to the model - this is done for speed
     # The data is passed as a list with on element per data set
@@ -121,34 +123,34 @@ def estimate_emission_models():
     
     #np.save(f"{wk_dir}/Prob_cereb_grey(mdtb_ses1).npy",Prob)
 
-    #pt.save(M.emissions[0].V,f"{wk_dir}/V_cerebcortex_MDTB(ses2).pt")
-    #pt.save(M.emissions[1].V,f"{wk_dir}/V_cerebcortex_Language.pt")
-    #pt.save(M.emissions[0].V,f"{wk_dir}/V_cerebcortex_Pontine(set1).pt")
+    pt.save(M.emissions[0].V,f"{wk_dir}/V_Iglesias_MDTB(ses2).pt")
+    pt.save(M.emissions[1].V,f"{wk_dir}/V_Iglesias_Language.pt")
+    pt.save(M.emissions[0].V,f"{wk_dir}/V_Iglesias_Pontine(set1).pt")
 
 def estimate_new_atlas(): 
-     
-    # Get atlas for dentate 
 
      atlas, _ = am.get_atlas('MNISymThalamus1')    
 
-     ar_model = ar.ArrangeIndependent(K=32, P=atlas.P, spatial_specific=True, remove_redundancy=False)
-        
+     ar_model = ar.ArrangeIndependent(K=23, P=atlas.P, spatial_specific=True, remove_redundancy=False)
+    
+    #add all 10 datasets
+     
      em_model = build_emission_mdtb_ses2(ar_model.K,atlas.P,atlas='MNISymThalamus1')
-     #em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymThalamus1')
+     em_model1 = build_emission_mdtb(ar_model.K,atlas.P,atlas='MNISymThalamus1')
      em_model2 = build_emission_language(ar_model.K,atlas.P,atlas='MNISymThalamus1')
      em_model3  = build_emission_pontine(ar_model.K,atlas.P,atlas='MNISymThalamus1')
 
-     em_model.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses2).pt")
-     #em_model1.V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
-     em_model2.V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
-     em_model3.V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
+     em_model.V = pt.load(f"{wk_dir}/V_Iglesias_MDTB(ses2).pt")
+     em_model1.V = pt.load(f"{wk_dir}/V_Iglesias_MDTB(ses1).pt")
+     em_model2.V = pt.load(f"{wk_dir}/V_Iglesias_Language.pt")
+     em_model3.V = pt.load(f"{wk_dir}/V_Iglesias_Pontine.pt")
 
      em_model.set_param_list(['kappa'])
-     #em_model1.set_param_list(['kappa'])
+     em_model1.set_param_list(['kappa'])
      em_model2.set_param_list(['kappa'])
      em_model3.set_param_list(['kappa'])
 
-     M= fm.FullMultiModel(ar_model, [em_model3])
+     M= fm.FullMultiModel(ar_model, [em_model, em_model1, em_model2, em_model3])
 
      M.initialize()
 
@@ -156,28 +158,27 @@ def estimate_new_atlas():
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
      Prob = M.arrange.marginal_prob().numpy()
-     np.save(f"{wk_dir}/Prob_thalamus_without_mdtbses1.npy",Prob)
+     np.save(f"{wk_dir}/Prob_thalamus_Iglesias.npy",Prob)
 
      return M
 
+
 if __name__ == '__main__':
 
-    thalamus_leave_out = estimate_new_atlas()
+    thalamus = estimate_new_atlas()
 
     # Load probability 
     
-    pmap = np.load(f"{wk_dir}/Prob_thalamus_without_mdtbses1.npy")
+    pmap = np.load(f"{wk_dir}/Prob_thalamus_Iglesias.npy")
 
-    pmap_combined = pmap[0:16] + pmap[16:32]
-
-    # Load colormap and labels
+    # Load colormap and labels #is there a .lut file I can use for the Iglesias atlas? If I did: what would this mean?
     lid,cmap,names = nt.read_lut('/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-MNI152NLin2009cSymC/atl-NettekovenSym32.lut')
 
-    wta = np.argmax(pmap_combined, axis=0) 
+    wta = np.argmax(pmap, axis=0) 
     wta += 1
     wta_int32 = wta.astype(np.int32)
     
-    dentate_parcellation = plot.plot_thalamus(wta_int32,cscale=[0,16],cmap=cmap[0:17])
+    parcellation = plot.plot_thalamus(wta_int32,cscale=[0,16],cmap=cmap[0:17])
 
     #pass 
     
