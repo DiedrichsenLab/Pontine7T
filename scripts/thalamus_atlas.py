@@ -65,6 +65,8 @@ def get_subj_prob_maps(subj ='sub-01', dataset='Language7T'):
 
 def get_group_prob_map(subject_file ='sub-01_4d_thalamus_prob_map.nii.gz'):
 
+    #averages subject probability maps to get group map
+
     N= len(subject_file)
     first_img = nb.load(f"{wk_dir}/{subject_file[0]}")
     sum_of_data = first_img.get_fdata().astype('float64')
@@ -82,6 +84,8 @@ def get_group_prob_map(subject_file ='sub-01_4d_thalamus_prob_map.nii.gz'):
 
 def get_Vs(subj ='sub-01', map_file = 'sub-01_4d_thalamus_prob_map.nii.gz', map_type='indiv'):
 
+    #weighted average of data times the probability maps to get V matrices of size Tasks x Parcels 
+
     for sub in subj:
         data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas='MNISymThalamus1', 
                                             sess='ses-localizerfm', 
@@ -93,7 +97,7 @@ def get_Vs(subj ='sub-01', map_file = 'sub-01_4d_thalamus_prob_map.nii.gz', map_
         map_img = nb.load(map_file)
         map_data = atlas.read_data(map_img) 
         
-        Vs = data[0] @ map_data.T
+        Vs = data[sub] @ map_data.T
         
         parcel_weight_sums_subj = map_data.sum(axis=1)
         parcel_weight_sums_subj[parcel_weight_sums_subj == 0] = 1
