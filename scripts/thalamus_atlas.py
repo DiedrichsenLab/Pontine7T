@@ -113,31 +113,30 @@ def get_Vs(subj =['sub-01'], map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_tha
         pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices/V_{map_type}_{sub}_norm.pt")
 
 
-def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], V_indiv_file = f"{wk_dir}/V_matrices/V_indiv_sub-01_norm.pt",
-                           V_group_file = f"{wk_dir}/V_matrices/V_group_norm.pt"):
+def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group'):
+
+    avg_similarity_per_parcel = []
     
     for k in range(58):
         parcel_vectors_subj = []
 
         for sub in subj:
-            V_indiv = pt.load(V_indiv_file)
+            V_indiv = pt.load(f"{wk_dir}/V_matrices/V_{type}_{sub}_norm.pt")
             parcel_vector = V_indiv[:, k]
             parcel_vectors_subj.append(parcel_vector)
+            
+            X = np.stack(parcel_vectors_subj, axis=0)
 
-        X = pt.stack(parcel_vectors_subj, dim=0)
+        cosine_similarity_matrix = X@X.T
 
-        cosine_similarity_matrix = pt.zeros((len(subj), len(subj)))
+        triangle_indices = np.triu_indices_from(cosine_similarity_matrix, k=1)
+        cosine_similarity_matrix_values = cosine_similarity_matrix[triangle_indices]
 
-        for i in range(len(subj)):
-            for j in range(len(subj)):
-                v_i = X[i, :]
-                v_j = X[j, :]
-                cosine_similarity = pt.dot(v_i, v_j) / (v_i * v_j)
-                cosine_similarity_matrix[i, j] = cosine_similarity
+        mean_similarity = np.mean(cosine_similarity_matrix_values) 
 
-        cosine_similarities = cosine_similarity_matrix.numpy()
+        avg_similarity_per_parcel.append(mean_similarity) 
     
-    return cosine_similarities
+    return avg_similarity_per_parcel
 
 
 if __name__ == '__main__':
@@ -155,9 +154,11 @@ if __name__ == '__main__':
     # Step 3: Get V matrices for individual and group maps
     #for sub in subjects:
                 
-    sub_list=['sub-01']
+    sub_list=['sub-01','sub-02','sub-03','sub-04',
+              'sub-06','sub-07','sub-08','sub-09']
 
     for sub in sub_list:
+        cosine = calc_cosine_similarity(subj=sub_list, type='subj')
         get_Vs(subj=sub_list, map_file = f"{wk_dir}/pseg_Language7T/{sub}_4d_thalamus_prob_map.nii.gz", map_type='indiv')
         get_Vs(subj='group', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
 
