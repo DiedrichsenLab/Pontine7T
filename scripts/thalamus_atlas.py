@@ -116,6 +116,7 @@ def get_Vs(subj =['sub-01'], map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_tha
 def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group'):
 
     avg_similarity_per_parcel = []
+    similarity_distributions_per_parcel = []
     
     for k in range(58):
         parcel_vectors_subj = []
@@ -132,11 +133,32 @@ def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group'):
         triangle_indices = np.triu_indices_from(cosine_similarity_matrix, k=1)
         cosine_similarity_matrix_values = cosine_similarity_matrix[triangle_indices]
 
+        similarity_distributions_per_parcel.append(cosine_similarity_matrix_values)
+
         mean_similarity = np.mean(cosine_similarity_matrix_values) 
 
         avg_similarity_per_parcel.append(mean_similarity) 
     
-    return avg_similarity_per_parcel
+    return avg_similarity_per_parcel, similarity_distributions_per_parcel   
+
+def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group'):
+
+    avg_similarity_per_subject = []
+    
+    for sub in subj:
+        V = pt.load(f"{wk_dir}/V_matrices/V_{type}_{sub}_norm.pt")
+        X = V.T
+        
+        cosine_similarity_matrix = X@X.T
+
+        triangle_indices = np.triu_indices_from(cosine_similarity_matrix, k=1)
+        cosine_similarity_matrix_values = cosine_similarity_matrix[triangle_indices]
+
+        mean_similarity = np.mean(cosine_similarity_matrix_values) 
+
+        avg_similarity_per_subject.append(mean_similarity) 
+
+    return avg_similarity_per_subject
 
 
 if __name__ == '__main__':
@@ -158,7 +180,7 @@ if __name__ == '__main__':
               'sub-06','sub-07','sub-08','sub-09']
 
     for sub in sub_list:
-        cosine = calc_cosine_similarity(subj=sub_list, type='subj')
+        cosine = calc_cosine_similarity_within(subj=sub_list, type='subj')
         get_Vs(subj=sub_list, map_file = f"{wk_dir}/pseg_Language7T/{sub}_4d_thalamus_prob_map.nii.gz", map_type='indiv')
         get_Vs(subj='group', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
 
