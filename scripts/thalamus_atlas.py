@@ -113,6 +113,33 @@ def get_Vs(subj =['sub-01'], map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_tha
         pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices/V_{map_type}_{sub}_norm.pt")
 
 
+def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], V_indiv_file = f"{wk_dir}/V_matrices/V_indiv_sub-01_norm.pt",
+                           V_group_file = f"{wk_dir}/V_matrices/V_group_norm.pt"):
+    
+    for k in range(58):
+        parcel_vectors_subj = []
+
+        for sub in subj:
+            V_indiv = pt.load(V_indiv_file)
+            parcel_vector = V_indiv[:, k]
+            parcel_vectors_subj.append(parcel_vector)
+
+        X = pt.stack(parcel_vectors_subj, dim=0)
+
+        cosine_similarity_matrix = pt.zeros((len(subj), len(subj)))
+
+        for i in range(len(subj)):
+            for j in range(len(subj)):
+                v_i = X[i, :]
+                v_j = X[j, :]
+                cosine_similarity = pt.dot(v_i, v_j) / (v_i * v_j)
+                cosine_similarity_matrix[i, j] = cosine_similarity
+
+        cosine_similarities = cosine_similarity_matrix.numpy()
+    
+    return cosine_similarities
+
+
 if __name__ == '__main__':
 
     #subjects = ['sub-01','sub-02','sub-03','sub-04','sub-05',
