@@ -12,9 +12,9 @@ import HierarchBayesParcel.util as ut
 wk_dir = '/Users/incehusain/fs_projects'
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
 
-def get_subj_prob_maps(subj ='sub-01', dataset='Language7T'):
+def get_subj_prob_maps(subj =['sub-01'], dataset='Language7T'):
     
-    #Get individual subject probability maps in MNI space; assumes freesurfer thalamus segmentations already done
+    #Get individual subject anatomical thalamus probability maps in MNI space; assumes freesurfer thalamus segmentations already done
     
     template = f"{wk_dir}/tpl-MNI152NLin2009cSym_res-1_T1w.nii"
     template_img = ants.image_read(template)
@@ -82,14 +82,14 @@ def get_group_prob_map(subject_file ='sub-01_4d_thalamus_prob_map.nii.gz'):
     nb.save(mean_img, f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz")
 
 
-def get_Vs(subj ='sub-01', map_file = 'sub-01_4d_thalamus_prob_map.nii.gz', map_type='indiv'):
+def get_Vs(subj =['sub-01'], map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_thalamus_prob_map.nii.gz", map_type='indiv'):
 
     #weighted average of data times the probability maps to get V matrices of size Tasks x Parcels 
 
     for sub in subj:
         data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas='MNISymThalamus1', 
                                             sess='ses-localizerfm', 
-                                            subj=[subj], 
+                                            subj=[sub], 
                                             type='CondAll')
         
         atlas, _ = am.get_atlas('MNISymThalamus1')
@@ -97,36 +97,40 @@ def get_Vs(subj ='sub-01', map_file = 'sub-01_4d_thalamus_prob_map.nii.gz', map_
         map_img = nb.load(map_file)
         map_data = atlas.read_data(map_img) 
         
-        Vs = data[sub] @ map_data.T
+        Vs = data[0] @ map_data.T
         
         parcel_weight_sums_subj = map_data.sum(axis=1)
         parcel_weight_sums_subj[parcel_weight_sums_subj == 0] = 1
         
         Vs_avg = Vs/ parcel_weight_sums_subj  
         
-        pt.save(Vs_avg,f"{wk_dir}/V_matrices/V_{map_type}_{subj}_unnorm.pt")
+        #pt.save(Vs_avg,f"{wk_dir}/V_matrices/V_{map_type}_{subj}_unnorm.pt")
         
         col_norms = np.linalg.norm(Vs_avg, axis=0)
         col_norms[col_norms == 0] = 1
         Vs_subj_normalized = Vs_avg / col_norms
         
-        pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices/V_{map_type}_{subj}_norm.pt")
+        pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices/V_{map_type}_{sub}_norm.pt")
 
 
 if __name__ == '__main__':
 
-    subjects = ['sub-01','sub-02','sub-03','sub-04','sub-05',
-                'sub-06','sub-07','sub-08','sub-09','sub-10']
+    #subjects = ['sub-01','sub-02','sub-03','sub-04','sub-05',
+                #'sub-06','sub-07','sub-08','sub-09','sub-10']
     
     #1: Get individual subject probability maps in MNI space
-    get_subj_prob_maps(subj=subjects, dataset='Language7T')
+    #get_subj_prob_maps(subj=subjects, dataset='Language7T')
     
     #2: Get group average probability map
-    subject_files = [f"{sub}_4d_thalamus_prob_map.nii.gz" for sub in subjects]
-    get_group_prob_map(subject_file=subject_files)
+    #subject_files = [f"{sub}_4d_thalamus_prob_map.nii.gz" for sub in subjects]
+    #get_group_prob_map(subject_file=subject_files)
     
     # Step 3: Get V matrices for individual and group maps
-    for sub in subjects:
-        get_Vs(subj=sub, map_file=f"{wk_dir}/{sub}_4d_thalamus_prob_map.nii.gz", map_type='indiv')
+    #for sub in subjects:
+                
+    sub_list=['sub-01']
+
+    for sub in sub_list:
+        get_Vs(subj=sub_list, map_file = f"{wk_dir}/pseg_Language7T/{sub}_4d_thalamus_prob_map.nii.gz", map_type='indiv')
         get_Vs(subj='group', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
 
