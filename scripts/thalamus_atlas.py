@@ -8,6 +8,7 @@ import nibabel as nb
 import Functional_Fusion.atlas_map as am
 import torch as pt
 import HierarchBayesParcel.util as ut
+import pandas as pd 
 
 wk_dir = '/Users/incehusain/fs_projects'
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
@@ -144,6 +145,7 @@ def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group'):
 def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group'):
 
     avg_similarity_per_subject = []
+    subj_similarity_matrix = {}
     
     for sub in subj:
         V = pt.load(f"{wk_dir}/V_matrices/V_{type}_{sub}_norm.pt")
@@ -157,9 +159,44 @@ def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group'):
         mean_similarity = np.mean(cosine_similarity_matrix_values) 
 
         avg_similarity_per_subject.append(mean_similarity) 
+        subj_similarity_matrix[sub] = cosine_similarity_matrix
 
-    return avg_similarity_per_subject
+    return avg_similarity_per_subject, subj_similarity_matrix
 
+def find_similar_parcels(subj_similarity_matrices, threshold=0.8, num_top_pairs=5):
+    similar_parcels = []
+
+    for sub, matrix in subj_similarity_matrices.items():
+        matrix_upper = matrix.copy()
+        matrix_upper[np.tril_indices_from(matrix_upper)] = -1
+
+        similar_parcels_indices = np.where(matrix_upper > threshold) 
+
+        for i, j in zip(*similar_parcels_indices):
+            pair= tuple(sorted((i, j)))
+            similarity = matrix[i, j]
+            similar_parcels.append({'subject': sub, 'pair': pair, 'similarity': similarity})
+
+        if not similar_parcels:
+            print(f"No similar parcels found for subject {sub} with threshold {threshold}.")
+            return 
+
+        df = pd.DataFrame(similar_parcels)
+
+        pair_counts = df['pair'].value_counts()
+
+        print(f"Top {num_top_pairs} most common similar parcel pairs across subjects:")
+        print("Parcel Pair | Number of subjects showing highest correlation")
+        print("-----------------------------------------------------")
+
+        print(pair_counts.head(num_top_pairs))
+
+        mean_similarity_per_pair = df.groupby('pair')['similarity'].mean().sort_values(ascending=False) 
+        print(f"\nTop {num_top_pairs} mean similarities for parcel pairs:") 
+        
+        print(mean_similarity_per_pair.head(num_top_pairs))
+
+    return pair_counts, mean_similarity_per_pair
 
 if __name__ == '__main__':
 
@@ -181,6 +218,7 @@ if __name__ == '__main__':
 
     for sub in sub_list:
         cosine = calc_cosine_similarity_within(subj=sub_list, type='subj')
+        pairs = find_similar_parcels(cosine[1], threshold=0.8, num_top_pairs=10)
         get_Vs(subj=sub_list, map_file = f"{wk_dir}/pseg_Language7T/{sub}_4d_thalamus_prob_map.nii.gz", map_type='indiv')
         get_Vs(subj='group', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
 
