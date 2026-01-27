@@ -163,7 +163,7 @@ def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group'):
 
     return avg_similarity_per_subject, subj_similarity_matrix
 
-def find_similar_parcels(subj_similarity_matrices, threshold=0.8, num_top_pairs=5):
+def find_similar_parcels(subj_similarity_matrices, threshold=0.8, min_subject=5):
     similar_parcels = []
 
     for sub, matrix in subj_similarity_matrices.items():
@@ -177,26 +177,38 @@ def find_similar_parcels(subj_similarity_matrices, threshold=0.8, num_top_pairs=
             similarity = matrix[i, j]
             similar_parcels.append({'subject': sub, 'pair': pair, 'similarity': similarity})
 
-        if not similar_parcels:
-            print(f"No similar parcels found for subject {sub} with threshold {threshold}.")
-            return 
+    if not similar_parcels:
+        print(f"No similar parcels found for subject {sub} with threshold {threshold}.")
+        return 
 
-        df = pd.DataFrame(similar_parcels)
+    df = pd.DataFrame(similar_parcels)
 
-        pair_counts = df['pair'].value_counts()
+    pair_counts = df['pair'].value_counts()
 
-        print(f"Top {num_top_pairs} most common similar parcel pairs across subjects:")
-        print("Parcel Pair | Number of subjects showing highest correlation")
-        print("-----------------------------------------------------")
+    pairs_across_subj = pair_counts[pair_counts >= min_subject].index.tolist()
 
-        print(pair_counts.head(num_top_pairs))
-
-        mean_similarity_per_pair = df.groupby('pair')['similarity'].mean().sort_values(ascending=False) 
-        print(f"\nTop {num_top_pairs} mean similarities for parcel pairs:") 
+    if not pairs_across_subj:
+        print(f"No parcel pairs found with similarity above {threshold} in at least {min_subject} subjects.")
+        return None
         
-        print(mean_similarity_per_pair.head(num_top_pairs))
 
-    return pair_counts, mean_similarity_per_pair
+    all_subjects = list(subj_similarity_matrices.keys())
+    results = []    
+
+    for pair in pairs_across_subj:
+        parcel1_idx, parcel2_idx = pair
+        similarities = [subj_similarity_matrices[sub][parcel1_idx, parcel2_idx] for sub in all_subjects]
+        avg_similarity_all_subjects = np.mean(similarities)
+
+        results.append({'pair': pair, 'avg_similarity_all_subjects': avg_similarity_all_subjects,
+                'num_subjects_above_threshold': pair_counts[pair]
+            })
+
+    results_df = pd.DataFrame(results)
+    results_df = results_df.sort_values(by=['num_subjects_above_threshold', 'avg_similarity_all_subjects'], ascending=[False, False])
+    results_df = results_df.set_index('pair')
+
+    return results_df
 
 if __name__ == '__main__':
 
@@ -217,8 +229,8 @@ if __name__ == '__main__':
               'sub-06','sub-07','sub-08','sub-09']
 
     for sub in sub_list:
-        cosine = calc_cosine_similarity_within(subj=sub_list, type='subj')
-        pairs = find_similar_parcels(cosine[1], threshold=0.8, num_top_pairs=10)
+        cosine = calc_cosine_similarity_within(subj=sub_list, type='group')
+        pairs = find_similar_parcels(cosine[1], threshold=0.8, min_subject=5)
         get_Vs(subj=sub_list, map_file = f"{wk_dir}/pseg_Language7T/{sub}_4d_thalamus_prob_map.nii.gz", map_type='indiv')
         get_Vs(subj='group', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
 
