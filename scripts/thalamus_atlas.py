@@ -9,6 +9,10 @@ import Functional_Fusion.atlas_map as am
 import torch as pt
 import HierarchBayesParcel.util as ut
 import pandas as pd 
+import HierarchBayesParcel.emissions as em
+import HierarchBayesParcel.arrangements as ar
+import HierarchBayesParcel.full_model as fm
+
 
 wk_dir = '/Users/incehusain/fs_projects'
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
@@ -83,13 +87,13 @@ def get_group_prob_map(subject_file ='sub-01_4d_thalamus_prob_map.nii.gz'):
     nb.save(mean_img, f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz")
 
 
-def get_Vs(subj =['sub-01'], map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_thalamus_prob_map.nii.gz", map_type='indiv'):
+def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_thalamus_prob_map.nii.gz", map_type='indiv'):
 
     #weighted average of data times the probability maps to get V matrices of size Tasks x Parcels 
 
     for sub in subj:
-        data, info, ds_obj = ds.get_dataset(base_dir,'Language',atlas='MNISymThalamus1', 
-                                            sess='ses-localizerfm', 
+        data, info, ds_obj = ds.get_dataset(base_dir, dataset ,atlas='MNISymThalamus1', 
+                                            sess=session, 
                                             subj=[sub], 
                                             type='CondAll')
         
@@ -111,10 +115,71 @@ def get_Vs(subj =['sub-01'], map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_tha
         col_norms[col_norms == 0] = 1
         Vs_subj_normalized = Vs_avg / col_norms
         
-        pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices/V_{map_type}_{sub}_norm.pt")
+        pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices_{dataset}/V_{map_type}_{sub}_norm.pt")
 
+def build_emissions(K,P,atlas='MNISymThalamus1'):
 
-def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group'):
+    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s1',  subj=None, type='CondRun')
+    cond_v = info['cond_num_uni']
+    part_v = info['run']
+    X= ut.indicator(cond_v)
+    em_model_mdtb1 = em.MixVMF(K=K,P=P, X=X,part_vec=part_v)
+    em_model_mdtb1.initialize(data)
+
+    data2, info2,ds_obj2 = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s2',subj=None, type='CondRun')
+    cond_v2 = info2['cond_num_uni']
+    part_v2 = info2['run']
+    X2= ut.indicator(cond_v2)
+    em_model_mdtb2 = em.MixVMF(K=K,P=P, X=X2,part_vec=part_v2)
+    em_model_mdtb2.initialize(data2)
+
+    data3, info3, ds_obj3 = ds.get_dataset(base_dir,'Language',atlas=atlas, sess='ses-localizerfm', subj=None, type='CondRun')
+    cond_v3 = info3['task']
+    part_v3 = info3['run']
+    X3= ut.indicator(cond_v3)
+    em_model_language = em.MixVMF(K=K,P=P, X=X3,part_vec=part_v3)
+    em_model_language.initialize(data3)
+
+    data4, info4, ds_obj4 = ds.get_dataset(base_dir,'Pontine',atlas=atlas, sess='ses-s1', subj=None, type='CondRun')    
+    cond_v4 = info4['task']
+    part_v4 = info4['run']
+    X4= ut.indicator(cond_v4)
+    em_model_pontine = em.MixVMF(K=K,P=P, X=X4,part_vec=part_v4)
+    em_model_pontine(data4)
+
+    return em_model_mdtb1, em_model_mdtb2, em_model_language, em_model_pontine
+
+def estimate_new_atlas(): 
+     
+    # Get atlas for dentate 
+
+     atlas, _ = am.get_atlas('MNISymThalamus1')    
+
+     ar_model = ar.ArrangeIndependent(K=32, P=atlas.P, spatial_specific=True, remove_redundancy=False)
+
+     emissions = build_emissions(ar_model.K,atlas.P,atlas='MNISymThalamus1')
+
+     emissions[0].V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
+     emissions[1].V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses2).pt")
+     emissions[2].V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
+     emissions[3].V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
+
+     for em_model in emissions:
+            em_model.set_param_list(['kappa'])
+    
+     M= fm.FullMultiModel(ar_model, [emissions[0], emissions[1], emissions[2], emissions[3]])
+
+     M.initialize()
+
+     M, ll, _, _ = M.fit_em(iter=200, tol=0.01,
+        fit_arrangement=True,fit_emission=True,first_evidence=True)
+     
+     Prob = M.arrange.marginal_prob().numpy()
+     np.save(f"{wk_dir}/Prob_thalamus.npy",Prob)
+
+     return M
+
+def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group', dataset='Language'):
 
     avg_similarity_per_parcel = []
     similarity_distributions_per_parcel = []
@@ -123,7 +188,7 @@ def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group'):
         parcel_vectors_subj = []
 
         for sub in subj:
-            V_indiv = pt.load(f"{wk_dir}/V_matrices/V_{type}_{sub}_norm.pt")
+            V_indiv = pt.load(f"{wk_dir}/V_matrices_{dataset}/V_{type}_{sub}_norm.pt")
             parcel_vector = V_indiv[:, k]
             parcel_vectors_subj.append(parcel_vector)
             
@@ -142,13 +207,13 @@ def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group'):
     
     return avg_similarity_per_parcel, similarity_distributions_per_parcel   
 
-def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group'):
+def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group', dataset='Language'):
 
     avg_similarity_per_subject = []
     subj_similarity_matrix = {}
     
     for sub in subj:
-        V = pt.load(f"{wk_dir}/V_matrices/V_{type}_{sub}_norm.pt")
+        V = pt.load(f"{wk_dir}/V_matrices_{dataset}/V_{type}_{sub}_norm.pt")
         X = V.T
         
         cosine_similarity_matrix = X@X.T
@@ -224,13 +289,25 @@ if __name__ == '__main__':
     
     # Step 3: Get V matrices for individual and group maps
     #for sub in subjects:
-                
-    sub_list=['sub-01','sub-02','sub-03','sub-04',
-              'sub-06','sub-07','sub-08','sub-09']
+
+    #Language: sub_list=['sub-01','sub-02','sub-03','sub-04','sub-06','sub-07','sub-08','sub-09']
+    
+    #MDTB: sub_list = ['sub-02','sub-03','sub-04', 'sub-06','sub-08','sub-09', 'sub-10', 'sub-12','sub-14','sub-15','sub-17', 'sub-18',
+             # 'sub-19','sub-20', 'sub-21', 'sub-22','sub-24', 'sub-25','sub-26','sub-27', 'sub-28', 'sub-29','sub-30', 'sub-31']
+    
+    sub_list=['sub-02','sub-03','sub-04',
+              'sub-06','sub-08','sub-09',
+              'sub-10', 'sub-12','sub-14',
+              'sub-15','sub-17', 'sub-18',
+              'sub-19','sub-20', 'sub-21',
+              'sub-22','sub-24', 'sub-25',
+              'sub-26','sub-27', 'sub-28',
+                'sub-29','sub-30', 'sub-31']
 
     for sub in sub_list:
-        cosine = calc_cosine_similarity_within(subj=sub_list, type='group')
-        pairs = find_similar_parcels(cosine[1], threshold=0.8, min_subject=5)
-        get_Vs(subj=sub_list, map_file = f"{wk_dir}/pseg_Language7T/{sub}_4d_thalamus_prob_map.nii.gz", map_type='indiv')
-        get_Vs(subj='group', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
+        #cosine = calc_cosine_similarity(subj=sub_list, type='group', dataset='MDTB_ses1')
+        cosine = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='MDTB_ses2')
+        pairs = find_similar_parcels(cosine[1], threshold=0.8, min_subject=13)
+        get_Vs(subj=sub_list, dataset = 'MDTB', session = 'ses-s2', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
+        #get_Vs(subj=sub_list, dataset = 'Language', session = 'ses-localizerfm', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
 
