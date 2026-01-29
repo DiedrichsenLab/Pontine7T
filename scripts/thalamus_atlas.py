@@ -119,35 +119,35 @@ def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', 
 
 def build_emissions(K,P,atlas='MNISymThalamus1'):
 
-    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s1',  subj=None, type='CondRun')
-    cond_v = info['cond_num_uni']
-    part_v = info['run']
-    X= ut.indicator(cond_v)
-    em_model_mdtb1 = em.MixVMF(K=K,P=P, X=X,part_vec=part_v)
+    data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s1',  subj=None, type='CondAll')
+    #cond_v = info['cond_num_uni']
+    #part_v = info['run']
+    #X= ut.indicator(cond_v)
+    em_model_mdtb1 = em.MixVMF(K=K,P=P)
     em_model_mdtb1.initialize(data)
 
-    data2, info2,ds_obj2 = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s2',subj=None, type='CondRun')
-    cond_v2 = info2['cond_num_uni']
-    part_v2 = info2['run']
-    X2= ut.indicator(cond_v2)
-    em_model_mdtb2 = em.MixVMF(K=K,P=P, X=X2,part_vec=part_v2)
+    data2, info2,ds_obj2 = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s2',subj=None, type='CondAll')
+    #cond_v2 = info2['cond_num_uni']
+    #part_v2 = info2['run']
+    #X2= ut.indicator(cond_v2)
+    em_model_mdtb2 = em.MixVMF(K=K,P=P)
     em_model_mdtb2.initialize(data2)
 
     data3, info3, ds_obj3 = ds.get_dataset(base_dir,'Language',atlas=atlas, sess='ses-localizerfm', subj=None, type='CondRun')
-    cond_v3 = info3['task']
-    part_v3 = info3['run']
-    X3= ut.indicator(cond_v3)
-    em_model_language = em.MixVMF(K=K,P=P, X=X3,part_vec=part_v3)
+    #cond_v3 = info3['task']
+    #part_v3 = info3['run']
+    #X3= ut.indicator(cond_v3)
+    em_model_language = em.MixVMF(K=K,P=P)
     em_model_language.initialize(data3)
 
-    data4, info4, ds_obj4 = ds.get_dataset(base_dir,'Pontine',atlas=atlas, sess='ses-s1', subj=None, type='CondRun')    
-    cond_v4 = info4['task']
-    part_v4 = info4['run']
-    X4= ut.indicator(cond_v4)
-    em_model_pontine = em.MixVMF(K=K,P=P, X=X4,part_vec=part_v4)
-    em_model_pontine(data4)
+    #data4, info4, ds_obj4 = ds.get_dataset(base_dir,'Pontine',atlas=atlas, sess='ses-s1', subj=None, type='CondRun')    
+    #cond_v4 = info4['task']
+    #part_v4 = info4['run']
+    #X4= ut.indicator(cond_v4)
+    #em_model_pontine = em.MixVMF(K=K,P=P, X=X4,part_vec=part_v4)
+    #em_model_pontine(data4)
 
-    return em_model_mdtb1, em_model_mdtb2, em_model_language, em_model_pontine
+    return em_model_mdtb1, em_model_mdtb2, em_model_language
 
 def estimate_new_atlas(): 
      
@@ -162,12 +162,12 @@ def estimate_new_atlas():
      emissions[0].V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses1).pt")
      emissions[1].V = pt.load(f"{wk_dir}/V_cerebcortex_MDTB(ses2).pt")
      emissions[2].V = pt.load(f"{wk_dir}/V_cerebcortex_Language.pt")
-     emissions[3].V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
+     #emissions[3].V = pt.load(f"{wk_dir}/V_cerebcortex_Pontine.pt")
 
      for em_model in emissions:
             em_model.set_param_list(['kappa'])
     
-     M= fm.FullMultiModel(ar_model, [emissions[0], emissions[1], emissions[2], emissions[3]])
+     M= fm.FullMultiModel(ar_model, [emissions[0], emissions[1], emissions[2]])
 
      M.initialize()
 
@@ -306,6 +306,7 @@ if __name__ == '__main__':
 
     for sub in sub_list:
         #cosine = calc_cosine_similarity(subj=sub_list, type='group', dataset='MDTB_ses1')
+        emissions = build_emissions(K=58,P=24291,atlas='MNISymThalamus1')
         cosine = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='MDTB_ses2')
         pairs = find_similar_parcels(cosine[1], threshold=0.8, min_subject=13)
         get_Vs(subj=sub_list, dataset = 'MDTB', session = 'ses-s2', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
