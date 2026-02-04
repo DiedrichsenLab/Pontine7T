@@ -181,6 +181,8 @@ def estimate_new_atlas():
 
 def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group', dataset='Language'):
 
+    #computes average cosine similarities between subjects for each same parcel 
+
     avg_similarity_per_parcel = []
     similarity_distributions_per_parcel = []
     
@@ -209,6 +211,8 @@ def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group', dataset='L
 
 def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group', dataset='Language'):
 
+#calculates cosine similarities within each subject between all parcel pairs
+    
     avg_similarity_per_subject = []
     subj_similarity_matrix = {}
     
@@ -227,6 +231,17 @@ def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group', dat
         subj_similarity_matrix[sub] = cosine_similarity_matrix
 
     return avg_similarity_per_subject, subj_similarity_matrix
+
+def avg_similarity_matrices(subj_similarity_matrices):
+
+    all_matrices = []
+    
+    for sub in subj_similarity_matrices.keys():
+        all_matrices.append(subj_similarity_matrices[sub])
+    
+    mean_similarity_matrix = np.mean(np.array(all_matrices), axis=0)
+    
+    return mean_similarity_matrix
 
 def find_similar_parcels(subj_similarity_matrices, threshold=0.8, min_subject=5):
     similar_parcels = []
@@ -295,20 +310,14 @@ if __name__ == '__main__':
     #MDTB: sub_list = ['sub-02','sub-03','sub-04', 'sub-06','sub-08','sub-09', 'sub-10', 'sub-12','sub-14','sub-15','sub-17', 'sub-18',
              # 'sub-19','sub-20', 'sub-21', 'sub-22','sub-24', 'sub-25','sub-26','sub-27', 'sub-28', 'sub-29','sub-30', 'sub-31']
     
-    sub_list=['sub-02','sub-03','sub-04',
-              'sub-06','sub-08','sub-09',
-              'sub-10', 'sub-12','sub-14',
-              'sub-15','sub-17', 'sub-18',
-              'sub-19','sub-20', 'sub-21',
-              'sub-22','sub-24', 'sub-25',
-              'sub-26','sub-27', 'sub-28',
-                'sub-29','sub-30', 'sub-31']
+    sub_list= ['sub-01','sub-02','sub-03','sub-04','sub-06','sub-07','sub-08','sub-09']
 
     for sub in sub_list:
         #cosine = calc_cosine_similarity(subj=sub_list, type='group', dataset='MDTB_ses1')
-        emissions = build_emissions(K=58,P=24291,atlas='MNISymThalamus1')
-        cosine = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='MDTB_ses2')
-        pairs = find_similar_parcels(cosine[1], threshold=0.8, min_subject=13)
-        get_Vs(subj=sub_list, dataset = 'MDTB', session = 'ses-s2', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
+       # emissions = build_emissions(K=58,P=24291,atlas='MNISymThalamus1')
+        cosine_subj_matrices = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='Language')
+        mean_similarity_matrix = avg_similarity_matrices(cosine_subj_matrices[1])
+        #pairs = find_similar_parcels(cosine[1], threshold=0.8, min_subject=13)
+        get_Vs(subj=sub_list, dataset = 'MDTB', session = 'ses-s1', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
         #get_Vs(subj=sub_list, dataset = 'Language', session = 'ses-localizerfm', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
 
