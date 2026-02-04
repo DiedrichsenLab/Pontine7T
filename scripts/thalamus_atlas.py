@@ -12,6 +12,9 @@ import pandas as pd
 import HierarchBayesParcel.emissions as em
 import HierarchBayesParcel.arrangements as ar
 import HierarchBayesParcel.full_model as fm
+import matplotlib.pyplot as plt
+import pandas as pd 
+
 
 
 wk_dir = '/Users/incehusain/fs_projects'
@@ -243,6 +246,22 @@ def avg_similarity_matrices(subj_similarity_matrices):
     
     return mean_similarity_matrix
 
+def find_similar_parcels_within_dataset(mean_similarity_matrix, threshold=0.8):
+    rows, cols = np.triu_indices_from(mean_similarity_matrix, k=1)
+
+    high_corr_pairs = []
+
+    for i, j in zip(rows, cols):
+        similarity = mean_similarity_matrix[i, j]
+        if similarity > threshold:
+            high_corr_pairs.append({'pair': (i, j), 'similarity': similarity})
+
+    high_corr_pairs.sort(key=lambda x: x['similarity'], reverse=True)
+
+    results_df = pd.DataFrame(high_corr_pairs)
+
+    return results_df
+
 def find_similar_parcels(subj_similarity_matrices, threshold=0.8, min_subject=5):
     similar_parcels = []
 
@@ -312,12 +331,72 @@ if __name__ == '__main__':
     
     sub_list= ['sub-01','sub-02','sub-03','sub-04','sub-06','sub-07','sub-08','sub-09']
 
+    sub_list2 = ['sub-02','sub-03','sub-04', 'sub-06','sub-08','sub-09', 'sub-10', 'sub-12','sub-14','sub-15','sub-17', 'sub-18',
+              'sub-19','sub-20', 'sub-21', 'sub-22','sub-24', 'sub-25','sub-26','sub-27', 'sub-28', 'sub-29','sub-30', 'sub-31']
+
     for sub in sub_list:
         #cosine = calc_cosine_similarity(subj=sub_list, type='group', dataset='MDTB_ses1')
        # emissions = build_emissions(K=58,P=24291,atlas='MNISymThalamus1')
-        cosine_subj_matrices = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='Language')
-        mean_similarity_matrix = avg_similarity_matrices(cosine_subj_matrices[1])
+        subj_matrices_Language = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='Language')
+        mean_similarity_matrix_Language = avg_similarity_matrices(subj_matrices_Language[1])
+        pairs_Language = find_similar_parcels_within_dataset(mean_similarity_matrix_Language, threshold=0.8)
         #pairs = find_similar_parcels(cosine[1], threshold=0.8, min_subject=13)
-        get_Vs(subj=sub_list, dataset = 'MDTB', session = 'ses-s1', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
+        #get_Vs(subj=sub_list, dataset = 'MDTB', session = 'ses-s1', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
         #get_Vs(subj=sub_list, dataset = 'Language', session = 'ses-localizerfm', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
+
+    for sub in sub_list2:
+        subj_matrices_MDTB_ses1 = calc_cosine_similarity_within(subj=sub_list2, type='group', dataset='MDTB_ses1')
+        mean_similarity_matrix_MDTB_ses1 = avg_similarity_matrices(subj_matrices_MDTB_ses1[1])
+        pairs_MDTB_ses_1 = find_similar_parcels_within_dataset(mean_similarity_matrix_MDTB_ses1, threshold=0.8)
+
+    for sub in sub_list2:
+        subj_matrices_MDTB_ses2 = calc_cosine_similarity_within(subj=sub_list2, type='group', dataset='MDTB_ses2')
+        mean_similarity_matrix_MDTB_ses2 = avg_similarity_matrices(subj_matrices_MDTB_ses2[1])
+        pairs_MDTB_ses_2 = find_similar_parcels_within_dataset(mean_similarity_matrix_MDTB_ses2, threshold=0.8)
+
+#attempting to plot
+        
+    set_Language = set(pairs_Language['pair'].tolist())
+    set_MDTB_ses1 = set(pairs_MDTB_ses_1['pair'].tolist())
+    set_MDTB_ses2 = set(pairs_MDTB_ses_2['pair'].tolist())
+
+    common_pairs_all = set_Language.intersection(set_MDTB_ses1).intersection(set_MDTB_ses2)
+
+    common_pairs_Language_MDTB1 = set_Language.intersection(set_MDTB_ses1)
+    common_pairs_Language_MDTB2 = set_Language.intersection(set_MDTB_ses2)
+    common_pairs_MDTB1_MDTB2 = set_MDTB_ses1.intersection(set_MDTB_ses2)
+
+    all_unique_pairs = set_Language.union(set_MDTB_ses1).union(set_MDTB_ses2)
+
+    Language_similarities = []
+    MDTB_ses1_similarities = []
+    MDTB_ses2_similarities = []
+
+    for pair in common_pairs_all:
+        Language_similarity = pairs_Language.loc[pairs_Language['pair'] == pair]['similarity'].values
+        MDTB_ses1_similarity = pairs_MDTB_ses_1.loc[pairs_MDTB_ses_1['pair']== pair]['similarity'].values
+        MDTB_ses2_similarity = pairs_MDTB_ses_2.loc[pairs_MDTB_ses_2['pair']==pair]['similarity'].values
+        Language_similarities.append(Language_similarity[0])
+        MDTB_ses1_similarities.append(MDTB_ses1_similarity[0])
+        MDTB_ses2_similarities.append(MDTB_ses2_similarity[0])
+
+    ax = pairs_Language.plot(kind='bar', figsize=(12, 6))
+    
+    ax.bar(common_pairs_all, Language_similarities, color='purple')
+    ax.bar(common_pairs_all, MDTB_ses1_similarities, 'o-', label='MDTB_ses1', color='skyblue', linewidth=2, markersize=5)
+    ax.bar(common_pairs_all, MDTB_ses2_similarities, 'o-', label='MDTB_ses2', color='orange', linewidth=2, markersize=5)
+    
+    ax.set_title('Within Subject Similarity of Different Parcel Functional Signatures', fontsize=16)
+    ax.set_xlabel('Subject Index', fontsize=12)
+    ax.set_ylabel('Average Cosine Similarity', fontsize=12)
+    ax.set_xticks(common_pairs_all)
+    
+    ax.set_ylim(0, 1)
+    ax.axhline(0, color='black', linestyle='--', linewidth=0.7)
+    ax.legend(fontsize=12)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.show()
+
+    print("DONE")
 
