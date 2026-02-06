@@ -334,6 +334,12 @@ if __name__ == '__main__':
             #   'sub-16', 'sub-17', 'sub-18', 'sub-19', 'sub-20', 'sub-21', 'sub-22', 'sub-24',
              #  'sub-25', 'sub-26', 'sub-27']
     
+    #WMFS: sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06','sub-07','sub-08','sub-09', 'sub-10','sub-11','sub-12','sub-13','sub-14','sub-15','sub-16']
+
+    #Nishimoto: sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06']
+
+    #IBC: sub_list = ['sub-01','sub-02', 'sub-04', 'sub-05','sub-06', 'sub-07', 'sub-08', 'sub-09', 'sub-11', 'sub-12', 'sub-13', 'sub-14', 'sub-15']
+    
     sub_list= ['sub-04', 'sub-05',  'sub-07', 'sub-08', 'sub-09', 'sub-10',
                'sub-11', 'sub-12', 'sub-13', 'sub-14',  
                'sub-16', 'sub-17', 'sub-18', 'sub-19', 'sub-20', 'sub-21', 'sub-22', 'sub-24',
