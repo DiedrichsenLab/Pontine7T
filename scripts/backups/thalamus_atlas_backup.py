@@ -118,7 +118,7 @@ def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', 
         col_norms[col_norms == 0] = 1
         Vs_subj_normalized = Vs_avg / col_norms
         
-        pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices_{dataset}/{session}_V_{map_type}_{sub}_norm.pt")
+        pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices_{dataset}/V_{map_type}_{sub}_norm.pt")
 
 def build_emissions(K,P,atlas='MNISymThalamus1'):
 
@@ -182,7 +182,7 @@ def estimate_new_atlas():
 
      return M
 
-def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group', dataset='Language', sess = 'ses-localizerfm'):
+def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group', dataset='Language'):
 
     #computes average cosine similarities between subjects for each same parcel 
 
@@ -193,7 +193,7 @@ def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group', dataset='L
         parcel_vectors_subj = []
 
         for sub in subj:
-            V_indiv = pt.load(f"{wk_dir}/V_matrices_{dataset}/{sess}_V_{type}_{sub}_norm.pt")
+            V_indiv = pt.load(f"{wk_dir}/V_matrices_{dataset}/V_{type}_{sub}_norm.pt")
             parcel_vector = V_indiv[:, k]
             parcel_vectors_subj.append(parcel_vector)
             
@@ -212,7 +212,7 @@ def calc_cosine_similarity(subj = ['sub-01', 'sub-02'], type='group', dataset='L
     
     return avg_similarity_per_parcel, similarity_distributions_per_parcel   
 
-def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group', dataset='Language', sess = 'ses-localizerfm'):
+def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group', dataset='Language'):
 
 #calculates cosine similarities within each subject between all parcel pairs
     
@@ -220,7 +220,7 @@ def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group', dat
     subj_similarity_matrix = {}
     
     for sub in subj:
-        V = pt.load(f"{wk_dir}/V_matrices_{dataset}/{sess}_V_{type}_{sub}_norm.pt")
+        V = pt.load(f"{wk_dir}/V_matrices_{dataset}/V_{type}_{sub}_norm.pt")
         X = V.T
         
         cosine_similarity_matrix = X@X.T
@@ -246,7 +246,73 @@ def avg_similarity_matrices(subj_similarity_matrices):
     
     return mean_similarity_matrix
 
+def find_similar_parcels_within_dataset(mean_similarity_matrix, threshold=0.8):
+    rows, cols = np.triu_indices_from(mean_similarity_matrix, k=1)
+
+    high_corr_pairs = []
+
+    for i, j in zip(rows, cols):
+        similarity = mean_similarity_matrix[i, j]
+        if similarity > threshold:
+            high_corr_pairs.append({'pair': (i, j), 'similarity': similarity})
+
+    high_corr_pairs.sort(key=lambda x: x['similarity'], reverse=True)
+
+    results_df = pd.DataFrame(high_corr_pairs)
+
+    return results_df
+
+def find_similar_parcels(subj_similarity_matrices, threshold=0.8, min_subject=5):
+    similar_parcels = []
+
+    for sub, matrix in subj_similarity_matrices.items():
+        matrix_upper = matrix.copy()
+        matrix_upper[np.tril_indices_from(matrix_upper)] = -1
+
+        similar_parcels_indices = np.where(matrix_upper > threshold) 
+
+        for i, j in zip(*similar_parcels_indices):
+            pair= tuple(sorted((i, j)))
+            similarity = matrix[i, j]
+            similar_parcels.append({'subject': sub, 'pair': pair, 'similarity': similarity})
+
+    if not similar_parcels:
+        print(f"No similar parcels found for subject {sub} with threshold {threshold}.")
+        return 
+
+    df = pd.DataFrame(similar_parcels)
+
+    pair_counts = df['pair'].value_counts()
+
+    pairs_across_subj = pair_counts[pair_counts >= min_subject].index.tolist()
+
+    if not pairs_across_subj:
+        print(f"No parcel pairs found with similarity above {threshold} in at least {min_subject} subjects.")
+        return None
+        
+
+    all_subjects = list(subj_similarity_matrices.keys())
+    results = []    
+
+    for pair in pairs_across_subj:
+        parcel1_idx, parcel2_idx = pair
+        similarities = [subj_similarity_matrices[sub][parcel1_idx, parcel2_idx] for sub in all_subjects]
+        avg_similarity_all_subjects = np.mean(similarities)
+
+        results.append({'pair': pair, 'avg_similarity_all_subjects': avg_similarity_all_subjects,
+                'num_subjects_above_threshold': pair_counts[pair]
+            })
+
+    results_df = pd.DataFrame(results)
+    results_df = results_df.sort_values(by=['num_subjects_above_threshold', 'avg_similarity_all_subjects'], ascending=[False, False])
+    results_df = results_df.set_index('pair')
+
+    return results_df
+
 if __name__ == '__main__':
+
+    #subjects = ['sub-01','sub-02','sub-03','sub-04','sub-05',
+                #'sub-06','sub-07','sub-08','sub-09','sub-10']
     
     #1: Get individual subject probability maps in MNI space
     #get_subj_prob_maps(subj=subjects, dataset='Language7T')
@@ -258,46 +324,11 @@ if __name__ == '__main__':
     # Step 3: Get V matrices for individual and group maps
     #for sub in subjects:
 
-
-                       # 'ses-archi',
-                       #  'ses-clips4',
-                       #  'ses-enumeration',
-                       #  'ses-hcp1', 'ses-hcp2',
-                       #  'ses-lyon1', 'ses-lyon2',
-                       #  'ses-mathlang',
-                       #  'ses-mtt1', 'ses-mtt2',
-                       #  'ses-preference',
-                       #  'ses-rsvplanguage',
-                       #  'ses-spatialnavigation',
-                       #  'ses-tom']
-    
-    dataset = 'IBC'
-    sess = 'ses-tom'
-
-    sub_list = ['sub-01', 'sub-04', 'sub-05','sub-06', 'sub-07', 'sub-08', 'sub-09', 'sub-11', 'sub-12', 'sub-13', 'sub-14', 'sub-15']
-
-    for sub in sub_list:        
-        cosine = calc_cosine_similarity(subj=sub_list, type='group', dataset='IBC', sess='ses-tom')
-        pt.save(cosine[0],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_btwn_subj_avg_parcels_group.pt")
-        pt.save(cosine[1],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_btwn_subj_parcels_group.pt")
-
-        subj_matrices = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='IBC', sess='ses-tom')
-        pt.save(subj_matrices[0],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_within_subj_groupV.pt")
-
-        mean_similarity_matrix = avg_similarity_matrices(subj_matrices[1])
-        pt.save(mean_similarity_matrix,f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_avg_all_parcels.pt")
-
-        #get_Vs(subj=sub_list, dataset = 'Social', session = 'ses-social', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
-        #get_Vs(subj=sub_list, dataset = 'Language', session = 'ses-localizerfm', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
-        #emissions = build_emissions(K=58,P=24291,atlas='MNISymThalamus1')
-
+    #Language: sub_list=['sub-01','sub-02','sub-03','sub-04','sub-06','sub-07','sub-08','sub-09']
     
     #MDTB: sub_list = ['sub-02','sub-03','sub-04', 'sub-06','sub-08','sub-09', 'sub-10', 'sub-12','sub-14','sub-15','sub-17', 'sub-18',
              # 'sub-19','sub-20', 'sub-21', 'sub-22','sub-24', 'sub-25','sub-26','sub-27', 'sub-28', 'sub-29','sub-30', 'sub-31']
-        
-    #Language:  sub_list=['sub-01', 'sub-02', 'sub-04', 'sub-06', 'sub-07', 'sub-08', 'sub-09',
-               #'sub-10', 'sub-12', 'sub-13', 'sub-14', 'sub-15', 'sub-16', 'sub-17', 'sub-18', 'sub-19']
-        
+    
     #Social:  sub_list= ['sub-04', 'sub-05',  'sub-07', 'sub-08', 'sub-09', 'sub-10',
            #    'sub-11', 'sub-12', 'sub-13', 'sub-14',  
             #   'sub-16', 'sub-17', 'sub-18', 'sub-19', 'sub-20', 'sub-21', 'sub-22', 'sub-24',
@@ -308,7 +339,110 @@ if __name__ == '__main__':
     #Nishimoto: sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06']
 
     #IBC: sub_list = ['sub-01','sub-02', 'sub-04', 'sub-05','sub-06', 'sub-07', 'sub-08', 'sub-09', 'sub-11', 'sub-12', 'sub-13', 'sub-14', 'sub-15']
+    
+    sub_list= ['sub-04', 'sub-05',  'sub-07', 'sub-08', 'sub-09', 'sub-10',
+               'sub-11', 'sub-12', 'sub-13', 'sub-14',  
+               'sub-16', 'sub-17', 'sub-18', 'sub-19', 'sub-20', 'sub-21', 'sub-22', 'sub-24',
+               'sub-25', 'sub-26', 'sub-27']
 
+    sub_list2 = ['sub-02','sub-03','sub-04', 'sub-06','sub-08','sub-09', 'sub-10', 'sub-12','sub-14','sub-15','sub-17', 'sub-18',
+              'sub-19','sub-20', 'sub-21', 'sub-22','sub-24', 'sub-25','sub-26','sub-27', 'sub-28', 'sub-29','sub-30', 'sub-31']
+    
+    sub_list3=['sub-01','sub-02','sub-03','sub-04','sub-06','sub-07','sub-08','sub-09']
+
+    for sub in sub_list:
+        cosine = calc_cosine_similarity(subj=sub_list, type='group', dataset='Social')
+       # emissions = build_emissions(K=58,P=24291,atlas='MNISymThalamus1')
+        subj_matrices_Social = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='Social')
+        mean_similarity_matrix_Social = avg_similarity_matrices(subj_matrices_Social[1])
+        pairs_Social = find_similar_parcels_within_dataset(mean_similarity_matrix_Social, threshold=0.75)
+        #pairs = find_similar_parcels(cosine[1], threshold=0.8, min_subject=13)
+        #get_Vs(subj=sub_list, dataset = 'Social', session = 'ses-social', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
+        #get_Vs(subj=sub_list, dataset = 'Language', session = 'ses-localizerfm', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
+
+    for sub in sub_list2:
+        subj_matrices_MDTB_ses1 = calc_cosine_similarity_within(subj=sub_list2, type='group', dataset='MDTB_ses1')
+        mean_similarity_matrix_MDTB_ses1 = avg_similarity_matrices(subj_matrices_MDTB_ses1[1])
+        pairs_MDTB_ses_1 = find_similar_parcels_within_dataset(mean_similarity_matrix_MDTB_ses1, threshold=0.75)
+
+    for sub in sub_list2:
+        subj_matrices_MDTB_ses2 = calc_cosine_similarity_within(subj=sub_list2, type='group', dataset='MDTB_ses2')
+        mean_similarity_matrix_MDTB_ses2 = avg_similarity_matrices(subj_matrices_MDTB_ses2[1])
+        pairs_MDTB_ses_2 = find_similar_parcels_within_dataset(mean_similarity_matrix_MDTB_ses2, threshold=0.75)
+
+    for sub in sub_list3:
+        subj_matrices_Language = calc_cosine_similarity_within(subj=sub_list3, type='group', dataset='Language')
+        mean_similarity_matrix_Language = avg_similarity_matrices(subj_matrices_Language[1])
+        pairs_Language = find_similar_parcels_within_dataset(mean_similarity_matrix_Language, threshold=0.75)
+
+#attempting to plot
+        
+    set_Language = set(pairs_Language['pair'].tolist())
+    set_MDTB_ses1 = set(pairs_MDTB_ses_1['pair'].tolist())
+    set_MDTB_ses2 = set(pairs_MDTB_ses_2['pair'].tolist())
+    set_Social = set(pairs_Social['pair'].tolist())
+
+    common_pairs_all = set_Language.intersection(set_MDTB_ses1).intersection(set_MDTB_ses2).intersection(set_Social)
+
+    #common_pairs_MDTB1_MDTB2 = set_MDTB_ses1.intersection(set_MDTB_ses2)
+    
+    datasets = {'Language': pairs_Language,
+                'MDTB_ses1': pairs_MDTB_ses_1,
+                'MDTB_ses2': pairs_MDTB_ses_2,
+                'Social': pairs_Social
+                }
+    
+    all_data_list = []
+    for name, data in datasets.items():
+        df = data.copy()
+        df['dataset'] = name
+        all_data_list.append(df)
+    combined_data = pd.concat(all_data_list, ignore_index=True)
+
+    plot_data = combined_data[combined_data['pair'].isin(common_pairs_all)]
+
+    plot_df = plot_data.pivot(index='pair', columns='dataset', values='similarity')
+
+    plot_order_pairs = plot_df.index.tolist()   
+
+    index_path = '/Users/incehusain/fs_projects/thalamus_indices.csv'
+    df = pd.read_csv(index_path)
+
+    index_column_name = 'Index fsleyes'
+    nuclei_column_name = 'Thalamus nucleus'
+
+    index_to_name = df.set_index(index_column_name)[nuclei_column_name].to_dict()
+
+    x_tick_labels = []
+    for pair in plot_order_pairs:
+        name1 = index_to_name.get(pair[0], f"{pair[0]}")
+        name2 = index_to_name.get(pair[1], f"{pair[1]}")
+        label_str = f"{str(pair)}, {name1} & {name2}"
+        x_tick_labels.append(label_str)
+
+    ax = plot_df.plot(kind='bar', figsize=(12, 6), width=0.8, color = ['skyblue', 'purple', 'gold', 'pink'])
+
+    ax.set_title('Similarity of parcel pair functional signatures across datasets above 0.75', fontsize=16)
+    ax.set_xlabel('Nuclei Pairs', fontsize=12)
+    ax.set_ylabel('Average Cosine Similarity', fontsize=12)
+
+    ax.set_xticks(range(len(x_tick_labels)))
+    ax.set_xticklabels(x_tick_labels, rotation=45, ha='right', fontsize=8)
+
+    ax.tick_params(axis='x', labelrotation=45)
+
+    ax.grid(axis='y', linestyle='--', alpha=0.7)    
+    ax.legend(title='Dataset')
+    ax.set_ylim(0, 1)
+
+    plt.tight_layout()
+    plt.show()
+
+    #common_pairs_Language_MDTB1 = set_Language.intersection(set_MDTB_ses1)
+    #common_pairs_Language_MDTB2 = set_Language.intersection(set_MDTB_ses2)
+    #common_pairs_MDTB1_MDTB2 = set_MDTB_ses1.intersection(set_MDTB_ses2)
+
+    #all_unique_pairs = set_Language.union(set_MDTB_ses1).union(set_MDTB_ses2)
 
 
 

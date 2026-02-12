@@ -50,13 +50,13 @@ def make_xfm_files_depreciated(source_file, mask_file, sub):
 
 if __name__ == '__main__':
 
-    t1_files = sorted(glob.glob(os.path.join(wk_dir, 'xfm_files/HCPur100/', 'sub-*_T1w.nii')))
+    t1_files = sorted(glob.glob(os.path.join(wk_dir, 'xfm_files/Language/', 'sub-*_T1w.nii')))
 
     #sub_list = ['sub-01','sub-02', 'sub-04', 'sub-05','sub-06', 'sub-07', 'sub-08', 'sub-09', 'sub-11', 'sub-12', 'sub-13', 'sub-14', 'sub-15']
 
     for t1_file in t1_files:
         sub = os.path.basename(t1_file).split('_')[0]
-        make_deformation_file = make_xfm_files(t1_file, sub, dataset='HCPur100')
+        make_deformation_file = make_xfm_files(t1_file, sub, dataset='Language')
         print(f"Deformation file created for {sub}: {make_deformation_file}")
 
     #for sub in sub_list:
