@@ -257,19 +257,6 @@ if __name__ == '__main__':
     
     # Step 3: Get V matrices for individual and group maps
     #for sub in subjects:
-
-
-                       # 'ses-archi',
-                       #  'ses-clips4',
-                       #  'ses-enumeration',
-                       #  'ses-hcp1', 'ses-hcp2',
-                       #  'ses-lyon1', 'ses-lyon2',
-                       #  'ses-mathlang',
-                       #  'ses-mtt1', 'ses-mtt2',
-                       #  'ses-preference',
-                       #  'ses-rsvplanguage',
-                       #  'ses-spatialnavigation',
-                       #  'ses-tom']
     
     dataset = 'IBC'
     sess = 'ses-tom'
@@ -308,7 +295,7 @@ if __name__ == '__main__':
     #Nishimoto: sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06']
 
     #IBC: sub_list = ['sub-01','sub-02', 'sub-04', 'sub-05','sub-06', 'sub-07', 'sub-08', 'sub-09', 'sub-11', 'sub-12', 'sub-13', 'sub-14', 'sub-15']
-
+    ## IBS sessions: 'ses-archi', 'ses-clips4',  'ses-enumeration','ses-hcp1', 'ses-hcp2','ses-lyon1', 'ses-lyon2','ses-mathlang', 'ses-mtt1', 'ses-mtt2',  'ses-preference', 'ses-rsvplanguage', 'ses-spatialnavigation', 'ses-tom']
 
 
 
