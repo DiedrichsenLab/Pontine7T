@@ -119,6 +119,29 @@ def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', 
         
         pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices_{dataset}/{session}_V_{map_type}_{sub}_norm.pt")
 
+def get_Vs_from_data(data, info, map_file, map_type='indiv'):
+    atlas, _ = am.get_atlas('MNISymThalamus1')
+    map_img = nb.load(map_file)
+    map_data = atlas.read_data(map_img)
+    
+    Vs_list = []
+    
+    for subj_idx in range(data.shape[0]):
+        subj_data = data[subj_idx]
+        Vs = subj_data @ map_data.T
+        
+        parcel_weight_sums = map_data.sum(axis=1)
+        parcel_weight_sums[parcel_weight_sums == 0] = 1
+        Vs_avg = Vs / parcel_weight_sums
+        
+        col_norms = np.linalg.norm(Vs_avg, axis=0)
+        col_norms[col_norms == 0] = 1
+        Vs_subj_normalized = Vs_avg / col_norms
+        
+        Vs_list.append(Vs_subj_normalized)
+        
+    return np.stack(Vs_list, axis=0)
+
 def build_emissions(K,P,atlas='MNISymThalamus1'):
 
     data, info,ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,sess='ses-s1',  subj=None, type='CondAll')
@@ -256,6 +279,54 @@ if __name__ == '__main__':
     
     # Step 3: Get V matrices for individual and group maps
     #for sub in subjects:
+
+    dataset= 'WMFS'
+    sessions = ['ses-01', 'ses-02']
+
+    base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
+
+    #sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06']
+    
+    sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06','sub-07','sub-08','sub-09', 'sub-10','sub-11','sub-12','sub-13','sub-14','sub-15','sub-16']
+
+    #sub_list = ['sub-02','sub-03','sub-04', 'sub-06','sub-08','sub-09', 'sub-10', 'sub-12','sub-14','sub-15','sub-17', 'sub-18',
+     #         'sub-19','sub-20', 'sub-21', 'sub-22','sub-24', 'sub-25','sub-26','sub-27', 'sub-28', 'sub-29','sub-30', 'sub-31']
+        
+    data_ses1, info_ses1, ds_obj_ses1 = ds.get_dataset(base_dir, dataset ,atlas='MNISymThalamus1', 
+                                            sess=sessions[0], 
+                                            subj=sub_list, 
+                                            type='CondAll')
+    
+    data_ses2, info_ses2, ds_obj_ses2 = ds.get_dataset(base_dir, dataset ,atlas='MNISymThalamus1', 
+                                            sess=sessions[1], 
+                                            subj=sub_list, 
+                                            type='CondAll')
+    
+    info_ses1_path = f'{base_dir}/{dataset}/derivatives/ffextract/sub-02/sub-02_{sessions[0]}_CondAll.tsv'
+    info_ses1 = pd.read_csv(info_ses1_path, sep='\t')
+
+    info_ses2_path = f'{base_dir}/{dataset}/derivatives/ffextract/sub-02/sub-02_{sessions[1]}_CondAll.tsv'
+    info_ses2 = pd.read_csv(info_ses2_path, sep='\t')   
+
+    #recentered_ses1 = rd.recenter_data(data_ses1, info_ses1, center_full_code='rest_task', keep_center=True)
+
+    #recentered_ses2 = rd.recenter_data(data_ses2, info_ses2, center_full_code='rest_task', keep_center=True)
+
+    #merged_data, merged_info = rd.merge_sessions([recentered_ses1[0], recentered_ses2[0]], [recentered_ses1[1], recentered_ses2[1]])
+
+    merged_data, merged_info = rd.merge_sessions([data_ses1, data_ses2], [info_ses1, info_ses2])   
+    
+    baseline_all = np.ones(merged_data.shape[1])
+    mean_centered = ds.remove_baseline(merged_data, baseline_all)
+
+    map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz"
+    Vs_merged = get_Vs_from_data(mean_centered, merged_info, map_file, map_type='merged')
+    
+    for subj_idx, sub in enumerate(sub_list):
+        pt.save(Vs_merged[subj_idx], f"{wk_dir}/V_matrices_{dataset}/V_concat_{sub}_norm.pt")
+
+
+    #-------------------------------------#
     
     dataset = 'IBC'
     sess = 'ses-tom'
