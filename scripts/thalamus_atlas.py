@@ -14,8 +14,7 @@ import HierarchBayesParcel.arrangements as ar
 import HierarchBayesParcel.full_model as fm
 import matplotlib.pyplot as plt
 import pandas as pd 
-
-
+import recenter_data as rd 
 
 wk_dir = '/Users/incehusain/fs_projects'
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
