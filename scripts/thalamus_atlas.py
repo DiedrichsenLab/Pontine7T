@@ -15,6 +15,8 @@ import HierarchBayesParcel.full_model as fm
 import matplotlib.pyplot as plt
 import pandas as pd 
 import recenter_data as rd 
+import glob
+import os 
 
 wk_dir = '/Users/incehusain/fs_projects'
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
@@ -97,7 +99,7 @@ def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', 
         data, info, ds_obj = ds.get_dataset(base_dir, dataset ,atlas='MNISymThalamus1', 
                                             sess=session, 
                                             subj=[sub], 
-                                            type='CondAll')
+                                            type='CondHalf')
         
         atlas, _ = am.get_atlas('MNISymThalamus1')
         
@@ -119,7 +121,7 @@ def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', 
         
         pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices_{dataset}/{session}_V_{map_type}_{sub}_norm.pt")
 
-def get_Vs_from_data(data, info, map_file, map_type='indiv'):
+def get_Vs_from_data(data, map_file):
     atlas, _ = am.get_atlas('MNISymThalamus1')
     map_img = nb.load(map_file)
     map_data = atlas.read_data(map_img)
@@ -242,7 +244,7 @@ def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group', dat
     subj_similarity_matrix = {}
     
     for sub in subj:
-        V = pt.load(f"{wk_dir}/V_matrices_{dataset}/{sess}_V_{type}_{sub}_norm.pt")
+        V = pt.load(f"{wk_dir}/V_matrices_{dataset}/V_{sess}_{sub}_norm.pt")
         X = V.T
         
         cosine_similarity_matrix = X@X.T
@@ -256,6 +258,71 @@ def calc_cosine_similarity_within(subj = ['sub-01', 'sub-02'], type='group', dat
         subj_similarity_matrix[sub] = cosine_similarity_matrix
 
     return avg_similarity_per_subject, subj_similarity_matrix
+
+
+def calc_parcelwise_cosine_reliability(subj=['sub-01', 'sub-02'],
+                                       dataset='Language',
+                                       sess='ses-localizerfm'
+                                       ):
+    """
+    Computes parcel-wise cross-run cosine reliability per subject.
+
+    For each subject:
+        - Split trials into first half and second half
+        - Compute parcel x parcel cosine similarity matrix for each half
+        - For each parcel, compute mean similarity to all other parcels (excluding self)
+        - Compute cosine similarity between the two mean-similarity vectors (parcel-wise reliability)
+
+    Returns:
+        parcelwise_reliability: dict of subject -> array of length n_parcels
+            reliability score per parcel
+        S_matrices: dict of subject -> (S1, S2)
+            full cosine similarity matrices per half
+    """
+
+    parcelwise_reliability = {}
+    S_matrices = {}
+
+    for sub in subj:
+        # Load V matrix: (trials, parcels)
+        V = pt.load(f"{wk_dir}/V_matrices_{dataset}/ses2_V_{sess}_{sub}_norm.pt")
+        n_trials, n_parcels = V.shape
+
+        half = n_trials // 2
+        V1 = V[:half, :]
+        V2 = V[half:, :]
+
+        # Cosine similarity matrices: parcel x parcel
+        S1 = V1.T @ V1  # parcels x parcels
+        S2 = V2.T @ V2
+
+        # Compute mean similarity for each parcel (excluding self)
+        #mean_sim_S1 = (S1.sum(dim=1) - 1) / (n_parcels - 1)
+        #mean_sim_S2 = (S2.sum(dim=1) - 1) / (n_parcels - 1)
+
+        # Compute cross-run cosine similarity per parcel (reliability)
+        # Each parcel has a scalar: how similar its profile is across runs
+        # Note: mean similarity vectors are already 1D tensors of length n_parcels
+
+        # But for full profile reliability, you might want parcel-to-parcel similarity vector
+        # Here, we use the row of S1 and S2 (excluding diagonal) for each parcel
+
+        parcel_reliability = pt.zeros(n_parcels)
+
+        for i in range(n_parcels):
+            # similarity profile for parcel i (exclude self)
+            profile1 = np.concatenate([S1[i, :i], S1[i, i+1:]])
+            profile2 = np.concatenate([S2[i, :i], S2[i, i+1:]])
+
+            profile1 = profile1 / np.linalg.norm(profile1)
+            profile2 = profile2 / np.linalg.norm(profile2)
+
+            parcel_reliability[i] = np.dot(profile1, profile2)
+
+        parcelwise_reliability[sub] = parcel_reliability
+        S_matrices[sub] = (S1, S2)
+
+    return parcelwise_reliability, S_matrices
 
 def avg_similarity_matrices(subj_similarity_matrices):
 
@@ -280,53 +347,83 @@ if __name__ == '__main__':
     # Step 3: Get V matrices for individual and group maps
     #for sub in subjects:
 
-    dataset= 'WMFS'
+    dataset = 'Nishimoto'
+
+    t1_files = sorted(glob.glob(os.path.join(wk_dir, f'V_matrices_{dataset}/', 'ses2_V_CondHalf_sub-*_norm.pt')))
+
+    sub_list = [os.path.basename(f).split('_')[3] for f in t1_files]
+
+    reliability_dict, matrices_dict = calc_parcelwise_cosine_reliability(
+    subj=sub_list,
+    dataset='Nishimoto',
+    sess='CondHalf'
+                    )
+
+    # Example: mean similarity for first subject
+    sub = sub_list[0]
+    parcel_reliability = reliability_dict[sub]  
+
+    all_reliabilities = np.stack(
+    [reliability_dict[sub] for sub in sub_list],
+    axis=0
+        )  # shape: (n_subjects, n_parcels)
+
+# Average across subjects
+    group_parcel_reliability = np.mean(all_reliabilities, axis=0)
+
+    print(parcel_reliability)
+
+
+
+    #-------- devising Vs with concatenated sessions ------
+
+    dataset= 'Nishimoto'
     sessions = ['ses-01', 'ses-02']
 
     base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
 
     #sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06']
-    
-    sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06','sub-07','sub-08','sub-09', 'sub-10','sub-11','sub-12','sub-13','sub-14','sub-15','sub-16']
 
+    sub_list = ['sub-01','sub-02','sub-03', 'sub-04', 'sub-05','sub-06']
+    
     #sub_list = ['sub-02','sub-03','sub-04', 'sub-06','sub-08','sub-09', 'sub-10', 'sub-12','sub-14','sub-15','sub-17', 'sub-18',
      #         'sub-19','sub-20', 'sub-21', 'sub-22','sub-24', 'sub-25','sub-26','sub-27', 'sub-28', 'sub-29','sub-30', 'sub-31']
         
     data_ses1, info_ses1, ds_obj_ses1 = ds.get_dataset(base_dir, dataset ,atlas='MNISymThalamus1', 
                                             sess=sessions[0], 
                                             subj=sub_list, 
-                                            type='CondAll')
+                                            type='CondHalf')
     
     data_ses2, info_ses2, ds_obj_ses2 = ds.get_dataset(base_dir, dataset ,atlas='MNISymThalamus1', 
                                             sess=sessions[1], 
                                             subj=sub_list, 
-                                            type='CondAll')
+                                            type='CondHalf')
     
-    info_ses1_path = f'{base_dir}/{dataset}/derivatives/ffextract/sub-02/sub-02_{sessions[0]}_CondAll.tsv'
+    info_ses1_path = f'{base_dir}/{dataset}/derivatives/ffextract/sub-01/sub-01_{sessions[0]}_CondHalf.tsv'
     info_ses1 = pd.read_csv(info_ses1_path, sep='\t')
 
-    info_ses2_path = f'{base_dir}/{dataset}/derivatives/ffextract/sub-02/sub-02_{sessions[1]}_CondAll.tsv'
+    info_ses2_path = f'{base_dir}/{dataset}/derivatives/ffextract/sub-01/sub-01_{sessions[1]}_CondHalf.tsv'
     info_ses2 = pd.read_csv(info_ses2_path, sep='\t')   
 
-    #recentered_ses1 = rd.recenter_data(data_ses1, info_ses1, center_full_code='rest_task', keep_center=True)
+    recentered_ses1 = rd.recenter_data(data_ses1, info_ses1, center_full_code='rest_close', keep_center=True)
 
-    #recentered_ses2 = rd.recenter_data(data_ses2, info_ses2, center_full_code='rest_task', keep_center=True)
+    recentered_ses2 = rd.recenter_data(data_ses2, info_ses2, center_full_code='rest_close', keep_center=True)
 
-    #merged_data, merged_info = rd.merge_sessions([recentered_ses1[0], recentered_ses2[0]], [recentered_ses1[1], recentered_ses2[1]])
+    merged_data, merged_info = rd.merge_sessions([recentered_ses1[0], recentered_ses2[0]], [recentered_ses1[1], recentered_ses2[1]])
 
-    merged_data, merged_info = rd.merge_sessions([data_ses1, data_ses2], [info_ses1, info_ses2])   
+    #merged_data, merged_info = rd.merge_sessions([data_ses1, data_ses2], [info_ses1, info_ses2])   
     
     baseline_all = np.ones(merged_data.shape[1])
     mean_centered = ds.remove_baseline(merged_data, baseline_all)
 
     map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz"
-    Vs_merged = get_Vs_from_data(mean_centered, merged_info, map_file, map_type='merged')
+    Vs_merged = get_Vs_from_data(mean_centered, map_file)
     
     for subj_idx, sub in enumerate(sub_list):
-        pt.save(Vs_merged[subj_idx], f"{wk_dir}/V_matrices_{dataset}/V_concat_{sub}_norm.pt")
+        pt.save(Vs_merged[subj_idx], f"{wk_dir}/V_matrices_{dataset}/V_CondHalf_concat_{sub}_norm.pt")
 
 
-    #-------------------------------------#
+    #---------------------------------------#
     
     dataset = 'IBC'
     sess = 'ses-tom'
@@ -335,14 +432,14 @@ if __name__ == '__main__':
 
     for sub in sub_list:        
         cosine = calc_cosine_similarity(subj=sub_list, type='group', dataset='IBC', sess='ses-tom')
-        pt.save(cosine[0],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_btwn_subj_avg_parcels_group.pt")
-        pt.save(cosine[1],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_btwn_subj_parcels_group.pt")
+       # pt.save(cosine[0],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_btwn_subj_avg_parcels_group.pt")
+       # pt.save(cosine[1],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_btwn_subj_parcels_group.pt")
 
         subj_matrices = calc_cosine_similarity_within(subj=sub_list, type='group', dataset='IBC', sess='ses-tom')
-        pt.save(subj_matrices[0],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_within_subj_groupV.pt")
+       # pt.save(subj_matrices[0],f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_within_subj_groupV.pt")
 
         mean_similarity_matrix = avg_similarity_matrices(subj_matrices[1])
-        pt.save(mean_similarity_matrix,f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_avg_all_parcels.pt")
+        #pt.save(mean_similarity_matrix,f"{wk_dir}/cosine_similarities_{dataset}/{sess}_cosine_avg_all_parcels.pt")
 
         #get_Vs(subj=sub_list, dataset = 'Social', session = 'ses-social', map_file = f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
         #get_Vs(subj=sub_list, dataset = 'Language', session = 'ses-localizerfm', map_file=f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz", map_type='group')
