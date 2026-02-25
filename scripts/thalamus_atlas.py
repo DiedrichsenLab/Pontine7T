@@ -90,6 +90,16 @@ def get_group_prob_map(subject_file ='sub-01_4d_thalamus_prob_map.nii.gz'):
 
     nb.save(mean_img, f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz")
 
+def thresh_mask(thalamus_mask = '/Users/incehusain/fs_projects/thalamus_masks/thalamus_mask.nii', threshold=0.004):
+    img = nb.load(thalamus_mask)
+    data = img.get_fdata()
+    
+    binary_mask = (data >= threshold).astype(np.uint8)
+    
+    binary_mask_img = nb.Nifti1Image(binary_mask, img.affine, img.header)
+    
+    nb.save(binary_mask_img, '/Users/incehusain/fs_projects/thalamus_mask_thresholded_025.nii')
+
 
 def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_thalamus_prob_map.nii.gz", map_type='indiv'):
 
