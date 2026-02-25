@@ -178,7 +178,7 @@ if __name__ == '__main__':
     wta += 1
     wta_int32 = wta.astype(np.int32)
     
-    parcellation = plot.plot_thalamus(wta_int32,cscale=[0,16],cmap=cmap[0:17])
+    parcellation = plot.plot_thalamus(wta_int32,cscale=[0,47],cmap=cmap[0:48])
 
     #pass 
     

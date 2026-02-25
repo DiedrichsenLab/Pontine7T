@@ -292,7 +292,7 @@ def plot_thalamus(data,
    dn,_ = am.get_atlas('MNISymThalamus1')
    if bg_img is None:
        adir = ut.default_atlas_dir
-       bg_img = nb.load(adir + '/tpl-MNI152NLin2009cSym/tpl-MNI152NLin2009cSym_res-1_thalamus.nii')
+       bg_img = nb.load(adir + '/tpl-MNI152NLin2009cSym/tpl-MNI152NLin2009cSym_res-1_thalamus_anat.nii')
    if bg_img is True:
        bg_img = nb.load('/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/RegionOfInterest_BOLDMNI/template.nii')
   
