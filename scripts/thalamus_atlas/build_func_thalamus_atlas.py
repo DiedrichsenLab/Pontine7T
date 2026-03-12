@@ -108,22 +108,24 @@ def estimate_new_atlas():
 
      emissions = build_emissions(ar_model.K,'MNISymThalamus1')
 
-     #emissions[0].V = pt.load(f"{wk_dir}/V_Iglesias_Nishimoto_ses1.pt")
-     emissions[1].V = pt.load(f"{wk_dir}/V_Iglesias_Nishimoto_ses2.pt")
-     emissions[2].V = pt.load(f"{wk_dir}/V_Iglesias_MDTB_ses1.pt")
-     emissions[3].V = pt.load(f"{wk_dir}/V_Iglesias_MDTB_ses2.pt")
-     emissions[4].V = pt.load(f"{wk_dir}/V_Iglesias_Social.pt")
-     emissions[5].V = pt.load(f"{wk_dir}/V_Iglesias_Language.pt")
+     emissions[0].V = pt.from_numpy(np.load(f"{wk_dir}/V_matrices_Nishimoto/V_group_avg.pt"))
+     #emissions[1].V = pt.load(f"{wk_dir}/V_Iglesias_Nishimoto_ses2.pt")
+     #emissions[2].V = pt.load(f"{wk_dir}/V_Iglesias_MDTB_ses1.pt")
+     #emissions[3].V = pt.load(f"{wk_dir}/V_Iglesias_MDTB_ses2.pt")
+     emissions[4].V = pt.from_numpy(np.load(f"{wk_dir}/V_matrices_Social/V_group_avg.pt"))
+     #emissions[5].V = pt.load(f"{wk_dir}/V_matrices_Language/V_group_avg.pt")
+     emissions[5].V = pt.from_numpy(np.load(f"{wk_dir}/V_matrices_Language/V_group_avg.pt")
+)
 
      #for em_model in emissions:
-     #emissions[0].set_param_list(['kappa'])
-     emissions[1].set_param_list(['kappa'])
-     emissions[2].set_param_list(['kappa'])
-     emissions[3].set_param_list(['kappa'])
+     emissions[0].set_param_list(['kappa'])
+     #emissions[1].set_param_list(['kappa'])
+     #emissions[2].set_param_list(['kappa'])
+     #emissions[3].set_param_list(['kappa'])
      emissions[4].set_param_list(['kappa'])
      emissions[5].set_param_list(['kappa'])
     
-     M= fm.FullMultiModel(ar_model, [emissions[1], emissions[2], emissions[3], emissions[4], emissions[5]])
+     M= fm.FullMultiModel(ar_model, [emissions[0], emissions[4], emissions[5]])
 
      M.initialize()
 
@@ -131,13 +133,13 @@ def estimate_new_atlas():
         fit_arrangement=True,fit_emission=True,first_evidence=True)
      
      Prob = M.arrange.marginal_prob().numpy()
-     np.save(f"{wk_dir}/Prob_thalamus_nNishimoto-ses1.npy",Prob)
+     np.save(f"{wk_dir}/Prob_thalamus_first-stepV_nMDTB.npy",Prob)
 
      return M
 
 
 def estimate_new_atlas_de_novo(): 
-     
+          
      atlas, _ = am.get_atlas('MNISymThalamus1')    
 
      ar_model = ar.ArrangeIndependent(K=47, P=atlas.P, spatial_specific=True, remove_redundancy=False)
@@ -160,7 +162,7 @@ def estimate_new_atlas_de_novo():
 
 if __name__ == '__main__':    
     
-    estimate_new_atlas_de_novo()
+    estimate_new_atlas()
 
      # Load probability
 
