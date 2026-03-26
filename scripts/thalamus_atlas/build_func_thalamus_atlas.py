@@ -18,7 +18,7 @@ from scripts import decomposing_variances as dv
 import plot_thalamus 
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
-wk_dir = '/Users/incehusain/fs_projects'
+wk_dir = '/Users/incehusain/fs_projects_7.4.1'
 
 def build_emissions(K=58,atlas='MNISymThalamus1'):
 
@@ -162,24 +162,33 @@ def estimate_new_atlas_de_novo():
 
 if __name__ == '__main__':    
     
-    estimate_new_atlas()
+    #estimate_new_atlas()
 
      # Load probability
 
-    pmap = np.load(f"{wk_dir}/Prob_thalamus_MDTBses2.npy")
-    pmap2 = np.load(f"{wk_dir}/Prob_Language_thalamus.npy")
+    pmap = np.load(f"{wk_dir}/Prob_thalamus_nMDTB.npy")
 
     # Load colormap and labels #is there a .lut file I can use for the Iglesias atlas? If I did: what would this mean?
     lid,cmap_lut,names = nt.read_lut(f'{wk_dir}/thalamus_atlas.lut')
 
     wta = np.argmax(pmap, axis=0) 
-    wta += 1
-    wta_int32 = wta.astype(np.int32)
-    
-    fig, axes = plot_thalamus.plot_thalamus_wta(
-    wta_data=wta_int32,
-    bg_img=None,       # or your structural Nifti
+    #wta += 1
+    #wta_int32 = wta.astype(np.int32)
+
+    mask_img = nb.load(f'{wk_dir}/thalamus_masks/thalamus_mask_thresholded_03.nii')
+    mask = mask_img.get_fdata().astype(bool)
+
+    wta_3d = np.zeros(mask.shape, dtype=np.int32)
+    wta_3d[mask] = wta + 1
+
+    #z_coords=[-7,-5,-3,1,8,12,15]
+
+    display = plot_thalamus.plot_thalamus_wta(
+      wta_data=wta_3d,
+      mask_img = mask_img,
+    bg_img=mask_img,       # or your structural Nifti
     lut_cmap=cmap_lut,
+    names = names,
     z_coords=[-7,-5,-3,1,8,12,15])
     
     plt.show()
