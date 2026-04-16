@@ -87,8 +87,7 @@ def make_language_contrasts(atlas='MNISymRedNucleus1'):
                                         sess='ses-localizerfm', 
                                         subj=None, type='CondRun')
     
-    
-    cond_v = info['task']
+    cond_v = info['task_name']
     part_v = info['run']
 
     data = ds.remove_baseline(data,part_v)
@@ -106,9 +105,9 @@ def make_language_contrasts(atlas='MNISymRedNucleus1'):
 
     #make contrast vectors
 
-    T = pd.read_csv(f"{base_dir}/Language/derivatives/ffimport/sub-01/sub-01_ses-localizer_cond_fm_CondRun.tsv", sep='\t')
+    T = pd.read_csv(f"{base_dir}/Language/derivatives/ffextract/sub-01/sub-01_ses-localizer_CondRun.tsv", sep='\t')
 
-    contrast_names_all = T['taskName'].tolist()
+    contrast_names_all = T['task_name'].tolist()
 
     contrast_names = list(set(contrast_names_all))
 
@@ -134,7 +133,7 @@ def make_language_contrasts(atlas='MNISymRedNucleus1'):
         
     # Get one example cifti-file for the header 
     
-    ref_img=nb.load(f"{base_dir}/Language/derivatives/ffextract/sub-01/sub-01_space-MNISymRedNucleus1_ses-localizer_cond_fm_CondRun.dscalar.nii")
+    ref_img=nb.load(f"{base_dir}/Language/derivatives/ffextract/sub-01/sub-01_space-MNISymRedNucleus1_ses-localizerfm_CondRun.dscalar.nii")
     
     bm = ref_img.header.get_axis(1)
 
@@ -154,7 +153,7 @@ def make_language_contrasts(atlas='MNISymRedNucleus1'):
 
 def make_mdtb_contrasts(atlas='MNISymRedNucleus1'):
     data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,
-                                        sess='ses-s1', subj=None,
+                                        sess='ses-s2', subj=None,
                                         type='CondRun')
     
     cond_v = info['cond_num']
@@ -173,7 +172,7 @@ def make_mdtb_contrasts(atlas='MNISymRedNucleus1'):
 
     #make contrast vectors
 
-    T = pd.read_csv(f"{base_dir}/MDTB/derivatives/ffextract/sub-02/sub-02_ses-s1_CondRun.tsv", sep='\t')
+    T = pd.read_csv(f"{base_dir}/MDTB/derivatives/ffextract/sub-02/sub-02_ses-s2_CondRun.tsv", sep='\t')
 
     contrast_names_all = T['cond_name'].tolist()
 
@@ -201,7 +200,7 @@ def make_mdtb_contrasts(atlas='MNISymRedNucleus1'):
         
     # Get one example cifti-file for the header 
     
-    ref_img=nb.load(f"{base_dir}/MDTB/derivatives/ffextract/sub-02/sub-02_space-MNISymRedNucleus1_ses-s1_CondRun.dscalar.nii")
+    ref_img=nb.load(f"{base_dir}/MDTB/derivatives/ffextract/sub-02/sub-02_space-MNISymRedNucleus1_ses-s2_CondRun.dscalar.nii")
     
     bm = ref_img.header.get_axis(1)
 
@@ -211,8 +210,8 @@ def make_mdtb_contrasts(atlas='MNISymRedNucleus1'):
     con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
     t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
 
-    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/rednucleus/contrasts/mdtb_ses1_rednucleus_condavg_contrast.dscalar.nii'
-    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/rednucleus/contrasts/mdtb_ses1_rednucleus_condavg_Tstat.dscalar.nii'
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/rednucleus/contrasts/mdtb_ses2_rednucleus_condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/rednucleus/contrasts/mdtb_ses2_rednucleus_condavg_Tstat.dscalar.nii'
 
         # Save the contrast and T-statistic images
     nb.save(con_img, con_filename)
@@ -370,6 +369,6 @@ if __name__ == '__main__':
 
     #pontine = make_pontine_contrasts()
     #mdtb = make_mdtb_contrasts()
-    langauge = make_language_contrasts()
+    language = make_language_contrasts()
 
     print("DONE")
