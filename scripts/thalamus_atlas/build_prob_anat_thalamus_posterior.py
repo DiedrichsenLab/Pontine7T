@@ -5,6 +5,7 @@ import numpy as np
 import nibabel as nb
 import os 
 import subprocess
+import glob
 
 
 "This script builds anatomical thalamus probability maps for each subject and then averages them to create a group map. It applies a threshold to the group probability map to create a binary mask of the thalamus."
@@ -16,7 +17,7 @@ def convert_mgz_to_nii(input_dir, output_dir=None):
     """
     Convert all .mgz files in a directory to .nii.gz
     Before running, in terminal, write: 
-    export FREESURFER_HOME=/Applications/freesurfer_7.4.1/7.4.1
+    export FREESURFER_HOME=/Applications/freesurfer/8.2.0
     source $FREESURFER_HOME/SetUpFreeSurfer.sh 
     """
     
@@ -34,12 +35,14 @@ def convert_mgz_to_nii(input_dir, output_dir=None):
 
         print(f"[{i+1}/{len(mgz_files)}] Converting {fname}")
 
-        cmd = ["/Applications/freesurfer_7.4.1/7.4.1/bin/mri_convert", in_path, out_path]
+        cmd = ["/Applications/freesurfer/8.2.0/bin/mri_convert", in_path, out_path]
         subprocess.run(cmd, check=True)
 
     print("Done.")
 
 def get_subj_prob_maps(subj =['sub-01'], dataset='Social'):
+
+    wk_dir = '/Users/incehusain/fs_projects/'
     
     #Get individual subject anatomical thalamus probability maps in MNI space; assumes freesurfer thalamus segmentations already done
     
@@ -82,20 +85,44 @@ def get_subj_prob_maps(subj =['sub-01'], dataset='Social'):
 
         nb.save(img_4d, data_4d_name)
 
+
+def get_group_prob_map(wk_dir):
+
+    pattern = os.path.join(wk_dir, "*_pseg", "sub-*", "sub-*_4d_thalamus_prob_map.nii.gz")
+    subject_files = glob.glob(pattern)
+
+    #averages subject probability maps to get group map
+
+    N= len(subject_files)
+    first_img = nb.load(f"{subject_files[0]}")
+    sum_of_data = first_img.get_fdata().astype('float64')
+
+    for i in range(1, N):
+        img = nb.load(f"{subject_files[i]}")
+        sum_of_data += img.get_fdata()
+
+    mean_data = sum_of_data / N
+
+    mean_img = nb.Nifti1Image(mean_data.astype('float32'), first_img.affine, first_img.header)
+
+    nb.save(mean_img, f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz")
+
 if __name__ == '__main__':
+
+    group_map = get_group_prob_map(wk_dir)
     
-    #data_dir = f"{wk_dir}/Social"
+    #data_dir = f"{wk_dir}/Language"
     
     #subjects = sorted(
     #[d for d in os.listdir(data_dir)
     #if d.startswith("sub-") and os.path.isdir(os.path.join(data_dir, d))])
 
-    subjects = ['sub-10','sub-11','sub-12','sub-13','sub-14','sub-15','sub-16','sub-17','sub-18','sub-19','sub-20',
-                'sub-21','sub-22','sub-23','sub-24','sub-25','sub-26','sub-27']
+    #subjects = ['sub-29']
+    #dataset = 'MDTB'
 
-    for sub in subjects:
-        convert_mgz_to_nii(input_dir=f"{wk_dir}/Social/{sub}/mri/", output_dir=f"{wk_dir}/Social_pseg/{sub}/")
-        get_subj_prob_maps(subj=[sub], dataset='Social')
+    #for sub in subjects:
+     #   convert_mgz_to_nii(input_dir=f"{wk_dir}/{dataset}/{sub}/mri/", output_dir=f"{wk_dir}/{dataset}_pseg/{sub}/")
+      #  get_subj_prob_maps(subj=[sub], dataset=dataset)
     
     #convert_mgz_to_nii(input_dir=f"{wk_dir}/Social/sub-03/mri/", output_dir=f"{wk_dir}/Social_pseg/sub-03/")
     #get_subj_prob_maps(subj=['sub-03'],dataset='Social')
