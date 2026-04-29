@@ -107,9 +107,106 @@ def get_group_prob_map(wk_dir):
 
     nb.save(mean_img, f"{wk_dir}/group_mean_thalamus_prob_map.nii.gz")
 
+def get_thalamus_mask(wk_dir, threshold=0.25):
+
+    in_path = os.path.join(wk_dir, "67_group_mean_thalamus_prob_map.nii.gz")
+    out_path = os.path.join(wk_dir, f"group_thalamus_mask_thr{threshold}.nii.gz")
+
+    img = nb.load(in_path)
+    data = img.get_fdata()  # shape: (X, Y, Z, N)
+
+    # collapse across nuclei, determine max value for voxel across nuclei 
+    max_data = data.max(axis=3)
+
+    # threshold
+    binary_data = (max_data > threshold).astype(np.uint8)
+
+    mask_img = nb.Nifti1Image(binary_data, img.affine, img.header)
+    nb.save(mask_img, out_path)
+
+    print(f"Saved 3D thalamus mask to: {out_path}")
+
+
+import nibabel as nb
+import numpy as np
+import os
+
+def symmetrize_mask(wk_dir, threshold=25):
+
+    in_path = os.path.join(wk_dir, f"group_thalamus_mask_thr0{threshold}.nii.gz")
+    out_path = os.path.join(wk_dir, f"group_thalamus_mask_thr0{threshold}_sym.nii.gz")
+
+    img = nb.load(in_path)
+    data = img.get_fdata()
+
+    # flip left-right (assumes axis 0 is L-R)
+    flipped = np.flip(data, axis=0)
+
+    # combine original + flipped
+    sym_data = np.maximum(data, flipped)
+
+    # ensure binary
+    sym_data = (sym_data > 0).astype(np.uint8)
+
+    sym_img = nb.Nifti1Image(sym_data, img.affine, img.header)
+    nb.save(sym_img, out_path)
+
+    print(f"Saved symmetric mask to: {out_path}")
+
+def symmetrize_copy_right_to_left(wk_dir):
+
+    in_path = os.path.join(wk_dir, "corr_group_thalamus_mask_thr02_sym_copy.nii.gz")
+    out_path = os.path.join(wk_dir, "group_thalamus_mask_thr02_sym_RtoL.nii.gz")
+
+    img = nb.load(in_path)
+    data = img.get_fdata()
+
+    # Check orientation
+    axcodes = nb.aff2axcodes(img.affine)
+    print("Axis orientation:", axcodes)
+
+    # Find left-right axis
+    lr_axis = None
+    for i, ax in enumerate(axcodes):
+        if ax in ['L', 'R']:
+            lr_axis = i
+            break
+
+    if lr_axis is None:
+        raise ValueError("Could not find left-right axis.")
+
+    # Flip across left-right axis
+    flipped = np.flip(data, axis=lr_axis)
+
+    # Create output copy
+    sym_data = data.copy()
+
+    # Determine midpoint
+    mid = data.shape[lr_axis] // 2
+
+    # Replace LEFT half with mirrored RIGHT half
+    slicer = [slice(None)] * 3
+    slicer[lr_axis] = slice(0, mid)
+
+    sym_data[tuple(slicer)] = flipped[tuple(slicer)]
+
+    # Ensure binary
+    sym_data = (sym_data > 0).astype(np.uint8)
+
+    sym_img = nb.Nifti1Image(sym_data, img.affine, img.header)
+    nb.save(sym_img, out_path)
+
+    print(f"Saved right→left symmetric mask to: {out_path}")
+
 if __name__ == '__main__':
 
-    group_map = get_group_prob_map(wk_dir)
+    right_to_left = symmetrize_copy_right_to_left(wk_dir)
+
+    #sym_thalamus_mask = symmetrize_mask(wk_dir, threshold=2)
+
+    #thalamus_mask = get_thalamus_mask(wk_dir, threshold=0.18)
+
+    #group_map = get_group_prob_map(wk_dir)
     
     #data_dir = f"{wk_dir}/Language"
     
