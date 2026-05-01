@@ -126,11 +126,6 @@ def get_thalamus_mask(wk_dir, threshold=0.25):
 
     print(f"Saved 3D thalamus mask to: {out_path}")
 
-
-import nibabel as nb
-import numpy as np
-import os
-
 def symmetrize_mask(wk_dir, threshold=25):
 
     in_path = os.path.join(wk_dir, f"group_thalamus_mask_thr0{threshold}.nii.gz")

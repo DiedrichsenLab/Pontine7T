@@ -9,15 +9,18 @@ import torch as pt
 wk_dir = '/Users/incehusain/fs_projects'
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion_new' 
 
-def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', map_file = f"{wk_dir}/pseg_Language7T/sub-01_4d_thalamus_prob_map.nii.gz", map_type='indiv'):
+def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', map_file_template = "{wk_dir}/{dataset}_pseg/{sub}/{sub}_4d_thalamus_prob_map.nii.gz", map_type='subj'):
+
+    for sub in subj:
+        map_file = map_file_template.format(wk_dir = wk_dir, dataset=dataset, sub=sub)
 
     #weighted average of data times the probability maps to get V matrices of size Tasks x Parcels 
 
-    for sub in subj:
+    
         data, info, ds_obj = ds.get_dataset(base_dir, dataset ,atlas='MNISymThalamus1', 
                                             sess=session, 
                                             subj=[sub], 
-                                            type='CondHalf')
+                                            type='CondAll')
         
         atlas, _ = am.get_atlas('MNISymThalamus1')
         
@@ -37,7 +40,7 @@ def get_Vs(subj =['sub-01'], dataset = 'Language', session = 'ses-localizerfm', 
         col_norms[col_norms == 0] = 1
         Vs_subj_normalized = Vs_avg / col_norms
         
-        pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices_{dataset}/{session}_V_{map_type}_{sub}_norm.pt")
+        pt.save(Vs_subj_normalized,f"{wk_dir}/V_matrices_{dataset}/V_{sub}_{session}_{map_type}_norm.pt")
 
 def get_Vs_from_data(data, map_file):
     atlas, _ = am.get_atlas('MNISymThalamus1')
@@ -61,3 +64,13 @@ def get_Vs_from_data(data, map_file):
         Vs_list.append(Vs_subj_normalized)
         
     return np.stack(Vs_list, axis=0)
+
+if __name__ == '__main__':
+
+    Vs = get_Vs(subj = ['sub-01', 'sub-02','sub-03', 'sub-04', 'sub-06', 'sub-07', 'sub-08', 'sub-09', 'sub-10', 
+                        'sub-12', 'sub-13', 'sub-14', 'sub-15', 'sub-16', 'sub-17', 'sub-18', 'sub-19'], 
+                dataset = 'Language', 
+                session = 'ses-localizerfm',
+                map_type='subj')
+    
+    #for running the group map, just add map_file_template="{wk_dir}/67_group_mean_thalamus_prob_map.nii.gz" 

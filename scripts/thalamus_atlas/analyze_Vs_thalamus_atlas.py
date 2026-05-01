@@ -11,7 +11,7 @@ def calc_cosine_similarity_btwn(subj = ['sub-01', 'sub-02'], type='group', datas
     avg_similarity_per_parcel = []
     similarity_distributions_per_parcel = []
     
-    for k in range(58):
+    for k in range(50):
         parcel_vectors_subj = []
 
         for sub in subj:
