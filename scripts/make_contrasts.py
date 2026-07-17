@@ -150,6 +150,77 @@ def make_language_contrasts(atlas='MNISymRedNucleus1'):
     nb.save(con_img, con_filename)
     nb.save(t_img, t_filename)
 
+def make_social_contrasts(atlas='MNISymC3'):
+
+    print("HEY")
+    
+    data, info, ds_obj = ds.get_dataset(base_dir,'Social',atlas=atlas,
+                                        sess='ses-social', 
+                                        subj=None, type='CondRun')
+    
+    cond_v = info['task_name']
+    part_v = info['run']
+
+    #data = ds.remove_baseline(data,part_v)
+
+    flat_data = decomposing_variances.flat2ndarray(data, cond_v, part_v)
+
+    flat_data = np.nan_to_num(flat_data)
+
+    cond_avg = np.mean(flat_data, axis=1)
+
+    num_subj = cond_avg.shape[0]
+    num_cond = cond_avg.shape[1]
+
+    contrast_per_subj = np.zeros((num_subj,num_cond, cond_avg.shape[-1]))
+
+    #make contrast vectors
+
+    T = pd.read_csv(f"{base_dir}/Social/derivatives/ffextract/sub-03/sub-03_ses-social_CondRun.tsv", sep='\t')
+
+    contrast_names_all = T['task_name'].tolist()
+
+    contrast_names = list(set(contrast_names_all))
+
+    contrast_names = list(dict.fromkeys(contrast_names_all))
+
+    contrast = []
+
+    for i in range(num_cond):  # Loop over all conditions (tasks)
+        c = [1 if j == i else -1 / (num_cond - 1) for j in range(num_cond)]
+        contrast.append(c)
+
+    contrast = np.array(contrast)
+
+    for i,c in enumerate(contrast):
+        for s in range(num_subj):
+            contrast_per_subj[s,i,:] = np.dot(c, cond_avg[s, :, :])
+
+    CON = np.mean(contrast_per_subj,axis=0)
+
+    STD = np.std(contrast_per_subj,axis=0)
+        
+    t = CON/(STD/np.sqrt(num_subj))
+        
+    # Get one example cifti-file for the header 
+    
+    ref_img=nb.load(f"{base_dir}/Social/derivatives/ffextract/sub-03/sub-03_space-MNISymC3_ses-social_CondRun.dscalar.nii")
+    
+    bm = ref_img.header.get_axis(1)
+
+    row_axis = nb.cifti2.ScalarAxis(contrast_names)
+    header = nb.Cifti2Header.from_axes((row_axis,bm))
+
+    con_img = nb.Cifti2Image(dataobj=CON[:, :], header=header)
+    t_img = nb.Cifti2Image(dataobj=t[:, :], header=header)
+
+    con_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/olive/contrasts/social_cereb_grey_condavg_contrast.dscalar.nii'
+    t_filename = f'/Volumes/diedrichsen_data$/data/Cerebellum/Pontine7T/atlases/olive/contrasts/social_cereb_grey_condavg_Tstat.dscalar.nii'
+
+        # Save the contrast and T-statistic images
+    nb.save(con_img, con_filename)
+    nb.save(t_img, t_filename)
+
 
 def make_mdtb_contrasts(atlas='MNISymRedNucleus1'):
     data, info, ds_obj = ds.get_dataset(base_dir,'MDTB',atlas=atlas,
@@ -369,6 +440,6 @@ if __name__ == '__main__':
 
     #pontine = make_pontine_contrasts()
     #mdtb = make_mdtb_contrasts()
-    language = make_language_contrasts()
+    social = make_social_contrasts()
 
     print("DONE")

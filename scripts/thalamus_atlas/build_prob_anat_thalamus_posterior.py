@@ -109,17 +109,17 @@ def get_group_prob_map(wk_dir):
 
 def get_thalamus_mask(wk_dir, threshold=0.25):
 
-    in_path = os.path.join(wk_dir, "67_group_mean_thalamus_prob_map.nii.gz")
+    in_path = os.path.join(wk_dir, "107_group_mean_thalamus_prob_map.nii.gz")
     out_path = os.path.join(wk_dir, f"group_thalamus_mask_thr{threshold}.nii.gz")
 
     img = nb.load(in_path)
     data = img.get_fdata()  # shape: (X, Y, Z, N)
 
     # collapse across nuclei, determine max value for voxel across nuclei 
-    max_data = data.max(axis=3)
+    sum_data = data.sum(axis=3)
 
     # threshold
-    binary_data = (max_data > threshold).astype(np.uint8)
+    binary_data = (sum_data > threshold).astype(np.uint8)
 
     mask_img = nb.Nifti1Image(binary_data, img.affine, img.header)
     nb.save(mask_img, out_path)
@@ -128,7 +128,7 @@ def get_thalamus_mask(wk_dir, threshold=0.25):
 
 def symmetrize_mask(wk_dir, threshold=25):
 
-    in_path = os.path.join(wk_dir, f"group_thalamus_mask_thr0{threshold}.nii.gz")
+    in_path = os.path.join(wk_dir, f"corr_sum_group_thalamus_mask_thr0{threshold}_copy.nii.gz")
     out_path = os.path.join(wk_dir, f"group_thalamus_mask_thr0{threshold}_sym.nii.gz")
 
     img = nb.load(in_path)
@@ -150,7 +150,7 @@ def symmetrize_mask(wk_dir, threshold=25):
 
 def symmetrize_copy_right_to_left(wk_dir):
 
-    in_path = os.path.join(wk_dir, "corr_group_thalamus_mask_thr02_sym_copy.nii.gz")
+    in_path = os.path.join(wk_dir, "corr_sum_group_thalamus_mask_thr02_copy.nii.gz")
     out_path = os.path.join(wk_dir, "group_thalamus_mask_thr02_sym_RtoL.nii.gz")
 
     img = nb.load(in_path)
@@ -195,11 +195,11 @@ def symmetrize_copy_right_to_left(wk_dir):
 
 if __name__ == '__main__':
 
-    right_to_left = symmetrize_copy_right_to_left(wk_dir)
+    #right_to_left = symmetrize_copy_right_to_left(wk_dir)
 
-    #sym_thalamus_mask = symmetrize_mask(wk_dir, threshold=2)
+    sym_thalamus_mask = symmetrize_mask(wk_dir, threshold=2)
 
-    #thalamus_mask = get_thalamus_mask(wk_dir, threshold=0.18)
+    #thalamus_mask = get_thalamus_mask(wk_dir, threshold=0.3)
 
     #group_map = get_group_prob_map(wk_dir)
     
@@ -209,14 +209,14 @@ if __name__ == '__main__':
     #[d for d in os.listdir(data_dir)
     #if d.startswith("sub-") and os.path.isdir(os.path.join(data_dir, d))])
 
-    #subjects = ['sub-29']
-    #dataset = 'MDTB'
+    #subjects = ['sub-13','sub-14','sub-15','sub-16']
+    #dataset = 'WMFS'
 
     #for sub in subjects:
      #   convert_mgz_to_nii(input_dir=f"{wk_dir}/{dataset}/{sub}/mri/", output_dir=f"{wk_dir}/{dataset}_pseg/{sub}/")
       #  get_subj_prob_maps(subj=[sub], dataset=dataset)
     
-    #convert_mgz_to_nii(input_dir=f"{wk_dir}/Social/sub-03/mri/", output_dir=f"{wk_dir}/Social_pseg/sub-03/")
-    #get_subj_prob_maps(subj=['sub-03'],dataset='Social')
+    #convert_mgz_to_nii(input_dir=f"{wk_dir}/MDTB-high-res/sub-12/mri/", output_dir=f"{wk_dir}/MDTB-high-res_pseg/sub-12/")
+    #get_subj_prob_maps(subj=['sub-12'],dataset='MDTB-high-res')
 
 
