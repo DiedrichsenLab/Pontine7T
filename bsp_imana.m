@@ -8,7 +8,7 @@ elseif isdir('/srv/diedrichsen/data')
 else
     fprintf('Workdir not found. Mount or connect to server and try again.');
 end
-baseDir=(sprintf('%s/Cerebellum/Pontine7T',workdir));
+baseDir=(sprintf('%s/Cerebellum/Olive7T',workdir));
 
 imagingDir      ='imaging_data';
 imagingDirRaw   ='imaging_data_raw';
@@ -29,7 +29,7 @@ loc_AC = [
 % path
 pinfo = dload(fullfile(baseDir,'participants.tsv')); 
 subj_name = pinfo.participant_id;
-good_subj = find(pinfo.good)'; % Indices of all good subjects
+%good_subj = find(pinfo.good)'; % Indices of all good subjects
 
 %========================================================================================================================
 % GLM INFO

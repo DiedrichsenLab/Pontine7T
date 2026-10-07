@@ -3,9 +3,9 @@ import ants
 import glob
 import os 
 
-wk_dir = '/Users/incehusain/fs_projects'
+wk_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/Olive7T/anatomicals'
 
-def make_xfm_files(source_file, sub, dataset='Social'):
+def make_xfm_files(source_file, sub, dataset='Olive7T'):
 
     template_file = f"{wk_dir}/tpl-MNI152NLin2009cSym_res-1_T1w.nii"
     template_img = ants.image_read(template_file)
@@ -13,9 +13,9 @@ def make_xfm_files(source_file, sub, dataset='Social'):
     source_img = ants.image_read(source_file)
 
     mytx = ants.registration(fixed=template_img, moving=source_img, type_of_transform='SyN', 
-                             outprefix=f"{wk_dir}/xfm_files/{dataset}/{sub}_to-MNISym_")
+                             outprefix=f"{wk_dir}/{sub}/{sub}_to-MNISym_")
     
-    deformation_file = f"{wk_dir}/xfm_files/{dataset}/{sub}_space-MNI152NLin2009cSym_xfm.nii"
+    deformation_file = f"{wk_dir}/{sub}/{sub}_space-MNI152NLin2009cSym_xfm.nii"
     
     suit_norm.deformation_from_displacement(template_file, displacement_file =mytx['fwdtransforms'], deformation_file=deformation_file)
 
@@ -50,19 +50,19 @@ def make_xfm_files_depreciated(source_file, mask_file, sub):
 
 if __name__ == '__main__':
 
-    t1_files = sorted(glob.glob(os.path.join(wk_dir, 'xfm_files/Language/', 'sub-*_T1w.nii')))
+    #t1_files = sorted(glob.glob(os.path.join(wk_dir, 'xfm_files/Language/', 'sub-*_T1w.nii')))
 
-    #sub_list = ['sub-01','sub-02', 'sub-04', 'sub-05','sub-06', 'sub-07', 'sub-08', 'sub-09', 'sub-11', 'sub-12', 'sub-13', 'sub-14', 'sub-15']
+    sub_list = ['S06']
 
-    for t1_file in t1_files:
-        sub = os.path.basename(t1_file).split('_')[0]
-        make_deformation_file = make_xfm_files(t1_file, sub, dataset='Language')
-        print(f"Deformation file created for {sub}: {make_deformation_file}")
-
-    #for sub in sub_list:
-     #   source_file = f"{wk_dir}/xfm_files/IBC/{sub}_T1w.nii"
-      #  make_deformation_file = make_xfm_files(source_file, sub, dataset='IBC')
+    #for t1_file in t1_files:
+     #   sub = os.path.basename(t1_file).split('_')[0]
+      #  make_deformation_file = make_xfm_files(t1_file, sub, dataset='Language')
        # print(f"Deformation file created for {sub}: {make_deformation_file}")
+
+    for sub in sub_list:
+        source_file = f"{wk_dir}/{sub}/{sub}_T1w.nii"
+        make_deformation_file = make_xfm_files(source_file, sub, dataset='Olive7T')
+        print(f"Deformation file created for {sub}: {make_deformation_file}")
 
 
 

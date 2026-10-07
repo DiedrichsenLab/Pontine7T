@@ -7,9 +7,8 @@ if isdir('/Volumes/diedrichsen_data$/data')
 elseif isdir('/srv/diedrichsen/data')
     workdir='/srv/diedrichsen/data';
 else
-    fprintf('Workdir not found. Mount or connect to server and try again.');
-end
-baseDir=(sprintf('%s/Cerebellum/Pontine7T',workdir));
+    fprintf('Workdir not found. Mount or connect to server and try again.');end
+baseDir=(sprintf('%s/Cerebellum/Olive7T',workdir));
 
 imagingDir      ='imaging_data';
 imagingDirRaw   ='imaging_data_raw';
@@ -20,15 +19,15 @@ fmapDir         ='fieldmaps';
 
 % Load Participant information (make sure you have Dataframe/util in your
 % path
-pinfo = dload(fullfile(baseDir,'participants_new_format.tsv')); 
+pinfo = dload(fullfile(baseDir,'participants.tsv')); 
 subj_name = pinfo.participant_id;
-good_subj = find(pinfo.good)'; % Indices of all good subjects
+%good_subj = find(pinfo.good)'; % Indices of all good subjects
 
 %========================================================================================================================
 % GLM INFO
 numDummys = 3;                                                              % per run
 numTRs    = pinfo.numTR;                                                             % per run (includes dummies)
-runs         = {'01','02','03','04','05','06','07','08'};
+runs         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16'};
 runB        = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];  % Behavioural labelling of runs
 sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session number
 %========================================================================================================================
@@ -197,7 +196,7 @@ switch(what)
         subjs=length(sn);
         
         % load in task information
-        C=dload(fullfile(baseDir,'pontine_taskConds_GLM_reordered.tsv'));
+        C=dload(fullfile(baseDir,'olive_tasks_GLM.tsv'));
         Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks
         nTask      = max(Cc.taskNum);                                 % how many tasks there are?
         
@@ -211,7 +210,7 @@ switch(what)
             % Fill up struct for glm
             J.dir = {glmSubjDir};
             J.timing.units = 'secs';
-            J.timing.RT = 1.0;
+            J.timing.RT = 1.1;
             J.timing.fmri_t = 16;
             J.timing.fmri_t0 = 1;
 
@@ -490,10 +489,12 @@ switch(what)
         % down code for FAST GLM).
         % Example1: bsp_glm('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
         
+        sn=varargin{1};
+        glm =varargin{2};
         %sn             = 19;             %% list of subjects
         %glm            = 2;             %% The glm number
         
-        vararginoptions(varargin, {'sn', 'glm'})
+        %vararginoptions(varargin, {'sn', 'glm'})
         
         %%% setting directory paths I need
         glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
@@ -553,11 +554,6 @@ switch(what)
             name = 'Instruct'; 
             SPM.xCon(idx) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs); 
 
-            %HR regressor 
-            
-            con = zeros(1,size(SPM.xX.X,2));
-            con(1,T.task==100)=1;
-            con(1,T.task~=100)=0;
             
             SPM = spm_contrasts(SPM,1:length(SPM.xCon));  %makes contrast images: initially this - SPM = spm_contrasts(SPM,1:length(SPM.xCon))
              
@@ -575,6 +571,7 @@ switch(what)
             end % i (contrasts)
         end % sn
     
+    case 'GLM:contrast_'
     case 'GLM:Fcontrast'               % Create Contrast images
         %%% Calculating contrast images.
         % 'SPM_light' is created in this step (xVi is removed as it slows
@@ -599,7 +596,7 @@ switch(what)
                 SPM  = rmfield(SPM,'xCon');
             end
             cd(fullfile(glmDir, subj_name{s}))
-            T = load('SPM_info.mat');
+            T = dload('SPM_info.tsv');
             
             % F contrast
             name = sprintf('%s', type);
@@ -621,7 +618,7 @@ switch(what)
                         con(i,T.task~=task(i))=0;
                     end
                            
-                case 'HR'
+                case 'HR' %change SPM.xCon to 'T' for this one 
                     con = zeros(1,size(SPM.xX.X,2));
                     con(1,T.task==100)=1;
                     con(1,T.task~=100)=0;

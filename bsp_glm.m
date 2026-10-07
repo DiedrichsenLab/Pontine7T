@@ -7,9 +7,8 @@ if isdir('/Volumes/diedrichsen_data$/data')
 elseif isdir('/srv/diedrichsen/data')
     workdir='/srv/diedrichsen/data';
 else
-    fprintf('Workdir not found. Mount or connect to server and try again.');
-end
-baseDir=(sprintf('%s/Cerebellum/Pontine7T',workdir));
+    fprintf('Workdir not found. Mount or connect to server and try again.');end
+baseDir=(sprintf('%s/Cerebellum/Olive7T',workdir));
 
 imagingDir      ='imaging_data';
 imagingDirRaw   ='imaging_data_raw';
@@ -20,15 +19,15 @@ fmapDir         ='fieldmaps';
 
 % Load Participant information (make sure you have Dataframe/util in your
 % path
-pinfo = dload(fullfile(baseDir,'participants_new_format.tsv')); 
+pinfo = dload(fullfile(baseDir,'participants.tsv')); 
 subj_name = pinfo.participant_id;
-good_subj = find(pinfo.good)'; % Indices of all good subjects
+%good_subj = find(pinfo.good)'; % Indices of all good subjects
 
 %========================================================================================================================
 % GLM INFO
 numDummys = 3;                                                              % per run
 numTRs    = pinfo.numTR;                                                             % per run (includes dummies)
-runs         = {'01','02','03','04','05','06','07','08'};
+runs         = {'01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16'};
 runB        = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];  % Behavioural labelling of runs
 sess        = [1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2];                  % session number
 %========================================================================================================================
@@ -197,7 +196,7 @@ switch(what)
         subjs=length(sn);
         
         % load in task information
-        C=dload(fullfile(baseDir,'pontine_taskConds_GLM_reordered.tsv'));
+        C=dload(fullfile(baseDir,'olive_tasks_GLM.tsv'));
         Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks
         nTask      = max(Cc.taskNum);                                 % how many tasks there are?
         
@@ -211,7 +210,7 @@ switch(what)
             % Fill up struct for glm
             J.dir = {glmSubjDir};
             J.timing.units = 'secs';
-            J.timing.RT = 1.0;
+            J.timing.RT = 1.1;
             J.timing.fmri_t = 16;
             J.timing.fmri_t0 = 1;
 
@@ -490,10 +489,12 @@ switch(what)
         % down code for FAST GLM).
         % Example1: bsp_glm('GLM:contrast', 'sn', 3, 'glm', 1, 'type', 'task')
         
+        sn=varargin{1};
+        glm =varargin{2};
         %sn             = 19;             %% list of subjects
         %glm            = 2;             %% The glm number
         
-        vararginoptions(varargin, {'sn', 'glm'})
+        %vararginoptions(varargin, {'sn', 'glm'})
         
         %%% setting directory paths I need
         glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
@@ -570,6 +571,43 @@ switch(what)
             end % i (contrasts)
         end % sn
     
+    case 'GLM:contrast_rest'
+        sn=varargin{1};
+        glm =varargin{2};
+
+        glmDir = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm));
+        
+        for s = sn
+            fprintf('******************** calculating contrasts for %s ********************\n', subj_name{s});
+            subjDir=fullfile(glmDir, subj_name{s});
+            load(fullfile(glmDir, subj_name{s}, 'SPM.mat'))
+            T = readtable(fullfile(subjDir,'SPM_info.tsv'), 'FileType', 'text', 'Delimiter', '\t');
+
+            nReg  = size(SPM.xX.X, 2);                 % 240 task betas + run constants
+            iRest = find(strcmp(T.taskName, 'rest'));
+            tasks = setdiff(unique(T.taskName), {'rest'});
+
+            for t = 1:numel(tasks)
+                iTask = find(strcmp(T.taskName, tasks{t}));
+
+                c = zeros(nReg, 1);
+                c(iTask) =  1 / numel(iTask);          % mean of this task's betas
+                c(iRest) = -1 / numel(iRest);          % minus mean of rest betas
+
+                con = spm_FcUtil('Set', [tasks{t} '-rest'], 'T', 'c', c, SPM.xX.xKXs);
+                if isempty(SPM.xCon), SPM.xCon = con; else, SPM.xCon(end+1) = con; end
+            end
+
+            SPM = spm_contrasts(SPM, 1:numel(SPM.xCon));     % writes con_*.nii and spmT_*.nii
+            for k = 1:numel(SPM.xCon)
+                for prefix = {'con', 'spmT'}
+                    oldName = fullfile(subjDir, sprintf('%s_%04d.nii', prefix{1}, k));
+                    newName = fullfile(subjDir, sprintf('%s_%s.nii', prefix{1}, SPM.xCon(k).name));
+                    movefile(oldName, newName);
+                end
+            end
+        end
+
     case 'GLM:Fcontrast'               % Create Contrast images
         %%% Calculating contrast images.
         % 'SPM_light' is created in this step (xVi is removed as it slows
