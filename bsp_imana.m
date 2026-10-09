@@ -790,10 +790,10 @@ switch(what)
            
 
             % 4. Define scan timing parameters
-            physio.scan_timing.sqpar.Nslices = 60;              % number of slices in EPI volume
-            physio.scan_timing.sqpar.TR = 1;                    % TR in secs
+            physio.scan_timing.sqpar.Nslices = 56;              % number of slices in EPI volume
+            physio.scan_timing.sqpar.TR = 1.1;                    % TR in secs
             physio.scan_timing.sqpar.Ndummies = numDummys;      % Real dummy are not recorded
-            physio.scan_timing.sqpar.Nscans = numTRs-numDummys; % number of time points/scans/volumes
+            physio.scan_timing.sqpar.Nscans = numTRs(nrun)-numDummys; % number of time points/scans/volumes
             physio.scan_timing.sqpar.onset_slice = 30;          % slice of interest (choose middle slice if unsure?)
             physio.scan_timing.sync.method = 'scan_timing_log'; % using info file
             
