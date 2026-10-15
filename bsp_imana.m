@@ -1,10 +1,10 @@
 function varargout=bsp_imana(what,varargin)
 % Function for minimal preprocessing of the Pontine7T data
 % Define the data basedirectory 
-if isdir('/Volumes/diedrichsen_data$/data')
-    workdir='/Volumes/diedrichsen_data$/data';
-elseif isdir('/srv/diedrichsen/data')
-    workdir='/srv/diedrichsen/data';
+if isdir('/Volumes/Diedrichsen_data$/data')
+    workdir='/Volumes/Diedrichsen_data$/data';
+elseif isdir('/srv/Diedrichsen/data')
+    workdir='/srv/Diedrichsen/data';
 else
     fprintf('Workdir not found. Mount or connect to server and try again.');
 end
@@ -766,7 +766,9 @@ switch(what)
       %  sn=15; 
        % run = [1:8]; 
         %stop = true; 
-        vararginoptions(varargin,{'sn','run','stop'}); 
+        stop = false;
+        showRaw = false;
+        vararginoptions(varargin,{'sn','run','stop','showRaw'}); 
         
         for nrun= run
             
@@ -775,6 +777,40 @@ switch(what)
             PULS = dir('*PULS.log');
             RSP  = dir('*RESP.log');
             log  = dir('*Info.log');
+
+            if showRaw
+                info_file = fullfile(log.folder, log.name);
+                puls_file = fullfile(PULS.folder, PULS.name);
+                resp_file = fullfile(RSP.folder, RSP.name);
+
+                info = read_physio_log(info_file);          % VOLUME SLICE START FINISH ...
+                t0   = min(info(:,3));                      % first slice of the run
+                t1   = max(info(:,4));                      % last slice of the run
+
+                figure('Name', sprintf('Raw physio %s run%02d', subj_name{sn}, nrun));
+                ax = [];
+                files  = {puls_file, resp_file};
+                titles = {'Raw PPU (pulse)', 'Raw breathing belt'};
+                for k = 1:2
+                    d = read_physio_log(files{k});          % TICS CHANNEL VALUE ...
+                    t = (d(:,1) - t0) * 0.0025;             % seconds from scan start
+                    v = d(:,3);
+                    gap = find(diff(t) > 1);                % break the line at gaps > 1 s
+                    for g = flipud(gap(:))'
+                        t = [t(1:g); NaN; t(g+1:end)];
+                        v = [v(1:g); NaN; v(g+1:end)];
+                    end
+                    ax(end+1) = subplot(2,1,k);
+                    plot(t, v); hold on;
+                    xline(0, 'k--'); xline((t1 - t0) * 0.0025, 'k--');   % scan start and end
+                    title(titles{k}); ylabel('a.u.');
+                    if ~isempty(gap)
+                        title(sprintf('%s - %d gap(s)', titles{k}, numel(gap)), 'Color', 'r');
+                    end
+                 end
+                 xlabel('t (s) from first slice');
+                 linkaxes(ax, 'x');
+             end
             
             % 2. Define physio model structure
             physio = tapas_physio_new();
@@ -793,7 +829,7 @@ switch(what)
             physio.scan_timing.sqpar.Nslices = 56;              % number of slices in EPI volume
             physio.scan_timing.sqpar.TR = 1.1;                    % TR in secs
             physio.scan_timing.sqpar.Ndummies = numDummys;      % Real dummy are not recorded
-            physio.scan_timing.sqpar.Nscans = numTRs(nrun)-numDummys; % number of time points/scans/volumes
+            physio.scan_timing.sqpar.Nscans = numTRs(sn)-numDummys; % number of time points/scans/volumes
             physio.scan_timing.sqpar.onset_slice = 30;          % slice of interest (choose middle slice if unsure?)
             physio.scan_timing.sync.method = 'scan_timing_log'; % using info file
             
@@ -890,6 +926,17 @@ switch(what)
         error('Unknown option: %s',what);
 
 end
+
+function d = read_physio_log(fname)
+% numeric rows of a CMRR PhysioLog .log file; text entries (e.g. 'PULS') become NaN
+lines = strsplit(fileread(fname), newline);
+lines = lines(~cellfun(@isempty, regexp(lines, '^\s*\d', 'once')));
+tok = regexp(lines, '\S+', 'match');
+d = nan(numel(tok), max(cellfun(@numel, tok)));
+for i = 1:numel(tok)
+    d(i, 1:numel(tok{i})) = str2double(tok{i});
+end
+
         
  
   
