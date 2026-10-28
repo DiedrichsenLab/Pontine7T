@@ -922,11 +922,16 @@ switch(what)
         end
 
     case 'PHYS:aliasTable'
+        %run by writing [T, S] = bsp_imana('PHYS:aliasTable');
+        %[T, S] = bsp_imana('PHYS:aliasTable', 'TR', 1.25);   % what if TR = 1.25
+        %[T, S] = bsp_imana('PHYS:aliasTable', 'TR', 0.8);
         nruns = 16;
         min_coverage = 90;  max_dropped = 5;  max_gap_s = 5;
-        vararginoptions(varargin, {'min_coverage','max_dropped','max_gap_s'});
-        TR = 1.1;  fs = 1/TR;
+        TR = 1.1;  
+        vararginoptions(varargin, {'min_coverage','max_dropped','max_gap_s','TR'});
+        fs = 1/TR;
         alias = @(f) abs(f - fs*round(f/fs));
+        tr_tag = strrep(sprintf('%.2f', TR), '.', '_');
 
         res = [];
 
@@ -997,8 +1002,8 @@ switch(what)
         % overview of what was missing or flagged per subject
         disp(groupsummary(T, {'subj','status'}))
 
-        writetable(T, fullfile(baseDir,'physio','hr_alias_by_run.tsv'),     'FileType','text','Delimiter','\t');
-        writetable(S, fullfile(baseDir,'physio','hr_alias_by_subject.tsv'), 'FileType','text','Delimiter','\t');
+        writetable(T, fullfile(baseDir,'physio',['hr_alias_by_run_TR_', tr_tag, '.tsv']),     'FileType','text','Delimiter','\t');
+        writetable(S, fullfile(baseDir,'physio',['hr_alias_by_subject_TR_', tr_tag, '.tsv']), 'FileType','text','Delimiter','\t');
         varargout = {T,S};
     otherwise
         error('Unknown option: %s',what);
