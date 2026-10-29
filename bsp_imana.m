@@ -1005,6 +1005,108 @@ switch(what)
         writetable(T, fullfile(baseDir,'physio',['hr_alias_by_run_TR_', tr_tag, '.tsv']),     'FileType','text','Delimiter','\t');
         writetable(S, fullfile(baseDir,'physio',['hr_alias_by_subject_TR_', tr_tag, '.tsv']), 'FileType','text','Delimiter','\t');
         varargout = {T,S};
+
+    case 'PHYS:designCheck'
+        % run with: T = bsp_imana('PHYS:designCheck');
+        %or for some subjects: T = bsp_imana('PHYS:designCheck', 'sns', [1 2 3]);
+        glm = 2;  TR = 1.1;  cut_pct = 95;  sns = 1:numel(subj_name);
+        vararginoptions(varargin, {'glm','TR','cut_pct','sns'});
+
+        regfiles = {'reg_retro_hr.txt',   'all', 'retro_c';   % cardiac RETROICOR
+                    'reg_hr.txt',         1,     'HR';        % heart rate (convolved)
+                    'reg_retro_resp.txt', 'all', 'retro_r';   % respiratory RETROICOR
+                    'reg_rvt.txt',        1,     'RVT'};      % RVT (convolved)
+        res = [];
+        for sn = sns
+            fprintf('%s: loading SPM.mat ... ', subj_name{sn}); tic;
+            spmf = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm), subj_name{sn}, 'SPM.mat');
+            if ~exist(spmf, 'file'), fprintf('%s: no SPM.mat\n', subj_name{sn}); continue; end
+            load(spmf, 'SPM');
+            if abs(SPM.xY.RT - TR) > 1e-6
+                warning('%s: SPM.mat has RT = %.2f, not %.2f', subj_name{sn}, SPM.xY.RT, TR);
+            end
+
+            for r = 1:numel(SPM.Sess)
+                row = struct('subj', subj_name(sn), 'run', r, 'n_physio', 0, 'task_cut_hz', NaN, ...
+                             'card_peak_hz', NaN, 'card_pct_in_taskband', NaN, ...
+                             'resp_peak_hz', NaN, 'resp_pct_in_taskband', NaN, ...
+                             'card_f05', NaN, 'card_f50', NaN, 'card_f95', NaN, ...
+                             'resp_f05', NaN, 'resp_f50', NaN, 'resp_f95', NaN, ...
+                             'mean_abs_r', NaN, 'max_abs_r', NaN, 'vif_mean', NaN, 'vif_max', NaN);
+
+                % ---- task regressors of this run (GLM 2) ----
+                rows = SPM.Sess(r).row;  cols = SPM.Sess(r).col;
+                isTask = contains(SPM.xX.name(cols), '*bf(1)');
+                X = SPM.xX.X(rows, cols(isTask));
+                n = size(X, 1);
+
+                % ---- frequency axis (positive frequencies only, no 0 Hz) ----
+                f = (0:n-1)' / (n * TR);
+                half = (2:floor(n/2) + 1)';
+
+                % ---- task band: frequency below which cut_pct % of task power lies ----
+                Pt = abs(fft(X - mean(X))).^2;
+                pt = sum(Pt(half, :), 2);
+                cp = cumsum(pt) / sum(pt);
+                cut = f(half(find(cp >= cut_pct/100, 1)));
+                row.task_cut_hz = cut;
+
+                % ---- physio regressors of this run ----
+                pdir = fullfile(baseDir, 'physio', subj_name{sn}, sprintf('run%02d', r));
+                P = [];  pnames = {};
+                for k = 1:size(regfiles, 1)
+                    fn = fullfile(pdir, regfiles{k, 1});
+                    if ~exist(fn, 'file'), continue; end
+                    x = load(fn);
+                    if size(x, 1) ~= n
+                        warning('%s run%02d: %s has %d rows, design has %d', ...
+                                subj_name{sn}, r, regfiles{k, 1}, size(x, 1), n);
+                        if size(x, 1) < n, continue; end
+                    end
+                    if ischar(regfiles{k, 2}), c = 1:size(x, 2); else, c = regfiles{k, 2}; end
+                    P = [P, x(1:n, c)];
+                    pnames = [pnames, arrayfun(@(j) sprintf('%s%d', regfiles{k, 3}, j), c, 'UniformOutput', false)];
+                end
+                row.n_physio = size(P, 2);
+
+                % ---- % of first-harmonic variance inside the task band ----
+                pairs = {'retro_c', 'card'; 'retro_r', 'resp'};
+                for q = 1:2
+                    idx = find(startsWith(pnames, pairs{q, 1}), 2);   % first harmonic = first two columns
+                    if numel(idx) == 2
+                        Pc = abs(fft(P(:, idx) - mean(P(:, idx)))).^2;
+                        pc = sum(Pc(half, :), 2);                     % sine + cosine power
+                        [~, im] = max(pc);
+                        row.([pairs{q, 2} '_peak_hz']) = f(half(im));
+                        row.([pairs{q, 2} '_pct_in_taskband']) = 100 * sum(pc(f(half) <= cut)) / sum(pc);
+                                                cpw = cumsum(pc) / sum(pc);                     % cumulative share of power
+                        fh  = f(half);
+                        row.([pairs{q, 2} '_f05']) = fh(find(cpw >= 0.05, 1));
+                        row.([pairs{q, 2} '_f50']) = fh(find(cpw >= 0.50, 1));
+                        row.([pairs{q, 2} '_f95']) = fh(find(cpw >= 0.95, 1));
+                    end
+                end
+
+                % ---- correlations and variance inflation ----
+                if ~isempty(P)
+                    C = corr(X, P);
+                    row.mean_abs_r = mean(abs(C(:)));
+                    row.max_abs_r  = max(abs(C(:)));
+                    Xf = [X, P, ones(n, 1)];
+                    Xt = [X, ones(n, 1)];
+                    vf = diag(pinv(Xf' * Xf));
+                    vt = diag(pinv(Xt' * Xt));
+                    ratio = vf(1:size(X, 2)) ./ vt(1:size(X, 2));
+                    row.vif_mean = mean(ratio);
+                    row.vif_max  = max(ratio);
+                end
+                res = [res; row];
+            end
+        end
+        T = struct2table(res);
+        disp(T)
+        writetable(T, fullfile(baseDir, 'physio', 'physio_design_check_all.tsv'), 'FileType', 'text', 'Delimiter', '\t');
+        varargout = {T};
     otherwise
         error('Unknown option: %s',what);
 
