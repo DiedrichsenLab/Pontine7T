@@ -1032,7 +1032,8 @@ switch(what)
                              'resp_peak_hz', NaN, 'resp_pct_in_taskband', NaN, ...
                              'card_f05', NaN, 'card_f50', NaN, 'card_f95', NaN, ...
                              'resp_f05', NaN, 'resp_f50', NaN, 'resp_f95', NaN, ...
-                             'mean_abs_r', NaN, 'max_abs_r', NaN, 'vif_mean', NaN, 'vif_max', NaN);
+                             'mean_abs_r', NaN, 'max_abs_r', NaN, 'vif_mean', NaN, 'vif_max', NaN,...
+                             'max_r_task', {''}, 'max_r_physio', {''}, 'vif_max_task', {''});
 
                 % ---- task regressors of this run (GLM 2) ----
                 rows = SPM.Sess(r).row;  cols = SPM.Sess(r).col;
@@ -1089,23 +1090,37 @@ switch(what)
 
                 % ---- correlations and variance inflation ----
                 if ~isempty(P)
+
+                    tnames = SPM.xX.name(cols(isTask));          % task regressor names, e.g. 'Sn(1) movie*bf(1)'
+                    tnames = regexprep(tnames, '^Sn\(\d+\) |\*bf\(1\)$', '');   % shorten to just the task name
+
                     C = corr(X, P);
                     row.mean_abs_r = mean(abs(C(:)));
-                    row.max_abs_r  = max(abs(C(:)));
+                    [row.max_abs_r, imax] = max(abs(C(:)));
+                    [it, ip] = ind2sub(size(C), imax);           % row = task, column = physio regressor
+                    row.max_r_task   = tnames{it};
+                    row.max_r_physio = pnames{ip};
+
                     Xf = [X, P, ones(n, 1)];
                     Xt = [X, ones(n, 1)];
                     vf = diag(pinv(Xf' * Xf));
                     vt = diag(pinv(Xt' * Xt));
                     ratio = vf(1:size(X, 2)) ./ vt(1:size(X, 2));
                     row.vif_mean = mean(ratio);
-                    row.vif_max  = max(ratio);
+                    [row.vif_max, iv] = max(ratio);
+                    row.vif_max_task = tnames{iv};
+
+                    fprintf('%s run%02d: max |r| = %.2f (%s vs %s), max VIF = %.2f (%s)\n', ...
+                            subj_name{sn}, r, row.max_abs_r, row.max_r_task, row.max_r_physio, ...
+                            row.vif_max, row.vif_max_task);
                 end
+               
                 res = [res; row];
             end
         end
         T = struct2table(res);
         disp(T)
-        writetable(T, fullfile(baseDir, 'physio', 'physio_design_check_all.tsv'), 'FileType', 'text', 'Delimiter', '\t');
+        writetable(T, fullfile(baseDir, 'physio', 'physio_design_check_all_corr.tsv'), 'FileType', 'text', 'Delimiter', '\t');
         varargout = {T};
     otherwise
         error('Unknown option: %s',what);
