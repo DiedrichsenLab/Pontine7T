@@ -313,7 +313,7 @@ switch(what)
         subjs=length(sn);
         
         % load in task information
-        C=dload(fullfile(baseDir,'pontine_taskConds_GLM_reordered.tsv'));
+        C=dload(fullfile(baseDir,'olive_tasks_GLM.tsv'));
         Cc=getrow(C,C.StudyNum==1 & C.condNum==1); % Only get the first condition for each tasks
         nTask      = max(Cc.taskNum);                               
         
@@ -328,7 +328,7 @@ switch(what)
             % Fill up struct for glm
             J.dir = {glmSubjDir};
             J.timing.units = 'secs';
-            J.timing.RT = 1.0;
+            J.timing.RT = 1.1;
             J.timing.fmri_t = 16;
             J.timing.fmri_t0 = 1;
            
@@ -584,18 +584,19 @@ switch(what)
             T = readtable(fullfile(subjDir,'SPM_info.tsv'), 'FileType', 'text', 'Delimiter', '\t');
 
             nReg  = size(SPM.xX.X, 2);                 % 240 task betas + run constants
+            istask = T.task >= 1 & T.task < 100 & T.inst == 0;
             iRest = find(strcmp(T.taskName, 'rest'));
-            tasks = setdiff(unique(T.taskName), {'rest'});
+            tasks = setdiff(unique(T.taskName(istask)), {'rest'});
 
             for t = 1:numel(tasks)
-                iTask = find(strcmp(T.taskName, tasks{t}));
+                iTask = find(istask & strcmp(T.taskName, tasks{t}));
 
                 c = zeros(nReg, 1);
                 c(iTask) =  1 / numel(iTask);          % mean of this task's betas
                 c(iRest) = -1 / numel(iRest);          % minus mean of rest betas
 
                 con = spm_FcUtil('Set', [tasks{t} '-rest'], 'T', 'c', c, SPM.xX.xKXs);
-                if isempty(SPM.xCon), SPM.xCon = con; else, SPM.xCon(end+1) = con; end
+                if t == 1, SPM.xCon = con; else, SPM.xCon(end+1) = con; end
             end
 
             SPM = spm_contrasts(SPM, 1:numel(SPM.xCon));     % writes con_*.nii and spmT_*.nii
@@ -608,6 +609,19 @@ switch(what)
             end
         end
 
+        case 'GLM:diffMaps'
+        % GLM3 - GLM2 difference of a task-vs-rest contrast map
+        % Example: bsp_imana('GLM:diffMaps', 'sn', 6, 'task', 'finger_sequence_surprise')
+        sn   = 6;
+        task = 'finger_sequence_surprise';
+        vararginoptions(varargin, {'sn', 'task'});
+        for s = sn
+            g2  = fullfile(baseDir, 'GLM_firstlevel_2', subj_name{s}, ['con_' task '-rest.nii']);
+            g3  = fullfile(baseDir, 'GLM_firstlevel_3', subj_name{s}, ['con_' task '-rest.nii']);
+            out = fullfile(baseDir, 'GLM_firstlevel_3', subj_name{s}, ['diff_glm3-glm2_' task '-rest.nii']);
+            spm_imcalc({g3, g2}, out, 'i1 - i2');
+            fprintf('%s: wrote %s\n', subj_name{s}, out);
+        end
     case 'GLM:Fcontrast'               % Create Contrast images
         %%% Calculating contrast images.
         % 'SPM_light' is created in this step (xVi is removed as it slows
@@ -662,7 +676,7 @@ switch(what)
                             
             end
             
-            SPM.xCon(1) = spm_FcUtil('Set',name, 'F', 'c',con',SPM.xX.xKXs);
+            SPM.xCon(1) = spm_FcUtil('Set',name, 'T', 'c',con',SPM.xX.xKXs);
             SPM = spm_contrasts(SPM,1:length(SPM.xCon));
             save('SPM.mat', 'SPM','-v7.3');
             SPM = rmfield(SPM,'xVi'); % 'xVi' take up a lot of space and slows down code!
