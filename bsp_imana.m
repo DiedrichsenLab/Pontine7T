@@ -1017,6 +1017,7 @@ switch(what)
                     'reg_retro_resp.txt', 'all', 'retro_r';   % respiratory RETROICOR
                     'reg_rvt.txt',        1,     'RVT'};      % RVT (convolved)
         res = [];
+        allpairs = {};
         for sn = sns
             fprintf('%s: loading SPM.mat ... ', subj_name{sn}); tic;
             spmf = fullfile(baseDir, sprintf('GLM_firstlevel_%d', glm), subj_name{sn}, 'SPM.mat');
@@ -1095,6 +1096,11 @@ switch(what)
                     tnames = regexprep(tnames, '^Sn\(\d+\) |\*bf\(1\)$', '');   % shorten to just the task name
 
                     C = corr(X, P);
+                    for it = 1:size(C, 1)                                        % every task regressor...
+                        for ip = 1:size(C, 2)                                    % ...with every physio regressor
+                            allpairs(end+1, :) = {subj_name{sn}, r, tnames{it}, pnames{ip}, C(it, ip)};
+                        end
+                    end
                     row.mean_abs_r = mean(abs(C(:)));
                     [row.max_abs_r, imax] = max(abs(C(:)));
                     [it, ip] = ind2sub(size(C), imax);           % row = task, column = physio regressor
@@ -1120,7 +1126,8 @@ switch(what)
         end
         T = struct2table(res);
         disp(T)
-        writetable(T, fullfile(baseDir, 'physio', 'physio_design_check_all_corr.tsv'), 'FileType', 'text', 'Delimiter', '\t');
+        Tp = cell2table(allpairs, 'VariableNames', {'subj', 'run', 'task', 'physio', 'r'});
+        writetable(Tp, fullfile(baseDir, 'physio', 'physio_design_check_taskpairs.tsv'), 'FileType', 'text', 'Delimiter', '\t');
         varargout = {T};
     otherwise
         error('Unknown option: %s',what);
